@@ -6,6 +6,7 @@ import (
 	"time"
 
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
+	_product "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 
 	// _cache "git.sstv.io/lib/go/gojunkyard.git/middleware/cache"
@@ -30,6 +31,7 @@ type (
 
 	handler struct {
 		history _history.ICore
+		product _product.ICore
 		client  *http.Client
 	}
 )
@@ -47,17 +49,19 @@ func Init(router *router.Router, dep *Dependency, authConfig authpassport.Config
 		panicrecover       = _panic.InitHTTPRouterRecover(aggregatorreporter)
 		r                  = router.Use(panicrecover)
 		h                  = dep.toHandler()
-	) 
-  
+	)
+
 	// authpassport, err := authpassport.NewHTTPRouter(authConfig)
 	// if err != nil {
 	// 	log.Fatalln(err.Error())
 	// 	return
 	// }
 	// optionalAuthorize := authpassport.OptionalAuthorize
- 
-	r.GET("/ping", h.handleGetPing) 
+
+	r.GET("/ping", h.handleGetPing)
 	r.GET("/healthz", h.handleCheckHealth)
+
+	r.DELETE("/delete/product/:id", optionalAuthorize(h.handleDeleteProduct))
 
 	// PUBLIC
 	// r.GET("/articles/:id", optionalAuthorize(cache.Handle(h.handleGetArticleByID)))
