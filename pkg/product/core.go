@@ -2,29 +2,47 @@ package product
 
 import (
 	"time"
+	"fmt"
 
 	"github.com/jmoiron/sqlx"
+	"github.com/gomodule/redigo/redis"
+	jsoniter "github.com/json-iterator/go"
+	"encoding/json"
 )
 
 // ICore is the interface
 type ICore interface {
-	Select(pid int64) (products Products, err error)
-	SelectByIDs(ids []int64, pid int64, limit int) (products Products, err error)
-	Get(id int64, pid int64) (product Product, err error)
+	Select() (products Products, err error)
+	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
+	Get(id int64) (product Product, err error)
 	Insert(product *Product) (err error)
 	Update(product *Product) (err error)
-	Delete(id int64, pid int64) (err error)
+	Delete(id int64) (err error)
 }
 
 // core contains db client
 type core struct {
 	db *sqlx.DB
+	redis *redis.Pool
+}
+const redisPrefix = "product-v1"
+
+func (c *core) Select() (products Products, err error) {
+	redisKey := fmt.Sprintf("%s:products", redisPrefix)
+	products, err = c.selectFromCache()
+	if err != nil {
+		products, err = c.selectFromDB()
+		byt, _ := jsoniter.ConfigFastest.Marshal(products)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
 }
 
-func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (products Products, err error) {
-	if len(ids) == 0 {
-		return nil, nil
-	}
+
+func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error) {
+	// if len(ids) == 0 {
+	// 	return nil,nil
+	// }
 	query, args, err := sqlx.In(`
 		SELECT
 			product_id,
@@ -51,10 +69,11 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (products Products
 	`, ids, pid, limit)
 
 	err = c.db.Select(&product, query, args...)
+	return
 }
 
-func (c *core) Select(pid int64) (products Products, err error) {
-	err = c.db.Select(&articles, `
+func (c *core) selectFromDB() (product Products, err error) {
+	err = c.db.Select(&product, `
 		SELECT
 			product_id,
 			product_name,
@@ -72,14 +91,13 @@ func (c *core) Select(pid int64) (products Products, err error) {
 		FROM
 			productlist
 		WHERE
-			project_id = ? AND
 			status = 1
-	`, pid)
+	`)
 
 	return
 }
 
-func (c *core) Get(id int64, pid int64) (product Product, err error) {
+func (c *core) Get(id int64) (product Product, err error) {
 	err = c.db.Get(&product, `
 		SELECT
 			product_id,
@@ -98,16 +116,16 @@ func (c *core) Get(id int64, pid int64) (product Product, err error) {
 		FROM
 			productlist
 		WHERE
-			id = ? AND
-			project_id = ? AND
+			product_id = ? AND
 			status = 1
-	`, id, pid)
+	`, id)
+	
 	return
 }
 
 func (c *core) Insert(product *Product) (err error) {
 	product.CreatedAt = time.Now()
-	product.UpdatedAt = article.CreatedAt
+	product.UpdatedAt = product.CreatedAt
 	product.Status = 1
 
 	res, err := c.db.NamedExec(`
@@ -139,7 +157,11 @@ func (c *core) Insert(product *Product) (err error) {
 			:project_id
 		)
 	`, product)
-	product.Product_id, err = res.LastInsertId()
+	product.ProductID, err = res.LastInsertId()
+
+	redisKey := fmt.Sprintf("%s:%d:products", redisPrefix, product.ProductID)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
@@ -163,14 +185,16 @@ func (c *core) Update(product *Product) (err error) {
 			project_id = :project_id
 		WHERE
 			product_id = :product_id AND
-			project_id = :project_id AND
 			status = 1
 	`, product)
+
+	redisKey := fmt.Sprintf("%s:%d:products", redisPrefix, product.ProductID)
+	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(id int64, pid int64) (err error) {
+func (c *core) Delete(id int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
@@ -181,8 +205,46 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 			status = 0
 		WHERE
 			product_id = ? AND
-			project_id = ? AND
 			status = 1
-	`, now, id, pid)
+	`, now, id)
+
+	redisKey := fmt.Sprintf("%s:%d:products", redisPrefix, id)
+	_ = c.deleteCache(redisKey)
 	return
+}
+
+
+func (c *core) selectFromCache() (products Products, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &products)
+	return
+}
+
+func (c *core) getFromCache(key string) (product Product, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET", key))
+	err = json.Unmarshal(b, &product)
+	return
+}
+
+func (c *core) setToCache(key string, expired int, data []byte) (err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	_, err = conn.Do("SET", key, data)
+	_, err = conn.Do("EXPIRE", key, expired)
+	return
+}
+
+func (c *core) deleteCache(key string) error {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("DEL", key)
+	return err
 }

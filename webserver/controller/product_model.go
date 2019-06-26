@@ -1,8 +1,6 @@
-package product
+package controller
 
-import "time"
-
-type Product struct {
+type reqProduct struct {
 	ProductID    int64     `db:"product_id"`
 	ProductName  string    `db:"product_name"`
 	Description  string    `db:"description"`
@@ -13,11 +11,4 @@ type Product struct {
 	DisplayOrder int8      `db:"display_order"`
 	Icon         string    `db:"icon"`
 	Status       int8      `db:"status"`
-	CreatedAt    time.Time `db:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at"`
-	DeletedAt    time.Time `db:"deleted_at"`
-	ProjectID    int8      `db:"project_id"`
 }
-
-
-type Products []Product

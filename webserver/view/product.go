@@ -2,17 +2,13 @@ package view
 
 import "time"
 
-type DataResponse struct {
-	Type       string      `json:"type,omitempty"`
-	ID         interface{} `json:"id,omitempty"`
-	Attributes interface{} `json:"attributes,omitempty"`
-}
+
 
 type ProductAttributes struct {
-	ProductId    int16     `db:"product_id"`
+	ProductID    int16     `db:"product_id"`
 	ProductName  string    `db:"product_name"`
 	Description  string    `db:"dscription"`
-	VenueTypeId  string    `db:"venue_type_id"`
+	VenueTypeID  string    `db:"venue_type_id"`
 	Price        float64   `db:"price"`
 	Uom          string    `db:"uom"`
 	Currency     string    `db:"currency"`
@@ -22,5 +18,5 @@ type ProductAttributes struct {
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
 	DeletedAt    time.Time `db:"deleted_at"`
-	ProjectId    int8      `db:"project_id"`
+	ProjectID    int8      `db:"project_id"`
 }

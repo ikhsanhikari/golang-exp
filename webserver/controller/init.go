@@ -21,6 +21,7 @@ import (
 type (
 	Dependency struct {
 		History  _history.ICore
+		Product  _product.ICore
 		Sentry   _sentry.Option
 		Reporter ReporterConfig
 	}
@@ -60,8 +61,10 @@ func Init(router *router.Router, dep *Dependency, authConfig authpassport.Config
 
 	r.GET("/ping", h.handleGetPing)
 	r.GET("/healthz", h.handleCheckHealth)
-
-	r.DELETE("/delete/product/:id", optionalAuthorize(h.handleDeleteProduct))
+	r.GET("/_/products", h.handleGetAllProducts)
+	r.POST("/_/products", h.handlePostProduct)
+	r.PATCH("/_/products/:id", h.handlePatchProduct)
+	r.DELETE("/_/products/:id",h.handleDeleteProduct)
 
 	// PUBLIC
 	// r.GET("/articles/:id", optionalAuthorize(cache.Handle(h.handleGetArticleByID)))
@@ -85,6 +88,7 @@ func (dep *Dependency) toHandler() *handler {
 	examineDependency(dep)
 	return &handler{
 		history: dep.History,
+		product: dep.Product,
 		client: &http.Client{
 			Timeout: 500 * time.Millisecond,
 		},
@@ -97,5 +101,8 @@ func examineDependency(dep *Dependency) {
 	}
 	if dep.History == nil {
 		log.Fatalln("history cannot be nil")
+	}
+	if dep.Product == nil {
+		log.Fatalln("product cannot be nil")
 	}
 }

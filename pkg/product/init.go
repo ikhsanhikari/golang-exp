@@ -14,6 +14,7 @@ func Init(db *sqlx.DB, redis *redis.Pool) ICore {
 	examineDBHealth(db)
 	return &core{
 		db: db,
+		redis: redis,
 	}
 }
 

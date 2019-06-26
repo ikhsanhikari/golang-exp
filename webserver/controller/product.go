@@ -2,39 +2,42 @@ package controller
 
 import (
 	"database/sql"
-	"fork/molanobar-core/webserver/view"
 	"log"
 	"net/http"
 	"strconv"
-
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/webserver/view"
 	"github.com/julienschmidt/httprouter"
+	"git.sstv.io/lib/go/gojunkyard.git/form"
+	 "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	// "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 
 
 
 func (h *handler) handleGetAllProducts(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
-	var (
-		project, _ = authpassport.GetProject(r)
-		pid        = project.ID
-	)
+	// var (
+	// 	project, _ = authpassport.GetProject(r)
+	// 	pid        = project.ID
+	// )
 
-	products, err := h.product.Select(pid)
+	products, err := h.product.Select()
 	if err != nil {
 		log.Println(err)
 		view.RenderJSONError(w, "Failed get products", http.StatusInternalServerError)
 		return
 	}
 
+
 	res := make([]view.DataResponse, 0, len(products))
 	for _, product := range products {		
 		res = append(res, view.DataResponse{
 			Type: "products",
-			ID:   product.Product_id,
+			ID:   product.ProductID,
 			Attributes: view.ProductAttributes{
 				ProductName	: product.ProductName,
 				Description	: product.Description,
-				VenueTypeId	: product.VenueTypeId,
+				VenueTypeID	: product.VenueTypeID,
 				Price		: product.Price,
 				Uom	        : product.Uom,
 				Currency	: product.Currency,
@@ -49,11 +52,12 @@ func (h *handler) handleGetAllProducts(w http.ResponseWriter, r *http.Request, p
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+
 // Handle delete
 func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var (
-		project, _ = authpassport.GetProject(r)
-		pid        = project.ID
+		// project, _ = authpassport.GetProject(r)
+		// pid        = project.ID
 		_id        = ps.ByName("id")
 		id, err    = strconv.ParseInt(_id, 10, 64)
 	)
@@ -63,7 +67,7 @@ func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request, ps
 		return
 	}
 
-	_, err = h.product.Get(id, pid)
+	_, err = h.product.Get(id)
 	if err == sql.ErrNoRows {
 		log.Println(err)
 		view.RenderJSONError(w, "product not found", http.StatusNotFound)
@@ -75,7 +79,7 @@ func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request, ps
 		return
 	}
 
-	err = h.product.Delete(id, pid)
+	err = h.product.Delete(id)
 	if err != nil {
 		log.Println(err)
 		view.RenderJSONError(w, "Failed delete product", http.StatusInternalServerError)
@@ -87,9 +91,9 @@ func (h *handler) handleDeleteProduct(w http.ResponseWriter, r *http.Request, ps
 
 func (h *handler) handlePostProduct(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var (
-		project, _ = authpassport.GetProject(r)
-		pid        = project.ID
-		params     reqArticle
+	// 	project, _ = authpassport.GetProject(r)
+	// 	pid        = project.ID
+	params     reqProduct
 	)
 
 	err := form.Bind(&params, r)
@@ -102,17 +106,16 @@ func (h *handler) handlePostProduct(w http.ResponseWriter, r *http.Request, ps h
 	product := product.Product{
 		ProductName	: params.ProductName,
 		Description	: params.Description,
-		VenueTypeId	: params.VenueTypeId,
+		VenueTypeID	: params.VenueTypeID,
 		Price		: params.Price,
 		Uom	        : params.Uom,
 		Currency	: params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon        : params.Icon,
-		Status      : params.Status,			
-		CreatedAt  	: params.CreatedAt,
-		UpdatedAt	: params.UpdatedAt,
+		ProjectID	: 1,
 	}
 
+	
 	err = h.product.Insert(&product)
 	if err != nil {
 		log.Println(err)
@@ -124,10 +127,11 @@ func (h *handler) handlePostProduct(w http.ResponseWriter, r *http.Request, ps h
 
 func (h *handler) handlePatchProduct(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var (
-		project, _ = authpassport.GetProject(r)
-		pid        = project.ID
+		// project, _ = authpassport.GetProject(r)
+		// pid        = project.ID
 		_id        = ps.ByName("id")
 		id, err    = strconv.ParseInt(_id, 10, 64)
+		params reqProduct
 	)
 	if err != nil {
 		log.Println(err)
@@ -135,7 +139,7 @@ func (h *handler) handlePatchProduct(w http.ResponseWriter, r *http.Request, ps 
 		return
 	}
 
-	_, err = h.product.Get(id, pid)
+	_, err = h.product.Get(id)
 	if err == sql.ErrNoRows {
 		log.Println(err)
 		view.RenderJSONError(w, "Product not found", http.StatusNotFound)
@@ -143,7 +147,7 @@ func (h *handler) handlePatchProduct(w http.ResponseWriter, r *http.Request, ps 
 	}
 	if err != nil && err != sql.ErrNoRows {
 		log.Println(err)
-		view.RenderJSONError(w, "Failed get article", http.StatusInternalServerError)
+		view.RenderJSONError(w, "Failed get product", http.StatusInternalServerError)
 		return
 	}
 
@@ -155,17 +159,16 @@ func (h *handler) handlePatchProduct(w http.ResponseWriter, r *http.Request, ps 
 	}
 
 	product := product.Product{
+		ProductID	: id,
 		ProductName	: params.ProductName,
 		Description	: params.Description,
-		VenueTypeId	: params.VenueTypeId,
+		VenueTypeID	: params.VenueTypeID,
 		Price		: params.Price,
 		Uom	        : params.Uom,
 		Currency	: params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon        : params.Icon,
-		Status      : params.Status,			
-		CreatedAt  	: params.CreatedAt,
-		UpdatedAt	: params.UpdatedAt,
+		Status      : params.Status,
 	}
 
 	err = h.product.Update(&product)
