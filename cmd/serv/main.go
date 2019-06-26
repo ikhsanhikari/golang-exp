@@ -4,6 +4,8 @@ import (
 	"log"
 
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
+	_orders "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/orders"
+	_product "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/webserver"
 	controller "git.sstv.io/apps/molanobar/api/molanobar-core.git/webserver/controller"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
@@ -57,10 +59,18 @@ func main() {
 	coreHistory := _history.Init(db, redis)
 	log.Println("/pkg/history successfully initialized")
 
+	coreOrders := _orders.Init(db, redis)
+	log.Println("/pkg/order successfully initialized")
+
+	coreProducts := _product.Init(db, redis)
+	log.Println("/pkg/product successfully initialized")
+
 	err = webserver.Serve(
 		webserver.Config{Port: cfg.App.Port},
 		&controller.Dependency{
 			History: coreHistory,
+			Orders:  coreOrders,
+			Products :  coreProducts,
 			Sentry: _sentry.Option{
 				AppName:     cfg.Sentry.AppName,
 				AppVersion:  cfg.Sentry.AppVersion,

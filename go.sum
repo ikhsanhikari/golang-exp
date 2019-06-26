@@ -4,6 +4,8 @@ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
 cloud.google.com/go v0.40.0/go.mod h1:Tk58MuI9rbLMKlAjeO/bDnteAx7tX2gJIXw4T5Jwlro=
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
+git.sstv.io/apps/video/api/articles.git v0.0.0-20190523083246-f433a0ce4639 h1:Zy1QpK4w0nXRMej0s5Jduo4+8WEyh0pNn0SLqXscgDo=
+git.sstv.io/apps/video/api/articles.git v0.0.0-20190523083246-f433a0ce4639/go.mod h1:eMfnOx7edZg1x2dJSVrmKZlBH0Z1sPhMEVg4n/b3gV8=
 git.sstv.io/lib/go/go-auth-api.git v0.0.0-20190522055033-9c94cf8222af h1:KiQ0OWrjZr9wpqFIv/LugAPv2oo5SPN44JD8+OCQdds=
 git.sstv.io/lib/go/go-auth-api.git v0.0.0-20190522055033-9c94cf8222af/go.mod h1:uVD1GvGTHz8PVMMEPyJtS5uHp7fkIujcOifelDWSdv4=
 git.sstv.io/lib/go/go-auth-api.git v0.0.0-20190522100604-57d0eb3fbd52 h1:D8M//3lNY2KbUEmRgKLm1zpmJIkn33hHjEVvl0mA/oI=
