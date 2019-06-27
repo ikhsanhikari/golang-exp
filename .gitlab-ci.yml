@@ -27,7 +27,7 @@ Golang-Docker-Push-Staging:
     - .gitlab/auth_gcloud.sh
     - .gitlab/push_docker.sh
   only:
-    - develop@apps/molanobar/API/molanobar-core
+    - develop@apps/molanobar/api/molanobar-core
 
 Golang-Docker-Push-Production:
   stage: push
@@ -43,4 +43,4 @@ Golang-Docker-Push-Production:
     - .gitlab/auth_gcloud.sh
     - .gitlab/push_docker.sh
   only:
-    - master@apps/molanobar/API/molanobar-core
+    - master@apps/molanobar/api/molanobar-core
