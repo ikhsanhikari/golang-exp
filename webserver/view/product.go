@@ -5,18 +5,18 @@ import "time"
 
 
 type ProductAttributes struct {
-	ProductID    int16     `db:"product_id"`
-	ProductName  string    `db:"product_name"`
-	Description  string    `db:"dscription"`
-	VenueTypeID  string    `db:"venue_type_id"`
-	Price        float64   `db:"price"`
-	Uom          string    `db:"uom"`
-	Currency     string    `db:"currency"`
-	DisplayOrder int8      `db:"display_order"`
-	Icon         string    `db:"icon"`
-	Status       int8      `db:"status"`
-	CreatedAt    time.Time `db:"created_at"`
-	UpdatedAt    time.Time `db:"updated_at"`
-	DeletedAt    time.Time `db:"deleted_at"`
-	ProjectID    int8      `db:"project_id"`
+	ProductID    int16     `json:"productId"`
+	ProductName  string    `json:"productName"`
+	Description  string    `json:"dscription"`
+	VenueTypeID  string    `json:"venueTypeId"`
+	Price        float64   `json:"price"`
+	Uom          string    `json:"uom"`
+	Currency     string    `json:"currency"`
+	DisplayOrder int8      `json:"displayOrder"`
+	Icon         string    `json:"icon"`
+	Status       int8      `json:"status"`
+	CreatedAt    time.Time `json:"createdAt"`
+	UpdatedAt    time.Time `json:"updatedAt"`
+	DeletedAt    time.Time `json:"deletedAt"`
+	ProjectID    int8      `json:"projectId"`
 }

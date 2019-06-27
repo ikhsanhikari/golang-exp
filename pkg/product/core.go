@@ -87,8 +87,8 @@ func (c *core) selectFromDB() (product Products, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
+			FROM
 			project_id
-		FROM
 			productlist
 		WHERE
 			status = 1
@@ -141,7 +141,8 @@ func (c *core) Insert(product *Product) (err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			status
 		) VALUES (
 			:product_name,
 			:description,
@@ -154,7 +155,8 @@ func (c *core) Insert(product *Product) (err error) {
 			:created_at,
 			:updated_at,
 			:deleted_at,
-			:project_id
+			:project_id,
+			:status
 		)
 	`, product)
 	product.ProductID, err = res.LastInsertId()

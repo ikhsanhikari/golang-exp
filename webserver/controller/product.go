@@ -112,7 +112,6 @@ func (h *handler) handlePostProduct(w http.ResponseWriter, r *http.Request, ps h
 		Currency	: params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon        : params.Icon,
-		ProjectID	: 1,
 	}
 
 	
@@ -168,7 +167,6 @@ func (h *handler) handlePatchProduct(w http.ResponseWriter, r *http.Request, ps 
 		Currency	: params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon        : params.Icon,
-		Status      : params.Status,
 	}
 
 	err = h.product.Update(&product)

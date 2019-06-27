@@ -1,14 +1,14 @@
 package controller
 
 type reqProduct struct {
-	ProductID    int64     `db:"product_id"`
-	ProductName  string    `db:"product_name"`
-	Description  string    `db:"description"`
-	VenueTypeID  string    `db:"venue_type_id"`
-	Price        float64   `db:"price"`
-	Uom          string    `db:"uom"`
-	Currency     string    `db:"currency"`
-	DisplayOrder int8      `db:"display_order"`
-	Icon         string    `db:"icon"`
-	Status       int8      `db:"status"`
+	ProductID    int64     `json:"productId"`
+	ProductName  string    `json:"productName"`
+	Description  string    `json:"description"`
+	VenueTypeID  string    `json:"venueTypeId"`
+	Price        float64   `json:"price"`
+	Uom          string    `json:"uom"`
+	Currency     string    `json:"currency"`
+	DisplayOrder int8      `json:"displayOrder"`
+	Icon         string    `json:"icon"`
+	Status       int8      `json:"status"`
 }
