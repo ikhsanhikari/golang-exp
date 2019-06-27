@@ -8,6 +8,8 @@ import (
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 
+	orders "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/orders"
+
 	// _cache "git.sstv.io/lib/go/gojunkyard.git/middleware/cache"
 	_panic "git.sstv.io/lib/go/gojunkyard.git/middleware/panic"
 	_aggregator "git.sstv.io/lib/go/gojunkyard.git/reporter/aggregator"
@@ -20,6 +22,7 @@ import (
 type (
 	Dependency struct {
 		History  _history.ICore
+		Orders   orders.ICore
 		Sentry   _sentry.Option
 		Reporter ReporterConfig
 	}
@@ -30,6 +33,7 @@ type (
 
 	handler struct {
 		history _history.ICore
+		orders  orders.ICore
 		client  *http.Client
 	}
 )
@@ -47,40 +51,35 @@ func Init(router *router.Router, dep *Dependency, authConfig authpassport.Config
 		panicrecover       = _panic.InitHTTPRouterRecover(aggregatorreporter)
 		r                  = router.Use(panicrecover)
 		h                  = dep.toHandler()
-	) 
-  
+	)
+
 	// authpassport, err := authpassport.NewHTTPRouter(authConfig)
 	// if err != nil {
 	// 	log.Fatalln(err.Error())
 	// 	return
 	// }
 	// optionalAuthorize := authpassport.OptionalAuthorize
- 
-	r.GET("/ping", h.handleGetPing) 
+
+	r.GET("/ping", h.handleGetPing)
 	r.GET("/healthz", h.handleCheckHealth)
 
-	// PUBLIC
-	// r.GET("/articles/:id", optionalAuthorize(cache.Handle(h.handleGetArticleByID)))
-	// r.GET("/related/:id", optionalAuthorize(cache.Handle(h.handleGetRelatedArticle)))
-	// r.GET("/lists/:name", optionalAuthorize(cache.Handle(h.handleGetListByName)))
+	/*ORDERS*/
+	r.GET("/orders/", h.handleGetOrders)
+	r.POST("/orders/", h.handlePostOrder)
+	r.PATCH("/orders/:id", h.handlePatchOrder)
+	r.DELETE("/orders/:id", h.handleDeleteOrder)
 
-	// INTERNAL
-	// r.GET("/_/articles", optionalAuthorize(h.handleGetAllArticles))
-	// r.GET("/_/articles/:id", optionalAuthorize(h.handleGetArticleByID))
-	// r.POST("/_/articles", optionalAuthorize(h.handlePostArticle))
-	// r.PATCH("/_/articles/:id", optionalAuthorize(h.handlePatchArticle))
-	// r.DELETE("/_/articles/:id", optionalAuthorize(h.handleDeleteArticle))
-	// r.GET("/_/lists", optionalAuthorize(h.handleGetAllLists))
-	// r.GET("/_/lists/:id", optionalAuthorize(h.handleGetListByID))
-	// r.POST("/_/lists", optionalAuthorize(h.handlePostList))
-	// r.PATCH("/_/lists/:id", optionalAuthorize(h.handlePatchList))
-	// r.DELETE("/_/lists/:id", optionalAuthorize(h.handleDeleteList))
+	// r.GET("/orders/", optionalAuthorize(h.handleGetOrders))
+	// r.POST("/orders/", optionalAuthorize(h.handlePostOrder))
+	// r.PATCH("/orders/:id", optionalAuthorize(h.handlePatchOrder))
+	// r.DELETE("/orders/:id", optionalAuthorize(h.handleDeleteOrder))
 }
 
 func (dep *Dependency) toHandler() *handler {
 	examineDependency(dep)
 	return &handler{
 		history: dep.History,
+		orders:  dep.Orders,
 		client: &http.Client{
 			Timeout: 500 * time.Millisecond,
 		},
@@ -93,5 +92,8 @@ func examineDependency(dep *Dependency) {
 	}
 	if dep.History == nil {
 		log.Fatalln("history cannot be nil")
+	}
+	if dep.Orders == nil {
+		log.Fatalln("[orders-api] order cannot be nil")
 	}
 }
