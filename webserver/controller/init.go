@@ -6,6 +6,7 @@ import (
 	"time"
 
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
+	_product "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 
 	// _cache "git.sstv.io/lib/go/gojunkyard.git/middleware/cache"
@@ -20,6 +21,7 @@ import (
 type (
 	Dependency struct {
 		History  _history.ICore
+		Product  _product.ICore
 		Sentry   _sentry.Option
 		Reporter ReporterConfig
 	}
@@ -30,6 +32,7 @@ type (
 
 	handler struct {
 		history _history.ICore
+		product _product.ICore
 		client  *http.Client
 	}
 )
@@ -47,17 +50,21 @@ func Init(router *router.Router, dep *Dependency, authConfig authpassport.Config
 		panicrecover       = _panic.InitHTTPRouterRecover(aggregatorreporter)
 		r                  = router.Use(panicrecover)
 		h                  = dep.toHandler()
-	) 
-  
+	)
+
 	// authpassport, err := authpassport.NewHTTPRouter(authConfig)
 	// if err != nil {
 	// 	log.Fatalln(err.Error())
 	// 	return
 	// }
 	// optionalAuthorize := authpassport.OptionalAuthorize
- 
-	r.GET("/ping", h.handleGetPing) 
+
+	r.GET("/ping", h.handleGetPing)
 	r.GET("/healthz", h.handleCheckHealth)
+	r.GET("/_/products", h.handleGetAllProducts)
+	r.POST("/_/products", h.handlePostProduct)
+	r.PATCH("/_/products/:id", h.handlePatchProduct)
+	r.DELETE("/_/products/:id",h.handleDeleteProduct)
 
 	// PUBLIC
 	// r.GET("/articles/:id", optionalAuthorize(cache.Handle(h.handleGetArticleByID)))
@@ -81,6 +88,7 @@ func (dep *Dependency) toHandler() *handler {
 	examineDependency(dep)
 	return &handler{
 		history: dep.History,
+		product: dep.Product,
 		client: &http.Client{
 			Timeout: 500 * time.Millisecond,
 		},
@@ -93,5 +101,8 @@ func examineDependency(dep *Dependency) {
 	}
 	if dep.History == nil {
 		log.Fatalln("history cannot be nil")
+	}
+	if dep.Product == nil {
+		log.Fatalln("product cannot be nil")
 	}
 }
