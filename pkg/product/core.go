@@ -87,8 +87,8 @@ func (c *core) selectFromDB() (product Products, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			FROM
 			project_id
+		FROM
 			productlist
 		WHERE
 			status = 1
