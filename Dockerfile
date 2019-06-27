@@ -33,6 +33,6 @@ WORKDIR /$CI_PROJECT_NAME
 COPY --from=builder /$CI_PROJECT_NAME/$CI_PROJECT_NAME .
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 # Add dummy .env file
-COPY .env .
+COPY .env.sample .
 # Run
 CMD /articles/articles
