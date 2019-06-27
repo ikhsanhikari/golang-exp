@@ -1,5 +1,5 @@
 # Build Image
-FROM golang:1.11.0 AS builder
+FROM golang:1.12 AS builder
 # Consume required ENVs
 ARG sshkey
 ARG CI_PROJECT_NAME
@@ -30,9 +30,9 @@ FROM alpine:latest
 ARG CI_PROJECT_NAME
 # Setup
 WORKDIR /$CI_PROJECT_NAME
-COPY --from=builder /$CI_PROJECT_NAME/$CI_PROJECT_NAME .
+COPY --from=builder /$CI_PROJECT_NAME/$CI_PROJECT_NAME ./app
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 # Add dummy .env file
-COPY .env.sample .
+COPY .env.sample .env
 # Run
-CMD /articles/articles
+CMD ./app
