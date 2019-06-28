@@ -42,4 +42,5 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/_/products", c.handlePostProduct)
 	router.PATCH("/_/products/:id", c.handlePatchProduct)
 	router.DELETE("/_/products/:id", c.handleDeleteProduct)
+	router.GET("/_/products/:venue_type", c.handleGetAllByVenueType)
 }
