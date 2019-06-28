@@ -64,7 +64,7 @@ func (h *handler) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Request, 
 	)
 
 	buyer_id, _ := strconv.Atoi(buyer)
-	orders, err := h.orders.SelectByVenueId(buyer_id)
+	orders, err := h.orders.SelectByBuyerId(buyer_id)
 	if err != nil {
 		log.Println(err)
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)

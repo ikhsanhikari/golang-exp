@@ -9,18 +9,18 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Init is used to initialize history package
+// Init is used to initialize product package
 func Init(db *sqlx.DB, redis *redis.Pool) ICore {
 	examineDBHealth(db)
 	return &core{
-		db:    db,
+		db: db,
 		redis: redis,
 	}
 }
 
 func examineDBHealth(db *sqlx.DB) {
 	if db == nil {
-		log.Fatalf("Failed to initialize products. db object cannot be nil")
+		log.Fatalf("Failed to initialize product. db object cannot be nil")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -28,6 +28,6 @@ func examineDBHealth(db *sqlx.DB) {
 
 	err := db.PingContext(ctx)
 	if err != nil {
-		log.Fatalf("Failed to initialize products. cannot pinging to db. err: %s", err)
+		log.Fatalf("Failed to initialize product. cannot pinging to db. err: %s", err)
 	}
 }

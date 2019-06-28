@@ -5,7 +5,7 @@ import (
 
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	_orders "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/orders"
-	_product "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/webserver"
 	controller "git.sstv.io/apps/molanobar/api/molanobar-core.git/webserver/controller"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
@@ -62,7 +62,7 @@ func main() {
 	coreOrders := _orders.Init(db, redis)
 	log.Println("/pkg/order successfully initialized")
 
-	coreProducts := _product.Init(db, redis)
+	coreProducts := _products.Init(db, redis)
 	log.Println("/pkg/product successfully initialized")
 
 	err = webserver.Serve(
@@ -70,7 +70,7 @@ func main() {
 		&controller.Dependency{
 			History: coreHistory,
 			Orders:  coreOrders,
-			Products :  coreProducts,
+			Product: coreProducts,
 			Sentry: _sentry.Option{
 				AppName:     cfg.Sentry.AppName,
 				AppVersion:  cfg.Sentry.AppVersion,

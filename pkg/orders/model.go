@@ -1,7 +1,7 @@
 package orders
 
 import (
-	"time"
+	null "gopkg.in/guregu/null.v3"
 )
 
 // History is model for history in db
@@ -12,16 +12,16 @@ type Order struct {
 	VenueID         int       `db:"venue_id"`
 	ProductID       int64     `db:"product_id"`
 	Quantity        int       `db:"quantity"`
-	TotalPrice      int       `db:"total_price"`
+	TotalPrice      float32   `db:"total_price"`
 	PaymentMethodID int       `db:"payment_method_id"`
-	PaymentFee      int       `db:"payment_fee"`
+	PaymentFee      float32   `db:"payment_fee"`
 	Status          int       `db:"status"`
-	CreatedAt       time.Time `db:"created_at"`
-	UpdatedAt       time.Time `db:"updated_at"`
-	DeletedAt       time.Time `db:"deleted_at"`
-	PendingAt       time.Time `db:"pending_at"`
-	PaidAt          time.Time `db:"paid_at"`
-	FailedAt        time.Time `db:"failed_at"`
+	CreatedAt       null.Time `db:"created_at"`
+	UpdatedAt       null.Time `db:"updated_at"`
+	DeletedAt       null.Time `db:"deleted_at"`
+	PendingAt       null.Time `db:"pending_at"`
+	PaidAt          null.Time `db:"paid_at"`
+	FailedAt        null.Time `db:"failed_at"`
 	ProjectID       int64     `db:"project_id"`
 }
 

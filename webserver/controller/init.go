@@ -7,7 +7,6 @@ import (
 
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	_orders "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/orders"
-
 	_product "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 
@@ -22,9 +21,9 @@ import (
 
 type (
 	Dependency struct {
-		Products _product.ICore
 		Orders   _orders.ICore
 		History  _history.ICore
+		Product  _product.ICore
 		Sentry   _sentry.Option
 		Reporter ReporterConfig
 	}
@@ -34,8 +33,9 @@ type (
 	}
 
 	handler struct {
-		product _product.ICore
 		orders  _orders.ICore
+		history _history.ICore
+		product _product.ICore
 		client  *http.Client
 	}
 )
@@ -64,10 +64,16 @@ func Init(router *router.Router, dep *Dependency, authConfig authpassport.Config
 
 	r.GET("/ping", h.handleGetPing)
 	r.GET("/healthz", h.handleCheckHealth)
-	r.GET("/getAllByVenueID/:venue_id", h.handleGetAllByVenueID)
-	r.GET("/getAllByBuyerID/:buyer_id", h.handleGetAllByBuyerID)
-	r.GET("/getAllByPaidDate/:paid_date", h.handleGetAllByPaidDate)
-	r.GET("/getAllByVenueType/:venue_type", h.handleGetAllByVenueType)
+	r.GET("/_/products", h.handleGetAllProducts)
+	r.POST("/_/products", h.handlePostProduct)
+	r.PATCH("/_/products/:id", h.handlePatchProduct)
+	r.DELETE("/_/products/:id", h.handleDeleteProduct)
+	r.GET("/_/products/:venue_type", h.handleGetAllByVenueType)
+
+	r.GET("/_/orders-by-venueid/:venue_id", h.handleGetAllByVenueID)
+	r.GET("/_/orders-by-buyerid/:buyer_id", h.handleGetAllByBuyerID)
+	r.GET("/_/orders-by-paiddate/:paid_date", h.handleGetAllByPaidDate)
+
 	// PUBLIC
 	// r.GET("/articles/:id", optionalAuthorize(cache.Handle(h.handleGetArticleByID)))
 	// r.GET("/related/:id", optionalAuthorize(cache.Handle(h.handleGetRelatedArticle)))
@@ -89,8 +95,9 @@ func Init(router *router.Router, dep *Dependency, authConfig authpassport.Config
 func (dep *Dependency) toHandler() *handler {
 	examineDependency(dep)
 	return &handler{
-		product: dep.Products,
 		orders:  dep.Orders,
+		history: dep.History,
+		product: dep.Product,
 		client: &http.Client{
 			Timeout: 500 * time.Millisecond,
 		},
@@ -104,11 +111,10 @@ func examineDependency(dep *Dependency) {
 	if dep.History == nil {
 		log.Fatalln("history cannot be nil")
 	}
-
 	if dep.Orders == nil {
 		log.Fatalln("Orders cannot be nil")
 	}
-	if dep.Products == nil {
-		log.Fatalln("Products cannot be nil")
+	if dep.Product == nil {
+		log.Fatalln("product cannot be nil")
 	}
 }

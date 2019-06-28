@@ -25,15 +25,12 @@ type core struct {
 const redisPrefix = "molanobar-v1"
 
 func (c *core) SelectByVenueId(vid int) (orders Orders, err error) {
-
 	if vid == 0 {
 		return nil, nil
 	}
-
-	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, vid)
+	redisKey := fmt.Sprintf("%s:orders-venueid:%d", redisPrefix, vid)
 
 	orders, err = c.selectFromCache()
-
 	if err != nil {
 		orders, err = c.selectFromDB(vid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
@@ -65,8 +62,8 @@ func (c *core) selectFromDB(venueid int) (order Orders, err error) {
 		orders
 	WHERE
 		venue_id = ? AND
-		status = 1
-`, venueid)
+		status = 2
+	`, venueid)
 
 	return
 }
@@ -76,16 +73,14 @@ func (c *core) SelectByBuyerId(buyerid int) (orders Orders, err error) {
 		return nil, nil
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, buyerid)
+	redisKey := fmt.Sprintf("%s:orders-buyerid:%d", redisPrefix, buyerid)
 
 	orders, err = c.selectFromCache()
-
 	if err != nil {
 		orders, err = c.selectFromDBByBuyerID(buyerid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
-
 	return
 }
 
@@ -112,8 +107,8 @@ func (c *core) selectFromDBByBuyerID(buyer_id int) (order Orders, err error) {
 		orders
 	WHERE
 	buyer_id = ? AND
-		status = 1
-`, buyer_id)
+		status = 2
+	`, buyer_id)
 
 	return
 }
@@ -122,10 +117,9 @@ func (c *core) SelectByPaidDate(paidDate string) (orders Orders, err error) {
 	if paidDate == "" {
 		return nil, nil
 	}
-	redisKey := fmt.Sprintf("%s:%s:orders", redisPrefix, paidDate)
+	redisKey := fmt.Sprintf("%s:orders-paiddate:%s", redisPrefix, paidDate)
 
 	orders, err = c.selectFromCache()
-
 	if err != nil {
 		orders, err = c.selectFromDBByPaidDate(paidDate)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
@@ -153,8 +147,8 @@ func (c *core) selectFromDBByPaidDate(paidDate string) (orders Orders, err error
 		 status,
 		 created_at,
 		 updated_at,
-		deleted_at,
-		pending_at,
+		 deleted_at,
+		 pending_at,
 		 paid_at,
 		 failed_at,
 		 project_id
@@ -162,8 +156,7 @@ func (c *core) selectFromDBByPaidDate(paidDate string) (orders Orders, err error
 	 		orders
 	 	WHERE
 		 paid_at = ? AND
-	 		status = 1
-		
+	 		status = 2
 	 `, paidDate)
 
 	err = c.db.Select(&orders, query, args...)

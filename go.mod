@@ -9,7 +9,7 @@ require (
 	github.com/facebookgo/grace v0.0.0-20180706040059-75cf19382434 //indirect
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/jmoiron/sqlx v1.2.0
-	github.com/json-iterator/go v1.1.5
+	github.com/json-iterator/go v1.1.6
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/klauspost/compress v1.7.1 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
