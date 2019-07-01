@@ -11,6 +11,42 @@ import (
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
 
+func (c *Controller) handleGetAllByVenueType(w http.ResponseWriter, r *http.Request) {
+	venue, err := strconv.ParseInt(router.GetParam(r, "venue_type"), 10, 64)
+
+	products, err := c.product.SelectByVenueType(venue)
+
+	if err != nil {
+		view.RenderJSONError(w, "Failed get products", http.StatusInternalServerError)
+		return
+	}
+	res := make([]view.DataResponse, 0, len(products))
+	for _, product := range products {
+		res = append(res, view.DataResponse{
+			Type: "products",
+			ID:   product.ProductID,
+			Attributes: view.ProductAttributes{
+				ProductName:  product.ProductName,
+				Description:  product.Description,
+				VenueTypeID:  product.VenueTypeID,
+				Price:        product.Price,
+				Uom:          product.Uom,
+				Currency:     product.Currency,
+				DisplayOrder: product.DisplayOrder,
+				Icon:         product.Icon,
+				Status:       product.Status,
+				CreatedAt:    product.CreatedAt,
+				UpdatedAt:    product.UpdatedAt,
+				DeletedAt:    product.DeletedAt,
+				ProjectID:    product.ProjectID,
+			},
+		})
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+
+
 func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request) {
 	products, err := c.product.Select()
 	if err != nil {
@@ -113,6 +149,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var params reqProduct
+	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePatchProduct] form binding, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -143,7 +180,6 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
 	}
-
 	err = c.product.Update(&product)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchProduct] error updating repository, err: %s", err.Error())
@@ -153,3 +189,4 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 
 	view.RenderJSONData(w, "OK", http.StatusOK)
 }
+ 
