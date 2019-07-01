@@ -20,7 +20,7 @@ import (
 func (h *handler) handlePostOrder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var (
 		// project, _ = authpassport.GetProject(r)
-		//  pid        = project.ID
+		// pid        = project.ID
 		params reqOrderInsert
 	)
 
@@ -31,13 +31,17 @@ func (h *handler) handlePostOrder(w http.ResponseWriter, r *http.Request, ps htt
 		return
 	}
 
-	num, err := h.orders.GetID()
+	lastOrderNumber, err := h.orders.GetLastOrderNumber()
 	if err != nil && err != sql.ErrNoRows {
 		log.Println(err)
-		view.RenderJSONError(w, "Failed get id", http.StatusInternalServerError)
+		view.RenderJSONError(w, "Failed get date & last number", http.StatusInternalServerError)
 		return
 	}
-	orderNumber := "MN" + time.Now().Format("060102") + leftPadLen(strconv.FormatInt(num+1, 10), "0", 7)
+	dateNow := time.Now().Format("060102")
+	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
+		lastOrderNumber.Number = 0
+	}
+	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
 	order := orders.Order{
 		OrderNumber:     orderNumber,
@@ -78,7 +82,7 @@ func (h *handler) handlePostOrder(w http.ResponseWriter, r *http.Request, ps htt
 func (h *handler) handlePatchOrder(w http.ResponseWriter, r *http.Request, ps httprouter.Params) {
 	var (
 		// project, _ = authpassport.GetProject(r)
-		// 2        = project.ID
+		// pid        = project.ID
 		params  reqOrderUpdate
 		_id     = ps.ByName("id")
 		id, err = strconv.ParseInt(_id, 10, 64)

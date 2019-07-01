@@ -16,7 +16,7 @@ import (
 type ICore interface {
 	Select(pid int64) (orders Orders, err error)
 	Get(id int64, pid int64) (order Order, err error)
-	GetID() (id int64, err error)
+	GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error)
 	Insert(order *Order) (err error)
 	Update(order *Order) (err error)
 	Delete(id int64, pid int64) (err error)
@@ -115,10 +115,11 @@ func (c *core) getFromDB(id int64, pid int64) (order Order, err error) {
 	return
 }
 
-func (c *core) GetID() (id int64, err error) {
-	err = c.db.Get(&id, `
+func (c *core) GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error) {
+	err = c.db.Get(&lastOrderNumber, `
 		SELECT
-			order_id
+			SUBSTRING(order_number, 3, 6) AS date,
+			CAST(SUBSTRING(order_number, 9, 7) AS SIGNED) AS number
 		FROM
 			orders
 		ORDER BY order_id DESC

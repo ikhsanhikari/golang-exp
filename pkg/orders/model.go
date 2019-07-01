@@ -29,3 +29,8 @@ type Order struct {
 
 //Orders is list of order
 type Orders []Order
+
+type LastOrderNumber struct {
+	Date  	string `db:"date"`
+	Number 	int64  `db:"number"`
+}
