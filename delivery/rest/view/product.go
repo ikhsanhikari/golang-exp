@@ -5,9 +5,8 @@ import "time"
 
 
 type ProductAttributes struct {
-	ProductID    int16     `json:"productId"`
 	ProductName  string    `json:"productName"`
-	Description  string    `json:"dscription"`
+	Description  string    `json:"description"`
 	VenueTypeID  string    `json:"venueTypeId"`
 	Price        float64   `json:"price"`
 	Uom          string    `json:"uom"`

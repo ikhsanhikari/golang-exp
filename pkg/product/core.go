@@ -12,6 +12,7 @@ import (
 
 // ICore is the interface
 type ICore interface {
+	SelectByVenueType(venue_type int64) (products Products, err error)
 	Select() (products Products, err error)
 	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
 	Get(id int64) (product Product, err error)
@@ -26,6 +27,49 @@ type core struct {
 	redis *redis.Pool
 }
 const redisPrefix = "product-v1"
+
+func (c *core) SelectByVenueType(venue_type int64) (products Products, err error) {
+
+	if venue_type == 0 {
+		return nil, nil
+	}
+
+	redisKey := fmt.Sprintf("%s:products-venuetype:%d", redisPrefix, venue_type)
+
+	products, err = c.selectFromCache()
+
+	if err != nil {
+		products, err = c.selectByVenueTypeFromDB(venue_type)
+		byt, _ := jsoniter.ConfigFastest.Marshal(products)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectByVenueTypeFromDB(venue_type int64) (products Products, err error) {
+	err = c.db.Select(&products, `SELECT
+	product_id,
+	product_name,
+	description,
+	venue_type_id,
+	price,
+	uom,
+	currency,
+	display_order,
+	icon,
+	status,
+	created_at,
+	updated_at,
+	deleted_at,
+	project_id
+	FROM
+	productlist
+	WHERE
+	venue_type_id=? AND status = 1
+`, venue_type)
+
+	return
+}
 
 func (c *core) Select() (products Products, err error) {
 	redisKey := fmt.Sprintf("%s:products", redisPrefix)
@@ -87,8 +131,8 @@ func (c *core) selectFromDB() (product Products, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			FROM
 			project_id
+		FROM
 			productlist
 		WHERE
 			status = 1
