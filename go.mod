@@ -12,13 +12,11 @@ require (
 	github.com/json-iterator/go v1.1.6
 	github.com/julienschmidt/httprouter v1.2.0
 	github.com/kataras/golog v0.0.0-20190624001437-99c81de45f40 // indirect
+	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/klauspost/compress v1.7.1 // indirect
 	github.com/klauspost/cpuid v1.2.1 // indirect
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
-	github.com/smartystreets/goconvey v0.0.0-20190330032615-68dc04aab96a // indirect
-	github.com/stretchr/testify v1.3.0 // indirect
-	github.com/xeipuuv/gojsonschema v1.1.0 // indirect
 	gopkg.in/guregu/null.v3 v3.4.0
 )
