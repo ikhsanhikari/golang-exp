@@ -20,6 +20,9 @@ type ICore interface {
 	Insert(order *Order) (err error)
 	Update(order *Order) (err error)
 	Delete(id int64, pid int64) (err error)
+	SelectByBuyerId(buyerid int64, pid int64) (orders Orders, err error)
+	SelectByVenueId(venueid int64, pid int64) (orders Orders, err error)
+	SelectByPaidDate(paidDate string, pid int64) (orders Orders, err error)
 }
 
 // core contains db client
@@ -226,6 +229,149 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)
 
+	return
+}
+
+func (c *core) SelectByVenueId(vid int64,pid int64) (orders Orders, err error) {
+	if vid == 0 {
+		return nil, nil
+	}
+	redisKey := fmt.Sprintf("%s:%d:orders-venueid:%d", redisPrefix,pid, vid)
+
+	orders, err = c.selectFromCache()
+	if err != nil {
+		orders, err = c.selectFromDBByVenueId(vid, pid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectFromDBByVenueId(venueid int64,pid int64) (order Orders, err error) {
+	err = c.db.Select(&order, `SELECT
+	order_id,
+	order_number,
+	buyer_id,
+	venue_id,
+	product_id,
+	quantity,
+	total_price,
+	payment_method_id,
+	payment_fee,
+	status,
+	created_at,
+	updated_at,
+    deleted_at,
+    pending_at,
+	paid_at,
+	failed_at,
+	project_id
+	FROM
+		orders
+	WHERE
+		venue_id = ? AND
+		status != 0 AND
+		project_id = ?  
+	`, venueid, pid)
+
+	return
+}
+
+func (c *core) SelectByBuyerId(buyerid int64,pid int64) (orders Orders, err error) {
+	if buyerid == 0 {
+		return nil, nil
+	}
+
+	redisKey := fmt.Sprintf("%s:%d:orders-buyerid:%d", redisPrefix,pid, buyerid)
+
+	orders, err = c.selectFromCache()
+	if err != nil {
+		orders, err = c.selectFromDBByBuyerID(buyerid, pid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectFromDBByBuyerID(buyer_id int64,pid int64) (order Orders, err error) {
+	err = c.db.Select(&order, `SELECT
+	order_id,
+	order_number,
+	buyer_id,
+	venue_id,
+	product_id,
+	quantity,
+	total_price,
+	payment_method_id,
+	payment_fee,
+	status,
+	created_at,
+	updated_at,
+    deleted_at,
+    pending_at,
+	paid_at,
+	failed_at,
+	project_id
+	FROM
+		orders
+	WHERE
+	buyer_id = ? AND
+		status != 0 AND
+		project_id = ? 
+	`, buyer_id, pid)
+
+	return
+}
+
+func (c *core) SelectByPaidDate(paidDate string,pid int64) (orders Orders, err error) {
+	if paidDate == "" {
+		return nil, nil
+	}
+	redisKey := fmt.Sprintf("%s:%d:orders-paiddate:%s", redisPrefix, pid,paidDate)
+
+	orders, err = c.selectFromCache()
+	if err != nil {
+		orders, err = c.selectFromDBByPaidDate(paidDate, pid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+
+	return
+}
+
+func (c *core) selectFromDBByPaidDate(paidDate string,pid int64) (orders Orders, err error) {
+	if paidDate == "" {
+		return nil, nil
+	}
+	paidDate = paidDate + "%"
+	query, args, err := sqlx.In(`
+	 	SELECT
+		 order_id,
+		 order_number,
+		 buyer_id,
+		 venue_id,
+		 product_id,
+		 quantity,
+		 total_price,
+		 payment_method_id,
+		 payment_fee,
+		 status,
+		 created_at,
+		 updated_at,
+		 deleted_at,
+		 pending_at,
+		 paid_at,
+		 failed_at,
+		 project_id
+	 	FROM
+	 		orders
+	 	WHERE
+		 paid_at like ? AND
+		 project_id = ? AND 
+	 		status != 0
+	 `, paidDate, pid)
+
+	err = c.db.Select(&orders, query, args...)
 	return
 }
 

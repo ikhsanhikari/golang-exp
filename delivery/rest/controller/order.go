@@ -229,6 +229,126 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Request) {
+	venue_id, err := strconv.ParseInt(router.GetParam(r, "venue_id"), 10, 64)
+
+	orders, err := c.order.SelectByVenueId(venue_id, 10)
+	if err != nil {
+		c.reporter.Errorf("[handleGetAllOrdersByVenueId] orders not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponse, 0, len(orders))
+	for _, order := range orders {
+		res = append(res, view.DataResponse{
+			Type: "orders",
+			ID:   order.OrderID,
+			Attributes: view.GetOrderAttributes{
+				OrderNumber:     order.OrderNumber,
+				BuyerID:         order.BuyerID,
+				VenueID:         order.VenueID,
+				ProductID:       order.ProductID,
+				Quantity:        order.Quantity,
+				TotalPrice:      order.TotalPrice,
+				PaymentMethodID: order.PaymentMethodID,
+				PaymentFee:      order.PaymentFee,
+				Status:          order.Status,
+				CreatedAt:       order.CreatedAt,
+				UpdatedAt:       order.UpdatedAt,
+				DeletedAt:       order.DeletedAt,
+				PendingAt:       order.PendingAt,
+				PaidAt:          order.PaidAt,
+				FailedAt:        order.FailedAt,
+				ProjectID:       order.ProjectID,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Request) {
+	buyer_id, err := strconv.ParseInt(router.GetParam(r, "buyer_id"), 10, 64)
+
+	orders, err := c.order.SelectByBuyerId(buyer_id, 10)
+	if err != nil {
+		c.reporter.Errorf("[handleGetAllOrdersByBuyerId] orders not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponse, 0, len(orders))
+	for _, order := range orders {
+		res = append(res, view.DataResponse{
+			Type: "orders",
+			ID:   order.OrderID,
+			Attributes: view.GetOrderAttributes{
+				OrderNumber:     order.OrderNumber,
+				BuyerID:         order.BuyerID,
+				VenueID:         order.VenueID,
+				ProductID:       order.ProductID,
+				Quantity:        order.Quantity,
+				TotalPrice:      order.TotalPrice,
+				PaymentMethodID: order.PaymentMethodID,
+				PaymentFee:      order.PaymentFee,
+				Status:          order.Status,
+				CreatedAt:       order.CreatedAt,
+				UpdatedAt:       order.UpdatedAt,
+				DeletedAt:       order.DeletedAt,
+				PendingAt:       order.PendingAt,
+				PaidAt:          order.PaidAt,
+				FailedAt:        order.FailedAt,
+				ProjectID:       order.ProjectID,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Request) {
+	paiddate := router.GetParam(r, "paid_date")
+
+	//layout := "2006-01-02T15:04:05"
+	//t, err := time.Parse(layout, paiddate)
+	paidd :=paiddate[:10]
+	orders, err := c.order.SelectByPaidDate(paidd,10)
+	if err != nil {
+		c.reporter.Errorf("[handleGetAllOrdersBypaidDate] orders not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponse, 0, len(orders))
+	for _, order := range orders {
+		res = append(res, view.DataResponse{
+			Type: "orders",
+			ID:   order.OrderID,
+			Attributes: view.GetOrderAttributes{
+				OrderNumber:     order.OrderNumber,
+				BuyerID:         order.BuyerID,
+				VenueID:         order.VenueID,
+				ProductID:       order.ProductID,
+				Quantity:        order.Quantity,
+				TotalPrice:      order.TotalPrice,
+				PaymentMethodID: order.PaymentMethodID,
+				PaymentFee:      order.PaymentFee,
+				Status:          order.Status,
+				CreatedAt:       order.CreatedAt,
+				UpdatedAt:       order.UpdatedAt,
+				DeletedAt:       order.DeletedAt,
+				PendingAt:       order.PendingAt,
+				PaidAt:          order.PaidAt,
+				FailedAt:        order.FailedAt,
+				ProjectID:       order.ProjectID,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+
 func leftPadLen(s string, padStr string, overallLen int) string {
 	var padCountInt int
 	padCountInt = 1 + ((overallLen - len(padStr)) / len(padStr))
