@@ -1,9 +1,10 @@
 package history
 
 import (
+	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 )
- 
+
 // ICore is the interface
 type ICore interface {
 	Select(pid int64) (histories Histories, err error)
@@ -16,7 +17,8 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db *sqlx.DB
+	db    *sqlx.DB
+	redis *redis.Pool
 }
 
 func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (histories Histories, err error) {

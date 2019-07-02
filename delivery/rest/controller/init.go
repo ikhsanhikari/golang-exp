@@ -42,14 +42,17 @@ func New(
 
 func (c *Controller) Register(router *router.Router) {
 	router.GET("/ping", c.handleGetPing)
-	router.GET("/_/products", c.handleGetAllProducts)
-	router.POST("/_/products", c.handlePostProduct)
-	router.PATCH("/_/products/:id", c.handlePatchProduct)
-	router.DELETE("/_/products/:id", c.handleDeleteProduct)
-	router.GET("/_/products/:venue_type", c.handleGetAllByVenueType)
+	router.GET("/products", c.handleGetAllProducts)
+	router.POST("/products", c.handlePostProduct)
+	router.PATCH("/products/:id", c.handlePatchProduct)
+	router.DELETE("/products/:id", c.handleDeleteProduct)
+	router.GET("/products/:venue_type", c.handleGetAllByVenueType)
 
 	router.GET("/orders", c.handleGetAllOrders)
 	router.POST("/orders", c.handlePostOrder)
 	router.PATCH("/orders/:id", c.handlePatchOrder)
 	router.DELETE("/orders/:id", c.handleDeleteOrder)
+	router.GET("/orders-by-venueid/:venue_id", c.handleGetAllByVenueID)
+	router.GET("/orders-by-buyerid/:buyer_id", c.handleGetAllByBuyerID)
+	router.GET("/orders-by-paiddate/:paid_date", c.handleGetAllByPaidDate)
 }

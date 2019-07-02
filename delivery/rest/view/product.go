@@ -2,7 +2,11 @@ package view
 
 import "time"
 
-
+type DataResponse struct {
+	Type       string      `json:"type,omitempty"`
+	ID         interface{} `json:"id,omitempty"`
+	Attributes interface{} `json:"attributes,omitempty"`
+}
 
 type ProductAttributes struct {
 	ProductName  string    `json:"productName"`

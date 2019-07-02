@@ -19,5 +19,4 @@ type Product struct {
 	ProjectID    int8      `db:"project_id"`
 }
 
-
 type Products []Product
