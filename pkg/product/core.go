@@ -1,13 +1,14 @@
 package product
 
 import (
-	"time"
 	"fmt"
+	"time"
 
-	"github.com/jmoiron/sqlx"
-	"github.com/gomodule/redigo/redis"
-	jsoniter "github.com/json-iterator/go"
 	"encoding/json"
+
+	"github.com/gomodule/redigo/redis"
+	"github.com/jmoiron/sqlx"
+	jsoniter "github.com/json-iterator/go"
 )
 
 // ICore is the interface
@@ -23,9 +24,10 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db *sqlx.DB
+	db    *sqlx.DB
 	redis *redis.Pool
 }
+
 const redisPrefix = "product-v1"
 
 func (c *core) SelectByVenueType(venue_type int64) (products Products, err error) {
@@ -81,7 +83,6 @@ func (c *core) Select() (products Products, err error) {
 	}
 	return
 }
-
 
 func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error) {
 	// if len(ids) == 0 {
@@ -163,7 +164,7 @@ func (c *core) Get(id int64) (product Product, err error) {
 			product_id = ? AND
 			status = 1
 	`, id)
-	
+
 	return
 }
 
@@ -258,7 +259,6 @@ func (c *core) Delete(id int64) (err error) {
 	_ = c.deleteCache(redisKey)
 	return
 }
-
 
 func (c *core) selectFromCache() (products Products, err error) {
 	conn := c.redis.Get()

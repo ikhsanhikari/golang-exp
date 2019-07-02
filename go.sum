@@ -4,9 +4,12 @@ cloud.google.com/go v0.34.0/go.mod h1:aQUYkXzVsufM+DwF1aE+0xfcU+56JwCaLick0ClmMT
 cloud.google.com/go v0.38.0/go.mod h1:990N+gfupTy94rShfmMCWGDn0LpTmnzTp2qbd1dvSRU=
 cloud.google.com/go v0.40.0/go.mod h1:Tk58MuI9rbLMKlAjeO/bDnteAx7tX2gJIXw4T5Jwlro=
 git.apache.org/thrift.git v0.0.0-20180902110319-2566ecd5d999/go.mod h1:fPE2ZNJGynbRyZ4dJvy6G277gSllfV2HJqblrnkyeyg=
+git.sstv.io/apps/video/api/articles.git v0.0.0-20190523083246-f433a0ce4639 h1:Zy1QpK4w0nXRMej0s5Jduo4+8WEyh0pNn0SLqXscgDo=
+git.sstv.io/apps/video/api/articles.git v0.0.0-20190523083246-f433a0ce4639/go.mod h1:eMfnOx7edZg1x2dJSVrmKZlBH0Z1sPhMEVg4n/b3gV8=
 git.sstv.io/lib/go/go-auth-api.git v0.0.0-20190522055033-9c94cf8222af h1:KiQ0OWrjZr9wpqFIv/LugAPv2oo5SPN44JD8+OCQdds=
 git.sstv.io/lib/go/go-auth-api.git v0.0.0-20190522055033-9c94cf8222af/go.mod h1:uVD1GvGTHz8PVMMEPyJtS5uHp7fkIujcOifelDWSdv4=
 git.sstv.io/lib/go/gojunkyard.git v0.0.0-20190301071644-40c8c0677785/go.mod h1:4tjXSGYx95KoveKNs/5EgGXD75ZuzObXlD8mNruXV08=
+git.sstv.io/lib/go/gojunkyard.git v0.0.0-20190408031155-53f4ec002425/go.mod h1:dheQlWcfVo0aEtsVLs/q6/kOjSj2BFcllvPPT7QdC5E=
 git.sstv.io/lib/go/gojunkyard.git v0.0.0-20190626065644-cee7acc9e2c5 h1:4ww4V4K29Z2yLFE3Kh+BZ5SeCJnkWHcS90/nYlcXfUY=
 git.sstv.io/lib/go/gojunkyard.git v0.0.0-20190626065644-cee7acc9e2c5/go.mod h1:Ne9g0xKW50p9sNqKqkVGxh6SP8E5chBN3gmbern5f7I=
 github.com/BurntSushi/toml v0.3.1 h1:WXkYYl6Yr3qBf1K79EBnL4mak0OimBfB0XUf9Vl28OQ=
@@ -42,6 +45,14 @@ github.com/eapache/go-resiliency v1.1.0 h1:1NtRmCAqadE2FN4ZcN6g90TP3uk8cg9rn9eNK
 github.com/eapache/go-resiliency v1.1.0/go.mod h1:kFI+JgMyC7bLPUVY133qvEBtVayf5mFgVsvEsIPBvNs=
 github.com/eknkc/amber v0.0.0-20171010120322-cdade1c07385 h1:clC1lXBpe2kTj2VHdaIu9ajZQe4kcEY9j0NsnDDBZ3o=
 github.com/eknkc/amber v0.0.0-20171010120322-cdade1c07385/go.mod h1:0vRUJqYpeSZifjYj7uP3BG/gKcuzL9xWVV/Y+cK33KM=
+github.com/facebookgo/clock v0.0.0-20150410010913-600d898af40a/go.mod h1:7Ga40egUymuWXxAe151lTNnCv97MddSOVsjpPPkityA=
+github.com/facebookgo/ensure v0.0.0-20160127193407-b4ab57deab51/go.mod h1:Yg+htXGokKKdzcwhuNDwVvN+uBxDGXJ7G/VN1d8fa64=
+github.com/facebookgo/freeport v0.0.0-20150612182905-d4adf43b75b9/go.mod h1:uPmAp6Sws4L7+Q/OokbWDAK1ibXYhB3PXFP1kol5hPg=
+github.com/facebookgo/grace v0.0.0-20180706040059-75cf19382434/go.mod h1:KigFdumBXUPSwzLDbeuzyt0elrL7+CP7TKuhrhT4bcU=
+github.com/facebookgo/httpdown v0.0.0-20180706035922-5979d39b15c2/go.mod h1:TUV/fX3XrTtBQb5+ttSUJzcFgLNpILONFTKmBuk5RSw=
+github.com/facebookgo/stack v0.0.0-20160209184415-751773369052/go.mod h1:UbMTZqLaRiH3MsBH8va0n7s1pQYcu3uTb8G4tygF4Zg=
+github.com/facebookgo/stats v0.0.0-20151006221625-1b76add642e4/go.mod h1:vsJz7uE339KUCpBXx3JAJzSRH7Uk4iGGyJzR529qDIA=
+github.com/facebookgo/subset v0.0.0-20150612182917-8dac2c3c4870/go.mod h1:5tD+neXqOorC30/tWg0LCSkrqj/AR6gu8yY8/fpw1q0=
 github.com/fatih/structs v1.1.0 h1:Q7juDM0QtcnhCpeyLGQKyg4TOIghuNXrkL32pHAUMxo=
 github.com/fatih/structs v1.1.0/go.mod h1:9NiDSp5zOcgEDl+j00MP/WkGVPOlPRLejGD8Ga6PJ7M=
 github.com/flosch/pongo2 v0.0.0-20180809100617-24195e6d38b0/go.mod h1:rE0ErqqBaMcp9pzj8JxV1GcfDBpuypXYxlR1c37AUwg=

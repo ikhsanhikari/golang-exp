@@ -3,6 +3,7 @@ module git.sstv.io/apps/molanobar/api/molanobar-core.git
 go 1.12
 
 require (
+	git.sstv.io/apps/video/api/articles.git v0.0.0-20190523083246-f433a0ce4639
 	git.sstv.io/lib/go/go-auth-api.git v0.0.0-20190522055033-9c94cf8222af
 	git.sstv.io/lib/go/gojunkyard.git v0.0.0-20190626065644-cee7acc9e2c5
 	github.com/ajg/form v1.5.1 // indirect
