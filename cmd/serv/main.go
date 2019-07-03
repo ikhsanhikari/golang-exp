@@ -9,6 +9,7 @@ import (
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	conn "git.sstv.io/lib/go/gojunkyard.git/conn"
 	health "git.sstv.io/lib/go/gojunkyard.git/health"
@@ -68,6 +69,9 @@ func main() {
 	coreOrder := order.Init(db, redis)
 	reporter.Infoln("/pkg/order successfully initialized")
 
+	coreVenue := venue.Init(db, redis)
+	reporter.Infoln("/pkg/venue successfully initialized")
+
 	auth, err := authpassport.NewStdlib(cfg.Auth)
 	if err != nil {
 		panic(err)
@@ -75,7 +79,7 @@ func main() {
 
 	var (
 		server = webserver.New(&cfg.Webserver)
-		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder)
+		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue)
 	)
 	rest.Register(server.Router())
 
