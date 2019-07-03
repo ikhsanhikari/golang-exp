@@ -11,4 +11,5 @@ type reqProduct struct {
 	DisplayOrder int8      `json:"displayOrder"`
 	Icon         string    `json:"icon"`
 	Status       int8      `json:"status"`
+	ProjectID    int64      `json:"projectId"`
 }

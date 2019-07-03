@@ -19,3 +19,6 @@
 vendor
 
 .DS_Store
+/.idea
+/.gitignores
+/molanobar-core.iml

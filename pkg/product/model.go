@@ -16,7 +16,7 @@ type Product struct {
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
 	DeletedAt    time.Time `db:"deleted_at"`
-	ProjectID    int8      `db:"project_id"`
+	ProjectID    int64      `db:"project_id"`
 }
 
 type Products []Product

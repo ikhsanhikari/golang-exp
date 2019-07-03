@@ -14,7 +14,7 @@ import (
 func (c *Controller) handleGetAllByVenueType(w http.ResponseWriter, r *http.Request) {
 	venue, err := strconv.ParseInt(router.GetParam(r, "venue_type"), 10, 64)
 
-	products, err := c.product.SelectByVenueType(venue)
+	products, err := c.product.SelectByVenueType(10,venue)
 
 	if err != nil {
 		view.RenderJSONError(w, "Failed get products", http.StatusInternalServerError)
@@ -48,7 +48,7 @@ func (c *Controller) handleGetAllByVenueType(w http.ResponseWriter, r *http.Requ
 
 
 func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request) {
-	products, err := c.product.Select()
+	products, err := c.product.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllProducts] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get products", http.StatusInternalServerError)
@@ -70,6 +70,7 @@ func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request
 				DisplayOrder: product.DisplayOrder,
 				Icon:         product.Icon,
 				Status:       product.Status,
+				ProjectID:	  product.ProjectID,
 				CreatedAt:    product.CreatedAt,
 				UpdatedAt:    product.UpdatedAt,
 			},
@@ -87,7 +88,7 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err = c.product.Get(id)
+	_, err = c.product.Get(10,id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteProduct] product not found, err: %s", err.Error())
 		view.RenderJSONError(w, "product not found", http.StatusNotFound)
@@ -100,7 +101,7 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = c.product.Delete(id)
+	err = c.product.Delete(10,id)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteProduct] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete product", http.StatusInternalServerError)
@@ -128,6 +129,7 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 		Currency:     params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
+		ProjectID:	  10,
 	}
 
 	err = c.product.Insert(&product)
@@ -137,7 +139,7 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	view.RenderJSONData(w, "OK", http.StatusOK)
+	view.RenderJSONData(w, product, http.StatusOK)
 }
 
 func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) {
@@ -156,7 +158,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = c.product.Get(id)
+	_, err = c.product.Get(10,id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchProduct] product not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product not found", http.StatusNotFound)
@@ -179,6 +181,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		Currency:     params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
+		ProjectID:	  10,
 	}
 	err = c.product.Update(&product)
 	if err != nil {
@@ -187,6 +190,6 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	view.RenderJSONData(w, "OK", http.StatusOK)
+	view.RenderJSONData(w, product, http.StatusOK)
 }
  

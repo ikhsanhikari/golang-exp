@@ -13,13 +13,13 @@ import (
 
 // ICore is the interface
 type ICore interface {
-	SelectByVenueType(venue_type int64) (products Products, err error)
-	Select() (products Products, err error)
+	SelectByVenueType(pid int64,venue_type int64) (products Products, err error)
+	Select( pid int64) (products Products, err error)
 	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
-	Get(id int64) (product Product, err error)
+	Get(id int64,pid int64) (product Product, err error)
 	Insert(product *Product) (err error)
 	Update(product *Product) (err error)
-	Delete(id int64) (err error)
+	Delete(pid int64,id int64) (err error)
 }
 
 // core contains db client
@@ -30,7 +30,7 @@ type core struct {
 
 const redisPrefix = "product-v1"
 
-func (c *core) SelectByVenueType(venue_type int64) (products Products, err error) {
+func (c *core) SelectByVenueType(pid int64,venue_type int64) (products Products, err error) {
 
 	if venue_type == 0 {
 		return nil, nil
@@ -41,43 +41,45 @@ func (c *core) SelectByVenueType(venue_type int64) (products Products, err error
 	products, err = c.selectFromCache()
 
 	if err != nil {
-		products, err = c.selectByVenueTypeFromDB(venue_type)
+		products, err = c.selectByVenueTypeFromDB(pid,venue_type)
 		byt, _ := jsoniter.ConfigFastest.Marshal(products)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) selectByVenueTypeFromDB(venue_type int64) (products Products, err error) {
+func (c *core) selectByVenueTypeFromDB(pid int64,venue_type int64) (products Products, err error) {
 	err = c.db.Select(&products, `SELECT
-	product_id,
-	product_name,
-	description,
-	venue_type_id,
-	price,
-	uom,
-	currency,
-	display_order,
-	icon,
-	status,
-	created_at,
-	updated_at,
-	deleted_at,
-	project_id
+		product_id,
+		product_name,
+		description,
+		venue_type_id,
+		price,
+		uom,
+		currency,
+		display_order,
+		icon,
+		status,
+		created_at,
+		updated_at,
+		deleted_at,
+		project_id
 	FROM
-	productlist
+		productlist
 	WHERE
-	venue_type_id=? AND status = 1
-`, venue_type)
+		venue_type_id=? AND 
+		status = 1 AND 
+		project_id = ?
+`, venue_type,pid)
 
 	return
 }
 
-func (c *core) Select() (products Products, err error) {
+func (c *core) Select(pid int64) (products Products, err error) {
 	redisKey := fmt.Sprintf("%s:products", redisPrefix)
 	products, err = c.selectFromCache()
 	if err != nil {
-		products, err = c.selectFromDB()
+		products, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(products)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
@@ -117,7 +119,7 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (product Product, 
 	return
 }
 
-func (c *core) selectFromDB() (product Products, err error) {
+func (c *core) selectFromDB(pid int64) (product Products, err error) {
 	err = c.db.Select(&product, `
 		SELECT
 			product_id,
@@ -132,17 +134,19 @@ func (c *core) selectFromDB() (product Products, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
+			status,
 			project_id
 		FROM
 			productlist
 		WHERE
-			status = 1
-	`)
+			status = 1 AND
+			project_id = ?
+	`,pid)
 
 	return
 }
 
-func (c *core) Get(id int64) (product Product, err error) {
+func (c *core) Get(pid int64,id int64) (product Product, err error) {
 	err = c.db.Get(&product, `
 		SELECT
 			product_id,
@@ -157,13 +161,15 @@ func (c *core) Get(id int64) (product Product, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			status
 		FROM
 			productlist
 		WHERE
 			product_id = ? AND
+			project_id = ? AND
 			status = 1
-	`, id)
+	`, id,pid)
 
 	return
 }
@@ -232,6 +238,7 @@ func (c *core) Update(product *Product) (err error) {
 			project_id = :project_id
 		WHERE
 			product_id = :product_id AND
+			project_id = :project_id AND 
 			status = 1
 	`, product)
 
@@ -241,7 +248,7 @@ func (c *core) Update(product *Product) (err error) {
 	return
 }
 
-func (c *core) Delete(id int64) (err error) {
+func (c *core) Delete(pid int64,id int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
@@ -252,8 +259,9 @@ func (c *core) Delete(id int64) (err error) {
 			status = 0
 		WHERE
 			product_id = ? AND
-			status = 1
-	`, now, id)
+			status = 1 AND 
+			project_id = ?
+	`, now, id,pid)
 
 	redisKey := fmt.Sprintf("%s:%d:products", redisPrefix, id)
 	_ = c.deleteCache(redisKey)

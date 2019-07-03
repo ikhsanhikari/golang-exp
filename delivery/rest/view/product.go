@@ -21,5 +21,5 @@ type ProductAttributes struct {
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
 	DeletedAt    time.Time `json:"deletedAt"`
-	ProjectID    int8      `json:"projectId"`
+	ProjectID    int64      `json:"projectId"`
 }
