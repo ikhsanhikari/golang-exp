@@ -6,6 +6,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -21,6 +22,7 @@ type Controller struct {
 	history  history.ICore
 	product  product.ICore
 	order    order.ICore
+	venue    venue.ICore
 }
 
 // New ...
@@ -30,6 +32,7 @@ func New(
 	history history.ICore,
 	product product.ICore,
 	order order.ICore,
+	venue venue.ICore,
 ) *Controller {
 	return &Controller{
 		reporter: reporter,
@@ -37,6 +40,7 @@ func New(
 		history:  history,
 		product:  product,
 		order:    order,
+		venue:    venue,
 	}
 }
 
@@ -55,4 +59,9 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/orders-by-venueid/:venue_id", c.handleGetAllByVenueID)
 	router.GET("/orders-by-buyerid/:buyer_id", c.handleGetAllByBuyerID)
 	router.GET("/orders-by-paiddate/:paid_date", c.handleGetAllByPaidDate)
+
+	router.GET("/venues", c.handleGetAllVenues)
+	router.POST("/venue", c.handlePostVenue)
+	router.PATCH("/venue/:id", c.handlePatchVenue)
+	router.DELETE("/venue/:id", c.handleDeleteVenue)
 }
