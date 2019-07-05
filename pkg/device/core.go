@@ -7,12 +7,13 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
+	"database/sql"
 )
 
 type ICore interface {
 	Select( pid int64) (devices Devices, err error)
 	SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error)
-	Get(id int64,pid int64) (device Device, err error)
+	Get(pid int64,id int64) (device Device, err error)
 	Insert(device *Device) (err error)
 	Update(device *Device) (err error)
 	Delete(pid int64,id int64) (err error)
@@ -82,7 +83,21 @@ func (c *core) selectFromDB(pid int64) (device Devices, err error) {
 	return
 }
 
-func (c *core) Get(pid int64,id int64) (device Device, err error) {
+func (c *core) Get(pid int64, id int64) (device Device, err error) {
+	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
+
+	device, err = c.getFromCache(redisKey)
+	if err != nil {
+		device, err = c.getFromDB(pid, id)
+		if err != sql.ErrNoRows {
+			byt, _ := jsoniter.ConfigFastest.Marshal(device)
+			_ = c.setToCache(redisKey, 300, byt)
+		}
+	}
+	return
+}
+
+func (c *core) getFromDB(pid int64,id int64) (device Device, err error) {
 	err = c.db.Get(&device, `
 	SELECT
 		id,
@@ -133,7 +148,7 @@ func (c *core) Insert(device *Device) (err error) {
 	`, device)
 	device.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:devices", redisPrefix, device.ID)
+	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -158,7 +173,7 @@ func (c *core) Update(device *Device) (err error) {
 			status = 	1
 	`, device)
 
-	redisKey := fmt.Sprintf("%s:%d:devices", redisPrefix, device.ID)
+	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -179,7 +194,7 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 			project_id = ?
 	`, now, id,pid)
 
-	redisKey := fmt.Sprintf("%s:%d:devices", redisPrefix, id)
+	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 	return
 }

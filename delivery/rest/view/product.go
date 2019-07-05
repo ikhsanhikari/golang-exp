@@ -1,6 +1,7 @@
 package view
 
 import "time"
+import "gopkg.in/guregu/null.v3"
 
 type DataResponse struct {
 	Type       string      `json:"type,omitempty"`
@@ -20,6 +21,6 @@ type ProductAttributes struct {
 	Status       int8      `json:"status"`
 	CreatedAt    time.Time `json:"createdAt"`
 	UpdatedAt    time.Time `json:"updatedAt"`
-	DeletedAt    time.Time `json:"deletedAt"`
+	DeletedAt    null.Time `json:"deletedAt"`
 	ProjectID    int64      `json:"projectId"`
 }
