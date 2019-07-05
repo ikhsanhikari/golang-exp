@@ -40,12 +40,12 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 				Longitude					:  venue.Longitude,
 				Latitude					:  venue.Latitude,
 				Status						:  venue.Status,
-				Location					:  venue.Location,
 				VenueCategory				:  venue.VenueCategory,
 				PicName						:  venue.PicName,
 				PicContactNumber			:  venue.PicContactNumber,
 				VenueTechnicianName			:  venue.VenueTechnicianName,
 				VenueTechnicianContactNumber:  venue.VenueTechnicianContactNumber,
+				VenuePhone					:  venue.VenuePhone,
 			},
 		})
 	}
@@ -104,12 +104,12 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		Longitude					:  params.Longitude,
 		Latitude					:  params.Latitude,
 		People						:  params.People,
-		Location					:  params.Location,
 		VenueCategory				:  params.VenueCategory,
 		PicName						:  params.PicName,
 		PicContactNumber			:  params.PicContactNumber,
 		VenueTechnicianName			:  params.VenueTechnicianName,
 		VenueTechnicianContactNumber:  params.VenueTechnicianContactNumber,
+		VenuePhone					:  params.VenuePhone,
 	}
 
 	err = c.venue.Insert(&venue)
@@ -163,12 +163,12 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		Longitude					:  params.Longitude,
 		Latitude					:  params.Latitude,
 		People						:  params.People,
-		Location					:  params.Location,
 		VenueCategory				:  params.VenueCategory,
 		PicName						:  params.PicName,
 		PicContactNumber			:  params.PicContactNumber,
 		VenueTechnicianName			:  params.VenueTechnicianName,
 		VenueTechnicianContactNumber:  params.VenueTechnicianContactNumber,
+		VenuePhone					:  params.VenuePhone,
 	}
 	err = c.venue.Update(&venue)
 	if err != nil {
@@ -193,12 +193,12 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 			People							:   params.People,
 			UpdatedAt						:   time.Now(),
 			Status							:   1,
-			Location						:   params.Location,
 			VenueCategory					:   params.VenueCategory,
 			PicName							:   params.PicName,
 			PicContactNumber				:	params.PicContactNumber,
 			VenueTechnicianName				:	params.VenueTechnicianName,
 			VenueTechnicianContactNumber	:	params.VenueTechnicianContactNumber,
+			VenuePhone						:   params.VenuePhone,
 		},
 	}
 
