@@ -12,7 +12,9 @@ type Order struct {
 	OrderNumber     string    `db:"order_number"`
 	BuyerID         int64     `db:"buyer_id"`
 	VenueID         int64     `db:"venue_id"`
+	DeviceID        int64     `db:"device_id"`
 	ProductID       int64     `db:"product_id"`
+	InstalationID   int64     `db:"instalation_id"`
 	Quantity        int64     `db:"quantity"`
 	TotalPrice      float64   `db:"total_price"`
 	PaymentMethodID int64     `db:"payment_method_id"`
@@ -31,6 +33,6 @@ type Order struct {
 type Orders []Order
 
 type LastOrderNumber struct {
-	Date  	string `db:"date"`
-	Number 	int64  `db:"number"`
+	Date   string `db:"date"`
+	Number int64  `db:"number"`
 }

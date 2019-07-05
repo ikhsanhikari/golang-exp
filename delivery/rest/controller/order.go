@@ -41,13 +41,17 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
+	totalPrice := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstalationID, 10, w)
+
 	order := order.Order{
 		OrderNumber:     orderNumber,
-		BuyerID:         params.BuyerID,
+		BuyerID:         12345,
 		VenueID:         params.VenueID,
+		DeviceID:        params.DeviceID,
 		ProductID:       params.ProductID,
+		InstalationID:   params.InstalationID,
 		Quantity:        params.Quantity,
-		TotalPrice:      params.TotalPrice,
+		TotalPrice:      totalPrice,
 		PaymentMethodID: params.PaymentMethodID,
 		PaymentFee:      params.PaymentFee,
 		ProjectID:       10,
@@ -62,15 +66,16 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 
 	res := view.DataResponse{
 		ID:   order.OrderID,
-		Type: "orders",
-		Attributes: view.PostOrderAttributes{
-			BuyerID:         order.BuyerID,
+		Type: "order",
+		Attributes: view.OrderAttributesWithoutDate{
 			VenueID:         order.VenueID,
+			DeviceID:        order.DeviceID,
 			ProductID:       order.ProductID,
+			InstalationID:   order.InstalationID,
 			Quantity:        order.Quantity,
-			TotalPrice:      order.TotalPrice,
 			PaymentMethodID: order.PaymentMethodID,
 			PaymentFee:      order.PaymentFee,
+			TotalPrice:      order.TotalPrice,
 		},
 	}
 
@@ -110,17 +115,20 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	totalPrice := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstalationID, 10, w)
+
 	order := order.Order{
 		OrderID:         id,
-		BuyerID:         params.BuyerID,
 		VenueID:         params.VenueID,
+		DeviceID:        params.DeviceID,
 		ProductID:       params.ProductID,
+		InstalationID:   params.InstalationID,
 		Quantity:        params.Quantity,
-		TotalPrice:      params.TotalPrice,
+		TotalPrice:      totalPrice,
 		PaymentMethodID: params.PaymentMethodID,
 		PaymentFee:      params.PaymentFee,
-		ProjectID:       10,
 		Status:          params.Status,
+		ProjectID:       10,
 	}
 
 	err = c.order.Update(&order)
@@ -132,16 +140,74 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 
 	res := view.DataResponse{
 		ID:   order.OrderID,
-		Type: "orders",
-		Attributes: view.PatchOrderAttributes{
-			BuyerID:         order.BuyerID,
+		Type: "order",
+		Attributes: view.OrderAttributesWithoutDate{
 			VenueID:         order.VenueID,
+			DeviceID:        order.DeviceID,
 			ProductID:       order.ProductID,
+			InstalationID:   order.InstalationID,
 			Quantity:        order.Quantity,
-			TotalPrice:      order.TotalPrice,
 			PaymentMethodID: order.PaymentMethodID,
 			PaymentFee:      order.PaymentFee,
 			Status:          order.Status,
+			TotalPrice:      order.TotalPrice,
+		},
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleUpdateStatusOrderByID(w http.ResponseWriter, r *http.Request) {
+	var (
+		// project, _ = authpassport.GetProject(r)
+		// pid        = project.ID
+		params  reqUpdateOrderStatus
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+	)
+	if err != nil {
+		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	_, err = c.order.Get(id, 10)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Failed get order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get order", http.StatusInternalServerError)
+		return
+	}
+
+	err = form.Bind(&params, r)
+	if err != nil {
+		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	order := order.Order{
+		OrderID:   id,
+		ProjectID: 10,
+		Status:    params.Status,
+	}
+
+	err = c.order.UpdateStatus(&order)
+	if err != nil {
+		c.reporter.Errorf("[handleUpdateStatusOrder] failed update status order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed update order", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponse{
+		ID:   order.OrderID,
+		Type: "order",
+		Attributes: view.OrderAttributesWithoutDate{
+			Status: order.Status,
 		},
 	}
 
@@ -180,7 +246,11 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	view.RenderJSONData(w, "OK", http.StatusOK)
+	res := view.DataResponse{
+		ID: id,
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
 }
 
 func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) {
@@ -206,10 +276,11 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 		res = append(res, view.DataResponseOrder{
 			ID:   order.OrderID,
 			Type: "orders",
-			Attributes: view.GetOrderAttributes{
+			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
 				BuyerID:         order.BuyerID,
 				VenueID:         order.VenueID,
+				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
 				Quantity:        order.Quantity,
 				TotalPrice:      order.TotalPrice,
@@ -229,12 +300,69 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) {
+	var (
+		// project, _ = authpassport.GetProject(r)
+		// pid        = project.ID
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+	)
+	if err != nil {
+		c.reporter.Errorf("[handleGetOrderByID] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	order, err := c.order.Get(id, 10)
+	if err != nil {
+		c.reporter.Errorf("[handleGetOrderByID] order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetOrderByID] failed get order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponse{
+		ID:   order.OrderID,
+		Type: "order",
+		Attributes: view.OrderAttributes{
+			OrderNumber:     order.OrderNumber,
+			BuyerID:         order.BuyerID,
+			VenueID:         order.VenueID,
+			DeviceID:        order.DeviceID,
+			ProductID:       order.ProductID,
+			InstalationID:   order.InstalationID,
+			Quantity:        order.Quantity,
+			TotalPrice:      order.TotalPrice,
+			PaymentMethodID: order.PaymentMethodID,
+			PaymentFee:      order.PaymentFee,
+			Status:          order.Status,
+			CreatedAt:       order.CreatedAt,
+			UpdatedAt:       order.UpdatedAt,
+			DeletedAt:       order.DeletedAt,
+			PendingAt:       order.PendingAt,
+			PaidAt:          order.PaidAt,
+			FailedAt:        order.FailedAt,
+			ProjectID:       order.ProjectID,
+		},
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Request) {
 	venue_id, err := strconv.ParseInt(router.GetParam(r, "venue_id"), 10, 64)
 
-	orders, err := c.order.SelectByVenueId(venue_id, 10)
+	orders, err := c.order.SelectByVenueID(venue_id, 10)
 	if err != nil {
-		c.reporter.Errorf("[handleGetAllOrdersByVenueId] orders not found, err: %s", err.Error())
+		c.reporter.Errorf("[handleGetAllOrdersByVenueID] orders not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetAllOrdersByVenueID] failed get orders, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
 		return
 	}
@@ -244,10 +372,11 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 		res = append(res, view.DataResponse{
 			Type: "orders",
 			ID:   order.OrderID,
-			Attributes: view.GetOrderAttributes{
+			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
 				BuyerID:         order.BuyerID,
 				VenueID:         order.VenueID,
+				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
 				Quantity:        order.Quantity,
 				TotalPrice:      order.TotalPrice,
@@ -271,9 +400,14 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Request) {
 	buyer_id, err := strconv.ParseInt(router.GetParam(r, "buyer_id"), 10, 64)
 
-	orders, err := c.order.SelectByBuyerId(buyer_id, 10)
+	orders, err := c.order.SelectByBuyerID(buyer_id, 10)
 	if err != nil {
-		c.reporter.Errorf("[handleGetAllOrdersByBuyerId] orders not found, err: %s", err.Error())
+		c.reporter.Errorf("[handleGetAllOrdersByBuyerID] orders not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetAllOrdersByBuyerID] failed get orders, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
 		return
 	}
@@ -283,10 +417,11 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 		res = append(res, view.DataResponse{
 			Type: "orders",
 			ID:   order.OrderID,
-			Attributes: view.GetOrderAttributes{
+			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
 				BuyerID:         order.BuyerID,
 				VenueID:         order.VenueID,
+				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
 				Quantity:        order.Quantity,
 				TotalPrice:      order.TotalPrice,
@@ -306,16 +441,22 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
+
 func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Request) {
 	paiddate := router.GetParam(r, "paid_date")
 
 	//layout := "2006-01-02T15:04:05"
 	//t, err := time.Parse(layout, paiddate)
-	paidd :=paiddate[:10]
-	orders, err := c.order.SelectByPaidDate(paidd,10)
+	paidd := paiddate[:10]
+	orders, err := c.order.SelectByPaidDate(paidd, 10)
 	if err != nil {
-		c.reporter.Errorf("[handleGetAllOrdersBypaidDate] orders not found, err: %s", err.Error())
+		c.reporter.Errorf("[handleGetAllOrdersByPaidDate] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetAllOrdersByPaidDate] failed get order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get order", http.StatusInternalServerError)
 		return
 	}
 
@@ -324,10 +465,11 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 		res = append(res, view.DataResponse{
 			Type: "orders",
 			ID:   order.OrderID,
-			Attributes: view.GetOrderAttributes{
+			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
 				BuyerID:         order.BuyerID,
 				VenueID:         order.VenueID,
+				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
 				Quantity:        order.Quantity,
 				TotalPrice:      order.TotalPrice,
@@ -347,11 +489,19 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
-
 
 func leftPadLen(s string, padStr string, overallLen int) string {
 	var padCountInt int
 	padCountInt = 1 + ((overallLen - len(padStr)) / len(padStr))
 	var retStr = strings.Repeat(padStr, padCountInt) + s
 	return retStr[(len(retStr) - overallLen):]
+}
+
+func (c *Controller) calculateTotalPrice(deviceID int64, productID int64, instalationID int64, pid int64, w http.ResponseWriter) float64 {
+	product, err := c.product.Get(10, productID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] product not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Product not found", http.StatusNotFound)
+	}
+	return product.Price
 }

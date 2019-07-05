@@ -48,10 +48,12 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/products/:id", c.handleDeleteProduct)
 	router.GET("/products/:venue_type", c.handleGetAllByVenueType)
 
-	router.GET("/orders", c.handleGetAllOrders)
 	router.POST("/orders", c.handlePostOrder)
 	router.PATCH("/orders/:id", c.handlePatchOrder)
+	router.PATCH("/orders-status/:id", c.handleUpdateStatusOrderByID)
 	router.DELETE("/orders/:id", c.handleDeleteOrder)
+	router.GET("/orders", c.handleGetAllOrders)
+	router.GET("/orders/:id", c.handleGetOrderByID)
 	router.GET("/orders-by-venueid/:venue_id", c.handleGetAllByVenueID)
 	router.GET("/orders-by-buyerid/:buyer_id", c.handleGetAllByBuyerID)
 	router.GET("/orders-by-paiddate/:paid_date", c.handleGetAllByPaidDate)
