@@ -12,10 +12,10 @@ type reqVenue struct {
 	Longitude   					int64     `json:"longitude"`
 	Latitude    					int64     `json:"latitude"`
 	People      					int64     `json:"people"`
-	Location						string	  `json:"location"`
-	VenueCategory					string	  `json:"venue_category"`
-	PicName	   						string	  `json:"pic_name"`
-	PicContactNumber				string	  `json:"pic_contact_number"`
-	VenueTechnicianName				string	  `json:"venue_technician_name"`
-	VenueTechnicianContactNumber	string	  `json:"venue_technician_contact_number"`
+	VenueCategory					string	  `json:"venueCategory"`
+	PicName	   						string	  `json:"picName"`
+	PicContactNumber				string	  `json:"picContactNumber"`
+	VenueTechnicianName				string	  `json:"venueTechnicianName"`
+	VenueTechnicianContactNumber	string	  `json:"venueTechnicianContactNumber"`
+	VenuePhone						string	  `json:"venuePhone"`
 }

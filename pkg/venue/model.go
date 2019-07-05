@@ -21,12 +21,12 @@ type Venue struct {
 	UpdatedAt  						time.Time `db:"updated_at"`
 	DeletedAt  						null.Time `db:"deleted_at"`
 	Status     						int64     `db:"stats"`
-	Location						string	  `db:"location"`
 	VenueCategory					string	  `db:"venue_category"`
 	PicName	   						string	  `db:"pic_name"`
 	PicContactNumber				string	  `db:"pic_contact_number"`
 	VenueTechnicianName				string	  `db:"venue_technician_name"`
 	VenueTechnicianContactNumber	string	  `db:"venue_technician_contact_number"`
+	VenuePhone						string	  `db:"venue_phone"`
 }
 
 type Venues []Venue

@@ -21,10 +21,10 @@ type VenueAttributes struct {
 	UpdatedAt  						time.Time `json:"updatedAt"`
 	DeletedAt  						null.Time `json:"deletedAt"`
 	Status     						int64     `json:"status"`
-	Location						string	  `json:"location"`
-	VenueCategory					string	  `json:"venue_category"`
+	VenueCategory					string	  `json:"venueCategory"`
 	PicName	   						string	  `json:"picName"`
 	PicContactNumber				string	  `json:"picContactNumber"`
 	VenueTechnicianName				string	  `json:"venueTechnicianName"`
 	VenueTechnicianContactNumber	string	  `json:"venueTechnicianContactNumber"`
+	VenuePhone						string	  `json:"venuePhone"`
 }

@@ -60,10 +60,12 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (venue Venue, err 
 			updated_at,
 			deleted_at,
 			stats,
+			venue_category,
 			pic_name,
 			pic_contact_number,
 			venue_technician_name,
-			venue_technician_contact_number
+			venue_technician_contact_number,
+			venue_phone
 		FROM
 			venues
 		WHERE
@@ -94,10 +96,12 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			updated_at,
 			deleted_at,
 			stats,
+			venue_category,
 			pic_name,
 			pic_contact_number,
 			venue_technician_name,
-			venue_technician_contact_number
+			venue_technician_contact_number,
+			venue_phone
 		FROM
 			venues
 		WHERE
@@ -124,10 +128,12 @@ func (c *core) Get(pid int64,id int64) (venue Venue, err error) {
 			updated_at,
 			deleted_at,
 			stats,
+			venue_category,
 			pic_name,
 			pic_contact_number,
 			venue_technician_name,
-			venue_technician_contact_number
+			venue_technician_contact_number,
+			venue_phone
 		FROM
 			venues
 		WHERE
@@ -157,10 +163,12 @@ func (c *core) Insert(venue *Venue) (err error) {
 			created_at,
 			updated_at,
 			stats,
+			venue_category,
 			pic_name,
 			pic_contact_number,
 			venue_technician_name,
-			venue_technician_contact_number
+			venue_technician_contact_number,
+			venue_phone
 		) VALUES (
 			:venue_id,
 			:venue_type,
@@ -174,10 +182,12 @@ func (c *core) Insert(venue *Venue) (err error) {
 			:created_at,
 			:updated_at,
 			:stats,
+			:venue_category,
 			:pic_name,
 			:pic_contact_number,
 			:venue_technician_name,
-			:venue_technician_contact_number
+			:venue_technician_contact_number,
+			:venue_phone
 		)
 	`, venue)
 	venue.Id = 1
@@ -208,10 +218,12 @@ func (c *core) Update(venue *Venue) (err error) {
 			latitude = :latitude,
 			people = :people,
 			updated_at = :updated_at,
+			venue_category = :venue_category,
 			pic_name = :pic_name,
 			pic_contact_number = :pic_contact_number,
 			venue_technician_name = :venue_technician_name,
-			venue_technician_contact_number = :venue_technician_contact_number
+			venue_technician_contact_number = :venue_technician_contact_number,
+			venue_phone = :venue_phone
 		WHERE
 			id = :id AND
 			stats = 1
