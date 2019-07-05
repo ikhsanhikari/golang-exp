@@ -5,7 +5,7 @@ import "time"
 type DeviceAttributes struct {
 	Name  		string    `json:"name"`
 	Info  		string    `json:"info"`
-	Price  		string    `json:"price"`
+	Price  		float64    `json:"price"`
 	Status      int8      `json:"status"`
 	CreatedAt   time.Time `json:"createdAt"`
 	UpdatedAt   time.Time `json:"updatedAt"`
