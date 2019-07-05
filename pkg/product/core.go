@@ -3,9 +3,7 @@ package product
 import (
 	"fmt"
 	"time"
-
 	"encoding/json"
-
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"

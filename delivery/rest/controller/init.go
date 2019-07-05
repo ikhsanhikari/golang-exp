@@ -6,6 +6,9 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -21,6 +24,9 @@ type Controller struct {
 	history  history.ICore
 	product  product.ICore
 	order    order.ICore
+	venue    venue.ICore
+	device	 device.ICore
+	pemasangan     pemasangan.ICore
 }
 
 // New ...
@@ -30,6 +36,9 @@ func New(
 	history history.ICore,
 	product product.ICore,
 	order order.ICore,
+	venue venue.ICore,
+	device device.ICore,
+	pemasangan pemasangan.ICore,
 ) *Controller {
 	return &Controller{
 		reporter: reporter,
@@ -37,6 +46,9 @@ func New(
 		history:  history,
 		product:  product,
 		order:    order,
+		venue:    venue,
+		device:	  device,
+		pemasangan:    pemasangan,
 	}
 }
 
@@ -57,4 +69,20 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/orders-by-venueid/:venue_id", c.handleGetAllByVenueID)
 	router.GET("/orders-by-buyerid/:buyer_id", c.handleGetAllByBuyerID)
 	router.GET("/orders-by-paiddate/:paid_date", c.handleGetAllByPaidDate)
+
+	router.GET("/venues", c.handleGetAllVenues)
+	router.POST("/venue", c.handlePostVenue)
+	router.PATCH("/venue/:id", c.handlePatchVenue)
+	router.DELETE("/venue/:id", c.handleDeleteVenue)
+
+
+	router.GET("/devices", c.handleGetAllDevices)
+	router.POST("/devices", c.handlePostDevice)
+	router.PATCH("/devices/:id", c.handlePatchDevice)
+	router.DELETE("/devices/:id", c.handleDeleteDevice)
+
+	router.GET("/pemasangan", c.handleGetAllPemasangans)
+	router.POST("/pemasangan", c.handlePostPemasangan)
+	router.PATCH("/pemasangan/:id", c.handlePatchPemasangan)
+	router.DELETE("/pemasangan/:id", c.handleDeletePemasangan)
 }
