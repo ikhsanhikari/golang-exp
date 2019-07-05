@@ -6,19 +6,25 @@ import (
 )
 
 type VenueAttributes struct {
-	Id         int64     `json:"id"`
-	VenueId    int64     `json:"venueId"`
-	VenueType  int64     `json:"venueType"`
-	Address    string    `json:"address"`
-	Province   string    `json:"province"`
-	Zip        string    `json:"zip"`
-	Capacity   int64     `json:"capacity"`
-	Facilities string    `json:"facilities"`
-	Longitude  int64     `json:"longitude"`
-	Latitude   int64     `json:"latitude"`
-	People     int64     `json:"people"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
-	DeletedAt  null.Time `json:"deletedAt"`
-	Status     int64     `json:"status"`
+	Id         						int64     `json:"id"`
+	VenueId    						int64     `json:"venueId"`
+	VenueType  						int64     `json:"venueType"`
+	Address    						string    `json:"address"`
+	Province   						string    `json:"province"`
+	Zip        						string    `json:"zip"`
+	Capacity   						int64     `json:"capacity"`
+	Facilities 						string    `json:"facilities"`
+	Longitude  						int64     `json:"longitude"`
+	Latitude   						int64     `json:"latitude"`
+	People     						int64     `json:"people"`
+	CreatedAt  						time.Time `json:"createdAt"`
+	UpdatedAt  						time.Time `json:"updatedAt"`
+	DeletedAt  						null.Time `json:"deletedAt"`
+	Status     						int64     `json:"status"`
+	Location						string	  `json:"location"`
+	VenueCategory					string	  `json:"venue_category"`
+	PicName	   						string	  `json:"picName"`
+	PicContactNumber				string	  `json:"picContactNumber"`
+	VenueTechnicianName				string	  `json:"venueTechnicianName"`
+	VenueTechnicianContactNumber	string	  `json:"venueTechnicianContactNumber"`
 }

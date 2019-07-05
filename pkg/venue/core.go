@@ -59,7 +59,11 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (venue Venue, err 
 			created_at,
 			updated_at,
 			deleted_at,
-			stats
+			stats,
+			pic_name,
+			pic_contact_number,
+			venue_technician_name,
+			venue_technician_contact_number
 		FROM
 			venues
 		WHERE
@@ -89,7 +93,11 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			stats
+			stats,
+			pic_name,
+			pic_contact_number,
+			venue_technician_name,
+			venue_technician_contact_number
 		FROM
 			venues
 		WHERE
@@ -115,7 +123,11 @@ func (c *core) Get(pid int64,id int64) (venue Venue, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			stats
+			stats,
+			pic_name,
+			pic_contact_number,
+			venue_technician_name,
+			venue_technician_contact_number
 		FROM
 			venues
 		WHERE
@@ -144,7 +156,11 @@ func (c *core) Insert(venue *Venue) (err error) {
 			people,
 			created_at,
 			updated_at,
-			stats
+			stats,
+			pic_name,
+			pic_contact_number,
+			venue_technician_name,
+			venue_technician_contact_number
 		) VALUES (
 			:venue_id,
 			:venue_type,
@@ -157,7 +173,11 @@ func (c *core) Insert(venue *Venue) (err error) {
 			:people,
 			:created_at,
 			:updated_at,
-			:stats
+			:stats,
+			:pic_name,
+			:pic_contact_number,
+			:venue_technician_name,
+			:venue_technician_contact_number
 		)
 	`, venue)
 	venue.Id = 1
@@ -187,7 +207,11 @@ func (c *core) Update(venue *Venue) (err error) {
 			longitude = :longitude,
 			latitude = :latitude,
 			people = :people,
-			updated_at = :updated_at
+			updated_at = :updated_at,
+			pic_name = :pic_name,
+			pic_contact_number = :pic_contact_number,
+			venue_technician_name = :venue_technician_name,
+			venue_technician_contact_number = :venue_technician_contact_number
 		WHERE
 			id = :id AND
 			stats = 1
