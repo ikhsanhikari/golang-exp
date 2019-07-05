@@ -6,7 +6,7 @@ type Device struct {
 	ID    		int64     	`db:"id"`
 	Name  		string    	`db:"name"`
 	Info  		string    	`db:"info"`
-	Price  		string    	`db:"price"`
+	Price  		float64    	`db:"price"`
 	Status     	int8      	`db:"status"`
 	CreatedAt 	time.Time 	`db:"created_at"`
 	UpdatedAt  	time.Time 	`db:"updated_at"`
