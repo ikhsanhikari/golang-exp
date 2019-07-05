@@ -7,6 +7,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -18,11 +19,12 @@ type Auth interface {
 
 type Controller struct {
 	reporter reporter.Reporter
-	auth     Auth
-	history  history.ICore
-	product  product.ICore
-	order    order.ICore
-	venue    venue.ICore
+	auth     		Auth
+	history  		history.ICore
+	product  		product.ICore
+	order    		order.ICore
+	venue    		venue.ICore
+	pemasangan      pemasangan.ICore
 }
 
 // New ...
@@ -33,6 +35,7 @@ func New(
 	product product.ICore,
 	order order.ICore,
 	venue venue.ICore,
+	pemasangan pemasangan.ICore,
 ) *Controller {
 	return &Controller{
 		reporter: reporter,
@@ -41,6 +44,7 @@ func New(
 		product:  product,
 		order:    order,
 		venue:    venue,
+		pemasangan:    pemasangan,
 	}
 }
 
@@ -64,4 +68,10 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/venue", c.handlePostVenue)
 	router.PATCH("/venue/:id", c.handlePatchVenue)
 	router.DELETE("/venue/:id", c.handleDeleteVenue)
+
+
+	router.GET("/pemasangan", c.handleGetAllPemasangans)
+	router.POST("/pemasangan", c.handlePostPemasangan)
+	router.PATCH("/pemasangan/:id", c.handlePatchPemasangan)
+	router.DELETE("/pemasangan/:id", c.handleDeletePemasangan)
 }
