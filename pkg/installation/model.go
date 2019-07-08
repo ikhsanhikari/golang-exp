@@ -1,14 +1,14 @@
-package pemasangan
+package installation
 
 import (
 	"time"
 	null "gopkg.in/guregu/null.v3"
 )
 
-type Pemasangan struct {
+type Installation struct {
 	ID			    int64     `db:"id"`
 	Description  	string    `db:"description"`
-	Price  			int64     `db:"price"`
+	Price  			float64   `db:"price"`
 	DeviceID  		int64     `db:"device_id"`
 	CreatedAt    	time.Time `db:"created_at"`
 	UpdatedAt    	time.Time `db:"updated_at"`
@@ -17,4 +17,4 @@ type Pemasangan struct {
 	Status	    	int64	  `db:"status"`
 }
 
-type Pemasangans []Pemasangan
+type Installations []Installation
