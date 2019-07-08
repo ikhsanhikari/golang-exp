@@ -198,7 +198,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 			PicContactNumber				:	params.PicContactNumber,
 			VenueTechnicianName				:	params.VenueTechnicianName,
 			VenueTechnicianContactNumber	:	params.VenueTechnicianContactNumber,
-			VenuePhone						:   params.VenuePhone,
+			VenuePhone					:  params.VenuePhone,
 		},
 	}
 
