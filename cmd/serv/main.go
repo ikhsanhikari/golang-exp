@@ -9,6 +9,7 @@ import (
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
@@ -73,8 +74,12 @@ func main() {
 	coreVenue := venue.Init(db, redis)
 	reporter.Infoln("/pkg/venue successfully initialized")
 
+
 	coreInstallation := installation.Init(db, redis)
 	reporter.Infoln("/pkg/installation successfully initialized")
+
+	coreDevice := device.Init(db, redis)
+	reporter.Infoln("/pkg/device successfully initialized")
 
 	auth, err := authpassport.NewStdlib(cfg.Auth)
 	if err != nil {
@@ -83,7 +88,7 @@ func main() {
 
 	var (
 		server = webserver.New(&cfg.Webserver)
-		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreInstallation)
+		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreInstallation,coreDevice)
 	)
 	rest.Register(server.Router())
 
