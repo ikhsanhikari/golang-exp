@@ -1,4 +1,4 @@
-package pemasangan
+package commercial_type
 
 import (
 	"context"
@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Init is used to initialize pemasangan package
+// Init is used to initialize installation package
 func Init(db *sqlx.DB, redis *redis.Pool) ICore {
 	examineDBHealth(db)
 	return &core{
@@ -20,7 +20,7 @@ func Init(db *sqlx.DB, redis *redis.Pool) ICore {
 
 func examineDBHealth(db *sqlx.DB) {
 	if db == nil {
-		log.Fatalf("Failed to initialize pemasangan. db object cannot be nil")
+		log.Fatalf("Failed to initialize commercial type. db object cannot be nil")
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -28,6 +28,6 @@ func examineDBHealth(db *sqlx.DB) {
 
 	err := db.PingContext(ctx)
 	if err != nil {
-		log.Fatalf("Failed to initialize pemasangan. cannot pinging to db. err: %s", err)
+		log.Fatalf("Failed to initialize commercial type. cannot pinging to db. err: %s", err)
 	}
 }

@@ -27,4 +27,5 @@ type VenueAttributes struct {
 	VenueTechnicianName				string	  `json:"venueTechnicianName"`
 	VenueTechnicianContactNumber	string	  `json:"venueTechnicianContactNumber"`
 	VenuePhone						string	  `json:"venuePhone"`
+	ProjectID						int64	  `json:"projectID"`
 }

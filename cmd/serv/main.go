@@ -7,10 +7,11 @@ import (
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
 	// aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
+	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
+	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
-	pemasangan "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
@@ -75,11 +76,14 @@ func main() {
 	coreVenue := venue.Init(db, redis)
 	reporter.Infoln("/pkg/venue successfully initialized")
 
+	coreInstallation := installation.Init(db, redis)
+	reporter.Infoln("/pkg/installation successfully initialized")
+
 	coreDevice := device.Init(db, redis)
 	reporter.Infoln("/pkg/device successfully initialized")
 
-	corePemasangan := pemasangan.Init(db, redis)
-	reporter.Infoln("/pkg/pemasangan successfully initialized")
+	coreCommercialType := commercialType.Init(db, redis)
+	reporter.Infoln("/pkg/commercialType successfully initialized")
 
 	// coreAging := aging.Init(db, redis)
 	// reporter.Infoln("/pkg/aging successfully initialized")
@@ -91,7 +95,7 @@ func main() {
 
 	var (
 		server = webserver.New(&cfg.Webserver)
-		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreDevice, corePemasangan)
+		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreInstallation, coreDevice, coreCommercialType)
 	)
 	rest.Register(server.Router())
 

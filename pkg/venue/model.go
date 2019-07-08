@@ -27,6 +27,7 @@ type Venue struct {
 	VenueTechnicianName				string	  `db:"venue_technician_name"`
 	VenueTechnicianContactNumber	string	  `db:"venue_technician_contact_number"`
 	VenuePhone						string	  `db:"venue_phone"`
+	ProjectID   					int64     `db:"project_id"`
 }
 
 type Venues []Venue

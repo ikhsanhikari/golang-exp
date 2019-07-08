@@ -4,12 +4,13 @@ import (
 	"net/http"
 
 	// "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -20,15 +21,15 @@ type Auth interface {
 }
 
 type Controller struct {
-	reporter   reporter.Reporter
-	auth       Auth
-	history    history.ICore
-	product    product.ICore
-	order      order.ICore
-	venue      venue.ICore
-	device     device.ICore
-	pemasangan pemasangan.ICore
-	// aging      aging.ICore
+	reporter reporter.Reporter
+	auth     		Auth
+	history  		history.ICore
+	product  		product.ICore
+	order    		order.ICore
+	venue    		venue.ICore
+	installation       installation.ICore
+	device	 device.ICore
+	commercialType	 commercial_type.ICore
 }
 
 // New ...
@@ -39,20 +40,21 @@ func New(
 	product product.ICore,
 	order order.ICore,
 	venue venue.ICore,
+	installation installation.ICore,
 	device device.ICore,
-	pemasangan pemasangan.ICore,
-	// aging aging.ICore,
+	commercialType	 commercial_type.ICore,
+
 ) *Controller {
 	return &Controller{
-		reporter:   reporter,
-		auth:       auth,
-		history:    history,
-		product:    product,
-		order:      order,
-		venue:      venue,
-		device:     device,
-		pemasangan: pemasangan,
-		// aging:      aging,
+		reporter: reporter,
+		auth:     auth,
+		history:  history,
+		product:  product,
+		order:    order,
+		venue:    venue,
+		installation:    installation,
+		device:	  device,
+		commercialType:	 commercialType,
 	}
 }
 
@@ -79,13 +81,19 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/venue/:id", c.handlePatchVenue)
 	router.DELETE("/venue/:id", c.handleDeleteVenue)
 
+	router.GET("/installation", c.handleGetAllInstallations)
+	router.POST("/installation", c.handlePostInstallation)
+	router.PATCH("/installation/:id", c.handlePatchInstallation)
+	router.DELETE("/installation/:id", c.handleDeleteInstallation)
+
 	router.GET("/devices", c.handleGetAllDevices)
 	router.POST("/devices", c.handlePostDevice)
 	router.PATCH("/devices/:id", c.handlePatchDevice)
 	router.DELETE("/devices/:id", c.handleDeleteDevice)
+	
+	router.GET("/commercialType", c.handleGetAllcommercialTypes)
+	router.POST("/commercialType", c.handlePostcommercialType)
+	router.PATCH("/commercialType/:id", c.handlePatchcommercialType)
+	router.DELETE("/commercialType/:id", c.handleDeletecommercialType)
 
-	router.GET("/pemasangan", c.handleGetAllPemasangans)
-	router.POST("/pemasangan", c.handlePostPemasangan)
-	router.PATCH("/pemasangan/:id", c.handlePatchPemasangan)
-	router.DELETE("/pemasangan/:id", c.handleDeletePemasangan)
 }

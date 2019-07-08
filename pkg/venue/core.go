@@ -3,6 +3,7 @@ package venue
 import (
 	"fmt"
 	"time"
+	"database/sql"
 
 	"encoding/json"
 
@@ -15,7 +16,7 @@ import (
 type ICore interface {
 	Select( pid int64) (venues Venues, err error)
 	SelectByIDs(ids []int64, pid int64, limit int) (venue Venue, err error)
-	Get(id int64,pid int64) (venue Venue, err error)
+	Get(pid int64,id int64) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
 	Update(venue *Venue) (err error)
 	Delete(pid int64,id int64) (err error)
@@ -30,7 +31,7 @@ type core struct {
 const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (venues Venues, err error) {
-	redisKey := fmt.Sprintf("%s:venue", redisPrefix)
+	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, pid)
 	venues, err = c.selectFromCache()
 	if err != nil {
 		venues, err = c.selectFromDB(pid)
@@ -70,10 +71,11 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (venue Venue, err 
 			venues
 		WHERE
 			id in (?) AND
-			stats = 1
+			stats = 1 AND 
+			project_id = ?
 		ORDER BY created_at DESC
 		LIMIT ?
-	`, ids, limit)
+	`, ids, pid, limit)
 
 	err = c.db.Select(&venue, query, args...)
 	return
@@ -101,17 +103,32 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			pic_contact_number,
 			venue_technician_name,
 			venue_technician_contact_number,
-			venue_phone
+			venue_phone,
+			project_id
 		FROM
 			venues
 		WHERE
-			stats = 1 
-	`)
+			stats = 1 AND
+			project_id = ?
+	`,pid)
 
 	return
 }
 
-func (c *core) Get(pid int64,id int64) (venue Venue, err error) {
+func (c *core) Get(pid int64,id int64,) (venue Venue, err error) {
+	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, pid, id)
+
+	venue, err = c.getFromCache(redisKey)
+	if err != nil {
+		venue, err = c.getFromDB(id, pid)
+		if err != sql.ErrNoRows {
+			byt, _ := jsoniter.ConfigFastest.Marshal(venue)
+			_ = c.setToCache(redisKey, 300, byt)
+		}
+	}
+	return
+}
+func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
 	err = c.db.Get(&venue, `
 		SELECT
 			id,
@@ -133,13 +150,15 @@ func (c *core) Get(pid int64,id int64) (venue Venue, err error) {
 			pic_contact_number,
 			venue_technician_name,
 			venue_technician_contact_number,
-			venue_phone
+			venue_phone,
+			project_id
 		FROM
 			venues
 		WHERE
 			id = ? AND
-			stats = 1
-	`, id)
+			stats = 1 AND
+			project_id = ?
+	`, id, pid)
 
 	return
 }
@@ -148,6 +167,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	venue.CreatedAt = time.Now()
 	venue.UpdatedAt = venue.CreatedAt
 	venue.Status = 1
+	venue.ProjectID = 10
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO venues (
@@ -168,7 +188,8 @@ func (c *core) Insert(venue *Venue) (err error) {
 			pic_contact_number,
 			venue_technician_name,
 			venue_technician_contact_number,
-			venue_phone
+			venue_phone,
+			project_id
 		) VALUES (
 			:venue_id,
 			:venue_type,
@@ -187,14 +208,15 @@ func (c *core) Insert(venue *Venue) (err error) {
 			:pic_contact_number,
 			:venue_technician_name,
 			:venue_technician_contact_number,
-			:venue_phone
+			:venue_phone,
+			:project_id
 		)
 	`, venue)
-	venue.Id = 1
+
 	//fmt.Println(res)
 	venue.Id, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, venue.Id)
+	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, venue.ProjectID, venue.Id)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -229,7 +251,7 @@ func (c *core) Update(venue *Venue) (err error) {
 			stats = 1
 	`, venue)
 
-	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, venue.Id)
+	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, venue.ProjectID, venue.Id)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -246,10 +268,11 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 			stats = 0
 		WHERE
 			id = ? AND
-			stats = 1 
-	`, now, id,)
+			stats = 1 AND 
+			project_id = 10
+	`, now, id)
 
-	redisKey := fmt.Sprintf("%s:%d:venues", redisPrefix, id)
+	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, 10, id)
 	_ = c.deleteCache(redisKey)
 	return
 }
