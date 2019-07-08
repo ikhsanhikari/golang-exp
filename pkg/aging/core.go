@@ -82,6 +82,8 @@ func (c *core) Update(aging *Aging) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:aging", redisPrefix, aging.ProjectID)
 	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:aging:%d", redisPrefix, aging.ProjectID, aging.ID)
+	_ = c.deleteCache(redisKey)
 
 	return
 }
@@ -102,6 +104,8 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 	`, now, id, pid)
 
 	redisKey := fmt.Sprintf("%s:%d:aging", redisPrefix, pid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:aging:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 
 	return
