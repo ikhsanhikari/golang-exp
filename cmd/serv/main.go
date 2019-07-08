@@ -11,6 +11,7 @@ import (
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
@@ -88,6 +89,9 @@ func main() {
 	coreRoom := room.Init(db, redis)
 	reporter.Infoln("/pkg/room successfully initialized")
 
+	coreAging := aging.Init(db, redis)
+	reporter.Infoln("/pkg/aging successfully initialized")
+
 	auth, err := authpassport.NewStdlib(cfg.Auth)
 	if err != nil {
 		panic(err)
@@ -95,7 +99,7 @@ func main() {
 
 	var (
 		server = webserver.New(&cfg.Webserver)
-		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreDevice, coreRoom, coreInstallation, coreCommercialType)
+		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreDevice, coreRoom, coreInstallation, coreCommercialType, coreAging)
 	)
 	rest.Register(server.Router())
 

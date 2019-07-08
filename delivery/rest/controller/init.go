@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
@@ -31,6 +32,7 @@ type Controller struct {
 	room           room.ICore
 	installation   installation.ICore
 	commercialType commercial_type.ICore
+	aging          aging.ICore
 }
 
 // New ...
@@ -45,6 +47,7 @@ func New(
 	room room.ICore,
 	installation installation.ICore,
 	commercialType commercial_type.ICore,
+	aging aging.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -57,6 +60,7 @@ func New(
 		room:           room,
 		installation:   installation,
 		commercialType: commercialType,
+		aging:          aging,
 	}
 }
 
@@ -102,4 +106,9 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/rooms", c.handlePostRoom)
 	router.PATCH("/rooms/:id", c.handlePatchRoom)
 	router.DELETE("/rooms/:id", c.handleDeleteRoom)
+
+	router.GET("/aging", c.handleGetAllAgings)
+	router.POST("/aging", c.handlePostAging)
+	router.PATCH("/aging/:id", c.handlePatchAging)
+	router.DELETE("/aging/:id", c.handleDeleteAging)
 }
