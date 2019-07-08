@@ -1,22 +1,32 @@
 package controller
 
 type reqOrderInsert struct {
-	BuyerID         int64   `json:"buyer_id" validate:"required"`
-	VenueID         int64   `json:"venue_id" validate:"required`
+	VenueID         int64   `json:"venue_id" validate:"required"`
+	DeviceID        int64   `json:"device_id" validate:"required"`
 	ProductID       int64   `json:"product_id" validate:"required"`
+	InstallationID  int64   `json:"installation_id" validate:"required"`
 	Quantity        int64   `json:"quantity" validate:"required"`
-	TotalPrice      float64 `json:"total_price" validate:"required"`
+	AgingID         int64   `json:"aging_id" validate:"required"`
+	RoomID          int64   `json:"room_id" validate:"required"`
+	RoomQuantity    int64   `json:"room_quantity" validate:"required"`
 	PaymentMethodID int64   `json:"payment_method_id" validate:"required"`
 	PaymentFee      float64 `json:"payment_fee" validate:"required"`
 }
 
 type reqOrderUpdate struct {
-	BuyerID         int64   `json:"buyer_id" validate:"required"`
-	VenueID         int64   `json:"venue_id" validate:"required`
+	VenueID         int64   `json:"venue_id" validate:"required"`
+	DeviceID        int64   `json:"device_id" validate:"required"`
 	ProductID       int64   `json:"product_id" validate:"required"`
+	InstallationID  int64   `json:"installation_id" validate:"required"`
 	Quantity        int64   `json:"quantity" validate:"required"`
-	TotalPrice      float64 `json:"total_price" validate:"required"`
+	AgingID         int64   `json:"aging_id" validate:"required"`
+	RoomID          int64   `json:"room_id" validate:"required"`
+	RoomQuantity    int64   `json:"room_quantity" validate:"required"`
 	PaymentMethodID int64   `json:"payment_method_id" validate:"required"`
 	PaymentFee      float64 `json:"payment_fee" validate:"required"`
-	Status          int16   `json:"status"`
+	Status          int16   `json:"status" validate:"required"`
+}
+
+type reqUpdateOrderStatus struct {
+	Status int16 `json:"status" validate:"required"`
 }

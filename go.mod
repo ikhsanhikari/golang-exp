@@ -19,5 +19,6 @@ require (
 	github.com/mattn/go-colorable v0.1.2 // indirect
 	github.com/onsi/ginkgo v1.8.0 // indirect
 	github.com/onsi/gomega v1.5.0 // indirect
+	github.com/xeipuuv/gojsonschema v1.1.0 // indirect
 	gopkg.in/guregu/null.v3 v3.4.0
 )

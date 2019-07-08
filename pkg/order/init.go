@@ -9,7 +9,7 @@ import (
 	"github.com/jmoiron/sqlx"
 )
 
-// Init is used to initialize history package
+// Init is used to initialize order package
 func Init(db *sqlx.DB, redis *redis.Pool) ICore {
 	examineDBHealth(db)
 	return &core{
