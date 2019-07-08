@@ -11,8 +11,6 @@ import (
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
 
-
-
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
 	devices, err := c.device.Select(10)
 	if err != nil {
@@ -27,19 +25,18 @@ func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request)
 			Type: "devices",
 			ID:   device.ID,
 			Attributes: view.DeviceAttributes{
-				Name:  		device.Name,
-				Info:  		device.Info,
-				Price:  	device.Price,
-				Status:     device.Status,
-				ProjectID:	device.ProjectID,
-				CreatedAt:  device.CreatedAt,
-				UpdatedAt:  device.UpdatedAt,
+				Name:      device.Name,
+				Info:      device.Info,
+				Price:     device.Price,
+				Status:    device.Status,
+				ProjectID: device.ProjectID,
+				CreatedAt: device.CreatedAt,
+				UpdatedAt: device.UpdatedAt,
 			},
 		})
 	}
 	view.RenderJSONData(w, res, http.StatusOK)
 }
-
 
 func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
@@ -49,7 +46,7 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = c.device.Get(10,id)
+	_, err = c.device.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteDevice] device not found, err: %s", err.Error())
 		view.RenderJSONError(w, "device not found", http.StatusNotFound)
@@ -62,7 +59,7 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = c.device.Delete(10,id)
+	err = c.device.Delete(10, id)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteDevice] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete device", http.StatusInternalServerError)
@@ -82,10 +79,10 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	device := device.Device{
-		Name:  params.Name,
-		Info:  params.Info,
-		Price:  params.Price,
-		ProjectID:	  10,
+		Name:      params.Name,
+		Info:      params.Info,
+		Price:     params.Price,
+		ProjectID: 10,
 	}
 
 	err = c.device.Insert(&device)
@@ -114,7 +111,7 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.device.Get(10,id)
+	_, err = c.device.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchDevice] device not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device not found", http.StatusNotFound)
@@ -128,11 +125,11 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	device := device.Device{
-		ID: id,
-		Name:  params.Name,
-		Info:  params.Info,
-		Price:  params.Price,
-		ProjectID:	  10,
+		ID:        id,
+		Name:      params.Name,
+		Info:      params.Info,
+		Price:     params.Price,
+		ProjectID: 10,
 	}
 	err = c.device.Update(&device)
 	if err != nil {
@@ -143,4 +140,3 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 
 	view.RenderJSONData(w, device, http.StatusOK)
 }
- 

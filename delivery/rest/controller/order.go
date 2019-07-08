@@ -35,13 +35,14 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "Failed get last order number", http.StatusInternalServerError)
 		return
 	}
+
 	dateNow := time.Now().Format("060102")
 	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
 		lastOrderNumber.Number = 0
 	}
 	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
-	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, 10)
+	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity, params.AgingID, 10)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrder] failed calculate total price, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed calculate total price", http.StatusInternalServerError)
@@ -50,7 +51,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 
 	order := order.Order{
 		OrderNumber:     orderNumber,
-		BuyerID:         12345,
+		BuyerID:         123,
 		VenueID:         params.VenueID,
 		DeviceID:        params.DeviceID,
 		ProductID:       params.ProductID,
@@ -125,9 +126,9 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, 10)
+	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity, params.AgingID, 10)
 	if err != nil {
-		c.reporter.Errorf("[handlePostOrder] failed calculate total price, err: %s", err.Error())
+		c.reporter.Errorf("[handlePatchOrder] failed calculate total price, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed calculate total price", http.StatusInternalServerError)
 		return
 	}
@@ -536,22 +537,31 @@ func leftPadLen(s string, padStr string, overallLen int) string {
 	return retStr[(len(retStr) - overallLen):]
 }
 
-func (c *Controller) calculateTotalPrice(deviceID int64, productID int64, instalationID int64, pid int64) (float64, error) {
-
-	// device, err := c.device.Get(deviceID, pid)
-	// if err == sql.ErrNoRows {
-	// 	return 0, err
-	// }
-
-	product, err := c.product.Get(10, productID)
+func (c *Controller) calculateTotalPrice(deviceID int64, productID int64, installationID int64, roomID int64, roomQuantity int64, agingID int64, pid int64) (float64, error) {
+	device, err := c.device.Get(pid, deviceID)
 	if err == sql.ErrNoRows {
 		return 0, err
 	}
 
-	// instalation, err := c.pemasangan.Get(instalationID, pid)
-	// if err == sql.ErrNoRows {
-	// 	return 0, err
-	// }
+	product, err := c.product.Get(pid, productID)
+	if err == sql.ErrNoRows {
+		return 0, err
+	}
 
-	return product.Price, err
+	installation, err := c.installation.Get(installationID, pid)
+	if err == sql.ErrNoRows {
+		return 0, err
+	}
+
+	room, err := c.room.Get(pid, roomID)
+	if err == sql.ErrNoRows {
+		return 0, err
+	}
+
+	aging, err := c.aging.Get(agingID, pid)
+	if err == sql.ErrNoRows {
+		return 0, err
+	}
+
+	return (device.Price + product.Price + installation.Price + (room.Price * float64(roomQuantity)) + aging.Price), err
 }
