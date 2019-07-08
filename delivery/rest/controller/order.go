@@ -41,7 +41,12 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
-	totalPrice := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstalationID, 10, w)
+	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, 10)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] failed calculate total price, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed calculate total price", http.StatusInternalServerError)
+		return
+	}
 
 	order := order.Order{
 		OrderNumber:     orderNumber,
@@ -49,8 +54,11 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		VenueID:         params.VenueID,
 		DeviceID:        params.DeviceID,
 		ProductID:       params.ProductID,
-		InstalationID:   params.InstalationID,
+		InstallationID:  params.InstallationID,
 		Quantity:        params.Quantity,
+		AgingID:         params.AgingID,
+		RoomID:          params.RoomID,
+		RoomQuantity:    params.RoomQuantity,
 		TotalPrice:      totalPrice,
 		PaymentMethodID: params.PaymentMethodID,
 		PaymentFee:      params.PaymentFee,
@@ -71,11 +79,13 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 			VenueID:         order.VenueID,
 			DeviceID:        order.DeviceID,
 			ProductID:       order.ProductID,
-			InstalationID:   order.InstalationID,
+			InstallationID:  order.InstallationID,
 			Quantity:        order.Quantity,
+			AgingID:         order.AgingID,
+			RoomID:          order.RoomID,
+			RoomQuantity:    order.RoomQuantity,
 			PaymentMethodID: order.PaymentMethodID,
 			PaymentFee:      order.PaymentFee,
-			TotalPrice:      order.TotalPrice,
 		},
 	}
 
@@ -115,15 +125,23 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalPrice := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstalationID, 10, w)
+	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, 10)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] failed calculate total price, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed calculate total price", http.StatusInternalServerError)
+		return
+	}
 
 	order := order.Order{
 		OrderID:         id,
 		VenueID:         params.VenueID,
 		DeviceID:        params.DeviceID,
 		ProductID:       params.ProductID,
-		InstalationID:   params.InstalationID,
+		InstallationID:  params.InstallationID,
 		Quantity:        params.Quantity,
+		AgingID:         params.AgingID,
+		RoomID:          params.RoomID,
+		RoomQuantity:    params.RoomQuantity,
 		TotalPrice:      totalPrice,
 		PaymentMethodID: params.PaymentMethodID,
 		PaymentFee:      params.PaymentFee,
@@ -145,12 +163,14 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 			VenueID:         order.VenueID,
 			DeviceID:        order.DeviceID,
 			ProductID:       order.ProductID,
-			InstalationID:   order.InstalationID,
+			InstallationID:  order.InstallationID,
 			Quantity:        order.Quantity,
+			AgingID:         order.AgingID,
+			RoomID:          order.RoomID,
+			RoomQuantity:    order.RoomQuantity,
 			PaymentMethodID: order.PaymentMethodID,
 			PaymentFee:      order.PaymentFee,
 			Status:          order.Status,
-			TotalPrice:      order.TotalPrice,
 		},
 	}
 
@@ -282,7 +302,11 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 				VenueID:         order.VenueID,
 				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
+				InstallationID:  order.InstallationID,
 				Quantity:        order.Quantity,
+				AgingID:         order.AgingID,
+				RoomID:          order.RoomID,
+				RoomQuantity:    order.RoomQuantity,
 				TotalPrice:      order.TotalPrice,
 				PaymentMethodID: order.PaymentMethodID,
 				PaymentFee:      order.PaymentFee,
@@ -334,8 +358,11 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 			VenueID:         order.VenueID,
 			DeviceID:        order.DeviceID,
 			ProductID:       order.ProductID,
-			InstalationID:   order.InstalationID,
+			InstallationID:  order.InstallationID,
 			Quantity:        order.Quantity,
+			AgingID:         order.AgingID,
+			RoomID:          order.RoomID,
+			RoomQuantity:    order.RoomQuantity,
 			TotalPrice:      order.TotalPrice,
 			PaymentMethodID: order.PaymentMethodID,
 			PaymentFee:      order.PaymentFee,
@@ -378,7 +405,11 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 				VenueID:         order.VenueID,
 				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
+				InstallationID:  order.InstallationID,
 				Quantity:        order.Quantity,
+				AgingID:         order.AgingID,
+				RoomID:          order.RoomID,
+				RoomQuantity:    order.RoomQuantity,
 				TotalPrice:      order.TotalPrice,
 				PaymentMethodID: order.PaymentMethodID,
 				PaymentFee:      order.PaymentFee,
@@ -423,7 +454,11 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 				VenueID:         order.VenueID,
 				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
+				InstallationID:  order.InstallationID,
 				Quantity:        order.Quantity,
+				AgingID:         order.AgingID,
+				RoomID:          order.RoomID,
+				RoomQuantity:    order.RoomQuantity,
 				TotalPrice:      order.TotalPrice,
 				PaymentMethodID: order.PaymentMethodID,
 				PaymentFee:      order.PaymentFee,
@@ -471,7 +506,11 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 				VenueID:         order.VenueID,
 				DeviceID:        order.DeviceID,
 				ProductID:       order.ProductID,
+				InstallationID:  order.InstallationID,
 				Quantity:        order.Quantity,
+				AgingID:         order.AgingID,
+				RoomID:          order.RoomID,
+				RoomQuantity:    order.RoomQuantity,
 				TotalPrice:      order.TotalPrice,
 				PaymentMethodID: order.PaymentMethodID,
 				PaymentFee:      order.PaymentFee,
@@ -497,11 +536,22 @@ func leftPadLen(s string, padStr string, overallLen int) string {
 	return retStr[(len(retStr) - overallLen):]
 }
 
-func (c *Controller) calculateTotalPrice(deviceID int64, productID int64, instalationID int64, pid int64, w http.ResponseWriter) float64 {
+func (c *Controller) calculateTotalPrice(deviceID int64, productID int64, instalationID int64, pid int64) (float64, error) {
+
+	// device, err := c.device.Get(deviceID, pid)
+	// if err == sql.ErrNoRows {
+	// 	return 0, err
+	// }
+
 	product, err := c.product.Get(10, productID)
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePatchOrder] product not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Product not found", http.StatusNotFound)
+		return 0, err
 	}
-	return product.Price
+
+	// instalation, err := c.pemasangan.Get(instalationID, pid)
+	// if err == sql.ErrNoRows {
+	// 	return 0, err
+	// }
+
+	return product.Price, err
 }

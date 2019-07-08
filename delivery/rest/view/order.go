@@ -18,8 +18,11 @@ type OrderAttributes struct {
 	VenueID         int64     `json:"venue_id"`
 	DeviceID        int64     `json:"device_id"`
 	ProductID       int64     `json:"product_id"`
-	InstalationID   int64     `json:"instalation_id"`
+	InstallationID  int64     `json:"installation_id"`
 	Quantity        int64     `json:"quantity"`
+	AgingID         int64     `json:"aging_id"`
+	RoomID          int64     `json:"room_id"`
+	RoomQuantity    int64     `json:"room_quantity"`
 	TotalPrice      float64   `json:"total_price"`
 	PaymentMethodID int64     `json:"payment_method_id"`
 	PaymentFee      float64   `json:"payment_fee"`
@@ -39,8 +42,11 @@ type OrderAttributesWithoutDate struct {
 	VenueID         int64   `json:"venue_id,omitempty"`
 	DeviceID        int64   `json:"device_id,omitempty"`
 	ProductID       int64   `json:"product_id,omitempty"`
-	InstalationID   int64   `json:"instalation_id,omitempty"`
+	InstallationID  int64   `json:"installation_id,omitempty"`
 	Quantity        int64   `json:"quantity,omitempty"`
+	AgingID         int64   `json:"aging_id"`
+	RoomID          int64   `json:"room_id"`
+	RoomQuantity    int64   `json:"room_quantity"`
 	TotalPrice      float64 `json:"total_price,omitempty"`
 	PaymentMethodID int64   `json:"payment_method_id,omitempty"`
 	PaymentFee      float64 `json:"payment_fee,omitempty"`

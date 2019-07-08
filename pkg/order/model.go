@@ -14,8 +14,11 @@ type Order struct {
 	VenueID         int64     `db:"venue_id"`
 	DeviceID        int64     `db:"device_id"`
 	ProductID       int64     `db:"product_id"`
-	InstalationID   int64     `db:"instalation_id"`
+	InstallationID  int64     `db:"installation_id"`
 	Quantity        int64     `db:"quantity"`
+	AgingID         int64     `db:"aging_id"`
+	RoomID          int64     `db:"room_id"`
+	RoomQuantity    int64     `db:"room_quantity"`
 	TotalPrice      float64   `db:"total_price"`
 	PaymentMethodID int64     `db:"payment_method_id"`
 	PaymentFee      float64   `db:"payment_fee"`
