@@ -11,7 +11,8 @@ import (
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
-	pemasangan "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
+	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
+	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	conn "git.sstv.io/lib/go/gojunkyard.git/conn"
 	health "git.sstv.io/lib/go/gojunkyard.git/health"
@@ -74,11 +75,15 @@ func main() {
 	coreVenue := venue.Init(db, redis)
 	reporter.Infoln("/pkg/venue successfully initialized")
 
+
+	coreInstallation := installation.Init(db, redis)
+	reporter.Infoln("/pkg/installation successfully initialized")
+
 	coreDevice := device.Init(db, redis)
 	reporter.Infoln("/pkg/device successfully initialized")
-	
-	corePemasangan := pemasangan.Init(db, redis)
-	reporter.Infoln("/pkg/pemasangan successfully initialized")
+
+	coreCommercialType:= commercialType.Init(db, redis)
+	reporter.Infoln("/pkg/commercialType successfully initialized")
 
 	auth, err := authpassport.NewStdlib(cfg.Auth)
 	if err != nil {
@@ -87,7 +92,7 @@ func main() {
 
 	var (
 		server = webserver.New(&cfg.Webserver)
-		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue,coreDevice,corePemasangan)
+		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreInstallation,coreDevice,coreCommercialType)
 	)
 	rest.Register(server.Router())
 
