@@ -7,6 +7,7 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
+	"database/sql"
 )
 
 // ICore is the interface
@@ -14,7 +15,7 @@ type ICore interface {
 	SelectByVenueType(pid int64,venue_type int64) (products Products, err error)
 	Select( pid int64) (products Products, err error)
 	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
-	Get(id int64,pid int64) (product Product, err error)
+	Get(pid int64,id int64) (product Product, err error)
 	Insert(product *Product) (err error)
 	Update(product *Product) (err error)
 	Delete(pid int64,id int64) (err error)
@@ -84,6 +85,20 @@ func (c *core) Select(pid int64) (products Products, err error) {
 	return
 }
 
+func (c *core) Get(pid int64, id int64) (product Product, err error) {
+	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, pid, id)
+
+	product, err = c.getFromCache(redisKey)
+	if err != nil {
+		product, err = c.getFromDB(pid, id)
+		if err != sql.ErrNoRows {
+			byt, _ := jsoniter.ConfigFastest.Marshal(product)
+			_ = c.setToCache(redisKey, 300, byt)
+		}
+	}
+	return
+}
+
 func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error) {
 	// if len(ids) == 0 {
 	// 	return nil,nil
@@ -144,7 +159,7 @@ func (c *core) selectFromDB(pid int64) (product Products, err error) {
 	return
 }
 
-func (c *core) Get(pid int64,id int64) (product Product, err error) {
+func (c *core) getFromDB(pid int64,id int64) (product Product, err error) {
 	err = c.db.Get(&product, `
 		SELECT
 			product_id,
@@ -210,7 +225,7 @@ func (c *core) Insert(product *Product) (err error) {
 	`, product)
 	product.ProductID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:products", redisPrefix, product.ProductID)
+	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, product.ProjectID, product.ProductID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -240,7 +255,7 @@ func (c *core) Update(product *Product) (err error) {
 			status = 1
 	`, product)
 
-	redisKey := fmt.Sprintf("%s:%d:products", redisPrefix, product.ProductID)
+	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, product.ProjectID, product.ProductID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -261,7 +276,7 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 			project_id = ?
 	`, now, id,pid)
 
-	redisKey := fmt.Sprintf("%s:%d:products", redisPrefix, id)
+	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 	return
 }

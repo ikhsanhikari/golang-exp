@@ -1,6 +1,7 @@
 package product
 
 import "time"
+import "gopkg.in/guregu/null.v3"
 
 type Product struct {
 	ProductID    int64     `db:"product_id"`
@@ -15,7 +16,7 @@ type Product struct {
 	Status       int8      `db:"status"`
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
-	DeletedAt    time.Time `db:"deleted_at"`
+	DeletedAt    null.Time `db:"deleted_at"`
 	ProjectID    int64      `db:"project_id"`
 }
 
