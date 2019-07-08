@@ -6,13 +6,13 @@ import (
 	"syscall"
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
-	// aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	conn "git.sstv.io/lib/go/gojunkyard.git/conn"
@@ -85,8 +85,8 @@ func main() {
 	coreCommercialType := commercialType.Init(db, redis)
 	reporter.Infoln("/pkg/commercialType successfully initialized")
 
-	// coreAging := aging.Init(db, redis)
-	// reporter.Infoln("/pkg/aging successfully initialized")
+	coreRoom := room.Init(db, redis)
+	reporter.Infoln("/pkg/room successfully initialized")
 
 	auth, err := authpassport.NewStdlib(cfg.Auth)
 	if err != nil {
@@ -95,7 +95,7 @@ func main() {
 
 	var (
 		server = webserver.New(&cfg.Webserver)
-		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreInstallation, coreDevice, coreCommercialType)
+		rest   = rest.New(reporter, auth, coreHistory, coreProduct, coreOrder, coreVenue, coreDevice, coreRoom, coreInstallation, coreCommercialType)
 	)
 	rest.Register(server.Router())
 

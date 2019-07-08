@@ -128,6 +128,7 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	device := device.Device{
+		ID: id,
 		Name:  params.Name,
 		Info:  params.Info,
 		Price:  params.Price,
