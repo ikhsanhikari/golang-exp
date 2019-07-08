@@ -44,9 +44,9 @@ type OrderAttributesWithoutDate struct {
 	ProductID       int64   `json:"product_id,omitempty"`
 	InstallationID  int64   `json:"installation_id,omitempty"`
 	Quantity        int64   `json:"quantity,omitempty"`
-	AgingID         int64   `json:"aging_id"`
-	RoomID          int64   `json:"room_id"`
-	RoomQuantity    int64   `json:"room_quantity"`
+	AgingID         int64   `json:"aging_id,omitempty"`
+	RoomID          int64   `json:"room_id,omitempty"`
+	RoomQuantity    int64   `json:"room_quantity,omitempty"`
 	TotalPrice      float64 `json:"total_price,omitempty"`
 	PaymentMethodID int64   `json:"payment_method_id,omitempty"`
 	PaymentFee      float64 `json:"payment_fee,omitempty"`
