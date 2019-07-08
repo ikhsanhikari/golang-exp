@@ -3,12 +3,13 @@ package controller
 import (
 	"net/http"
 
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -19,14 +20,15 @@ type Auth interface {
 }
 
 type Controller struct {
-	reporter reporter.Reporter
-	auth     Auth
-	history  history.ICore
-	product  product.ICore
-	order    order.ICore
-	venue    venue.ICore
-	device	 device.ICore
-	pemasangan     pemasangan.ICore
+	reporter   reporter.Reporter
+	auth       Auth
+	history    history.ICore
+	product    product.ICore
+	order      order.ICore
+	venue      venue.ICore
+	device     device.ICore
+	pemasangan pemasangan.ICore
+	room       room.ICore
 }
 
 // New ...
@@ -39,16 +41,18 @@ func New(
 	venue venue.ICore,
 	device device.ICore,
 	pemasangan pemasangan.ICore,
+	room room.ICore,
 ) *Controller {
 	return &Controller{
-		reporter: reporter,
-		auth:     auth,
-		history:  history,
-		product:  product,
-		order:    order,
-		venue:    venue,
-		device:	  device,
-		pemasangan:    pemasangan,
+		reporter:   reporter,
+		auth:       auth,
+		history:    history,
+		product:    product,
+		order:      order,
+		venue:      venue,
+		device:     device,
+		pemasangan: pemasangan,
+		room:       room,
 	}
 }
 
@@ -73,7 +77,6 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/venue/:id", c.handlePatchVenue)
 	router.DELETE("/venue/:id", c.handleDeleteVenue)
 
-
 	router.GET("/devices", c.handleGetAllDevices)
 	router.POST("/devices", c.handlePostDevice)
 	router.PATCH("/devices/:id", c.handlePatchDevice)
@@ -83,4 +86,9 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/pemasangan", c.handlePostPemasangan)
 	router.PATCH("/pemasangan/:id", c.handlePatchPemasangan)
 	router.DELETE("/pemasangan/:id", c.handleDeletePemasangan)
+
+	router.GET("/rooms", c.handleGetAllRooms)
+	router.POST("/rooms", c.handlePostRoom)
+	router.PATCH("/rooms/:id", c.handlePatchRoom)
+	router.DELETE("/rooms/:id", c.handleDeleteRoom)
 }
