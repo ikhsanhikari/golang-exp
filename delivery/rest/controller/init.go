@@ -3,12 +3,13 @@ package controller
 import (
 	"net/http"
 
+	// "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/pemasangan"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -19,14 +20,15 @@ type Auth interface {
 }
 
 type Controller struct {
-	reporter reporter.Reporter
-	auth     Auth
-	history  history.ICore
-	product  product.ICore
-	order    order.ICore
-	venue    venue.ICore
-	device	 device.ICore
-	pemasangan     pemasangan.ICore
+	reporter   reporter.Reporter
+	auth       Auth
+	history    history.ICore
+	product    product.ICore
+	order      order.ICore
+	venue      venue.ICore
+	device     device.ICore
+	pemasangan pemasangan.ICore
+	// aging      aging.ICore
 }
 
 // New ...
@@ -39,16 +41,18 @@ func New(
 	venue venue.ICore,
 	device device.ICore,
 	pemasangan pemasangan.ICore,
+	// aging aging.ICore,
 ) *Controller {
 	return &Controller{
-		reporter: reporter,
-		auth:     auth,
-		history:  history,
-		product:  product,
-		order:    order,
-		venue:    venue,
-		device:	  device,
-		pemasangan:    pemasangan,
+		reporter:   reporter,
+		auth:       auth,
+		history:    history,
+		product:    product,
+		order:      order,
+		venue:      venue,
+		device:     device,
+		pemasangan: pemasangan,
+		// aging:      aging,
 	}
 }
 
@@ -74,7 +78,6 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/venue", c.handlePostVenue)
 	router.PATCH("/venue/:id", c.handlePatchVenue)
 	router.DELETE("/venue/:id", c.handleDeleteVenue)
-
 
 	router.GET("/devices", c.handleGetAllDevices)
 	router.POST("/devices", c.handlePostDevice)
