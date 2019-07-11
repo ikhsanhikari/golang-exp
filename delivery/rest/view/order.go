@@ -36,20 +36,33 @@ type OrderAttributes struct {
 	ProjectID       int64     `json:"project_id"`
 }
 
-type OrderAttributesWithoutDate struct {
-	OrderNumber     string  `json:"order_number,omitempty"`
-	BuyerID         int64   `json:"buyer_id,omitempty"`
-	VenueID         int64   `json:"venue_id,omitempty"`
-	DeviceID        int64   `json:"device_id,omitempty"`
-	ProductID       int64   `json:"product_id,omitempty"`
-	InstallationID  int64   `json:"installation_id,omitempty"`
-	Quantity        int64   `json:"quantity,omitempty"`
-	AgingID         int64   `json:"aging_id,omitempty"`
-	RoomID          int64   `json:"room_id,omitempty"`
-	RoomQuantity    int64   `json:"room_quantity,omitempty"`
-	TotalPrice      float64 `json:"total_price,omitempty"`
-	PaymentMethodID int64   `json:"payment_method_id,omitempty"`
-	PaymentFee      float64 `json:"payment_fee,omitempty"`
-	Status          int16   `json:"status,omitempty"`
-	ProjectID       int64   `json:"project_id,omitempty"`
+type OrderAttributesInsert struct {
+	VenueID         int64   `json:"venue_id"`
+	DeviceID        int64   `json:"device_id"`
+	ProductID       int64   `json:"product_id"`
+	InstallationID  int64   `json:"installation_id"`
+	Quantity        int64   `json:"quantity"`
+	AgingID         int64   `json:"aging_id"`
+	RoomID          int64   `json:"room_id"`
+	RoomQuantity    int64   `json:"room_quantity"`
+	PaymentMethodID int64   `json:"payment_method_id"`
+	PaymentFee      float64 `json:"payment_fee"`
+}
+
+type OrderAttributesUpdate struct {
+	VenueID         int64   `json:"venue_id"`
+	DeviceID        int64   `json:"device_id"`
+	ProductID       int64   `json:"product_id"`
+	InstallationID  int64   `json:"installation_id"`
+	Quantity        int64   `json:"quantity"`
+	AgingID         int64   `json:"aging_id"`
+	RoomID          int64   `json:"room_id"`
+	RoomQuantity    int64   `json:"room_quantity"`
+	PaymentMethodID int64   `json:"payment_method_id"`
+	PaymentFee      float64 `json:"payment_fee"`
+	Status          int16   `json:"status"`
+}
+
+type OrderAttributesUpdateStatus struct {
+	Status int16 `json:"status"`
 }

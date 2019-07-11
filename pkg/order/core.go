@@ -103,7 +103,6 @@ func (c *core) Update(order *Order) (err error) {
 		UPDATE
 			orders
 		SET
-			buyer_id = :buyer_id,
 			venue_id = :venue_id,
 			device_id = :device_id,
 			product_id = :product_id,
@@ -161,6 +160,8 @@ func (c *core) UpdateStatus(order *Order) (err error) {
 	`, order)
 
 	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, order.ProjectID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:orders:%d", redisPrefix, order.ProjectID, order.OrderID)
 	_ = c.deleteCache(redisKey)
 
 	return
