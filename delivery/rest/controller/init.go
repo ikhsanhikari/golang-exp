@@ -12,6 +12,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -33,6 +34,7 @@ type Controller struct {
 	installation   installation.ICore
 	commercialType commercial_type.ICore
 	aging          aging.ICore
+	venueType      venue_type.ICore
 }
 
 // New ...
@@ -48,6 +50,7 @@ func New(
 	installation installation.ICore,
 	commercialType commercial_type.ICore,
 	aging aging.ICore,
+	venueType venue_type.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -61,6 +64,7 @@ func New(
 		installation:   installation,
 		commercialType: commercialType,
 		aging:          aging,
+		venueType:      venueType,
 	}
 }
 
@@ -111,4 +115,10 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/aging", c.handlePostAging)
 	router.PATCH("/aging/:id", c.handlePatchAging)
 	router.DELETE("/aging/:id", c.handleDeleteAging)
+
+	router.GET("/venue_types", c.handleGetAllVenueTypes)
+	router.GET("/venue_types_by_commercial_type/:commercialTypeId", c.handleGetVenueTypeByCommercialTypeID)
+	router.POST("/venue_type", c.handlePostVenueType)
+	router.PATCH("/venue_type/:id", c.handlePatchVenueType)
+	router.DELETE("/venue_type/:id", c.handleDeleteVenueType)
 }
