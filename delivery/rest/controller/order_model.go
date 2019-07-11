@@ -24,7 +24,7 @@ type reqOrderUpdate struct {
 	RoomQuantity    int64   `json:"room_quantity" validate:"required"`
 	PaymentMethodID int64   `json:"payment_method_id" validate:"required"`
 	PaymentFee      float64 `json:"payment_fee" validate:"required"`
-	Status          int16   `json:"status" validate:"required"`
+	Status          int16   `json:"status"`
 }
 
 type reqUpdateOrderStatus struct {

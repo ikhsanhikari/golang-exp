@@ -76,7 +76,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	res := view.DataResponse{
 		ID:   order.OrderID,
 		Type: "order",
-		Attributes: view.OrderAttributesWithoutDate{
+		Attributes: view.OrderAttributesInsert{
 			VenueID:         order.VenueID,
 			DeviceID:        order.DeviceID,
 			ProductID:       order.ProductID,
@@ -107,7 +107,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.order.Get(id, 10)
+	getOrder, err := c.order.Get(id, 10)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -148,6 +148,9 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		PaymentFee:      params.PaymentFee,
 		Status:          params.Status,
 		ProjectID:       10,
+		PendingAt:       getOrder.PendingAt,
+		PaidAt:          getOrder.PaidAt,
+		FailedAt:        getOrder.FailedAt,
 	}
 
 	err = c.order.Update(&order)
@@ -160,7 +163,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	res := view.DataResponse{
 		ID:   order.OrderID,
 		Type: "order",
-		Attributes: view.OrderAttributesWithoutDate{
+		Attributes: view.OrderAttributesUpdate{
 			VenueID:         order.VenueID,
 			DeviceID:        order.DeviceID,
 			ProductID:       order.ProductID,
@@ -187,26 +190,26 @@ func (c *Controller) handleUpdateStatusOrderByID(w http.ResponseWriter, r *http.
 		id, err = strconv.ParseInt(_id, 10, 64)
 	)
 	if err != nil {
-		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
+		c.reporter.Errorf("[handleUpdateStatusOrder] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
-	_, err = c.order.Get(id, 10)
+	getOrder, err := c.order.Get(id, 10)
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())
+		c.reporter.Errorf("[handleUpdateStatusOrder] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
 		return
 	}
 	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePatchOrder] Failed get order, err: %s", err.Error())
+		c.reporter.Errorf("[handleUpdateStatusOrder] Failed get order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get order", http.StatusInternalServerError)
 		return
 	}
 
 	err = form.Bind(&params, r)
 	if err != nil {
-		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
+		c.reporter.Errorf("[handleUpdateStatusOrder] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
@@ -215,6 +218,9 @@ func (c *Controller) handleUpdateStatusOrderByID(w http.ResponseWriter, r *http.
 		OrderID:   id,
 		ProjectID: 10,
 		Status:    params.Status,
+		PendingAt: getOrder.PendingAt,
+		PaidAt:    getOrder.PaidAt,
+		FailedAt:  getOrder.FailedAt,
 	}
 
 	err = c.order.UpdateStatus(&order)
@@ -227,7 +233,7 @@ func (c *Controller) handleUpdateStatusOrderByID(w http.ResponseWriter, r *http.
 	res := view.DataResponse{
 		ID:   order.OrderID,
 		Type: "order",
-		Attributes: view.OrderAttributesWithoutDate{
+		Attributes: view.OrderAttributesUpdateStatus{
 			Status: order.Status,
 		},
 	}
