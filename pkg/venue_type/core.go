@@ -135,7 +135,7 @@ func (c *core) getFromDB(id int64, pid int64) (venueType VenueType, err error) {
 	return
 }
 
-func (c *core) GetByCommercialType(pid int64,commercialTypeId int64,) (venueTypes VenueTypes, err error) {
+func (c *core) GetByCommercialType(pid int64,commercialTypeId int64) (venueTypes VenueTypes, err error) {
 	err = c.db.Select(&venueTypes, `
 		SELECT
 			id,
