@@ -9,9 +9,19 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
+	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.GetUser(r)
+    if !ok {
+		view.RenderJSONError(w, "Failed get User for VenueTypes", http.StatusInternalServerError)
+		return
+    }
+   _, ok = user["sub"]
+   if !ok {
+		c.reporter.Errorf("[handleGetAllVenueTypes] error get IDUser")
+   }
 	venueTypes, err := c.venueType.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenueTypes] error get from repository, err: %s", err.Error())
@@ -36,6 +46,8 @@ func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Reque
 				DeletedAt					:  venueType.DeletedAt,
 				Status						:  venueType.Status,
 				ProjectID					:  venueType.ProjectID,
+				CreatedBy					:  venueType.CreatedBy,
+				LastUpdateBy				:  venueType.LastUpdateBy,
 			},
 		})
 	}
@@ -90,6 +102,7 @@ func (c *Controller) handlePostVenueType(w http.ResponseWriter, r *http.Request)
 		Capacity					:  params.Capacity,
 		CommercialTypeID			:  params.CommercialTypeID,
 		PricingGroupID				:  params.PricingGroupID,
+		CreatedBy					:  params.CreatedBy,
 				
 	}
 
@@ -139,6 +152,7 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		Capacity					:  params.Capacity,
 		CommercialTypeID			:  params.CommercialTypeID,
 		PricingGroupID				:  params.PricingGroupID,
+		CreatedBy					:  params.CreatedBy,
 				
 	}
 	err = c.venueType.Update(&venueType)
@@ -161,6 +175,8 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 			DeletedAt					:  venueType.DeletedAt,
 			Status						:  venueType.Status,
 			ProjectID					:  venueType.ProjectID,
+			CreatedBy					:  venueType.CreatedBy,
+			LastUpdateBy				:  venueType.LastUpdateBy,
 		},
 	}
 
@@ -168,6 +184,15 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 }
 
 func (c *Controller) handleGetVenueTypeByCommercialTypeID(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.GetUser(r)
+    if !ok {
+		view.RenderJSONError(w, "Failed get User for VenueTypes", http.StatusInternalServerError)
+		return
+    }
+   _, ok = user["sub"]
+   if !ok {
+		c.reporter.Errorf("[handleGetAllVenueTypes] error get IDUser")
+   }
 	ctid, err := strconv.ParseInt(router.GetParam(r, "commercialTypeId"), 10, 64)
 
 	if err != nil {
@@ -205,6 +230,8 @@ func (c *Controller) handleGetVenueTypeByCommercialTypeID(w http.ResponseWriter,
 				DeletedAt					:  venueType.DeletedAt,
 				Status						:  venueType.Status,
 				ProjectID					:  venueType.ProjectID,
+				CreatedBy					:  venueType.CreatedBy,
+				LastUpdateBy				:  venueType.LastUpdateBy,
 			},
 		})
 	}

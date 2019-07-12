@@ -53,7 +53,9 @@ func (c *core) SelectByIDs(ids []int64,pid int64, limit int) (commercialType Com
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			commercial_type
 		WHERE
@@ -77,7 +79,9 @@ func (c *core) selectFromDB(pid int64) (commercialType CommercialTypes, err erro
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			commercial_type
 		WHERE 
@@ -110,7 +114,9 @@ func (c *core) getFromDB(id int64, pid int64) (commercialType CommercialType, er
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			commercial_type
 		WHERE
@@ -128,6 +134,8 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 	commercialType.UpdatedAt = commercialType.CreatedAt
 	commercialType.ProjectID = 10
 	commercialType.Status = 1
+	commercialType.LastUpdateBy = commercialType.CreatedBy
+
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO commercial_type (
@@ -136,14 +144,18 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		) VALUES (
 			:name,
 			:description,
 			:created_at,
 			:updated_at,
 			:deleted_at,
-			:project_id
+			:project_id,
+			:created_by,
+			:last_update_by
 		)
 	`, commercialType)
 	//fmt.Println(res)
@@ -157,6 +169,7 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 
 func (c *core) Update(commercialType *CommercialType) (err error) {
 	commercialType.UpdatedAt = time.Now()
+	commercialType.LastUpdateBy = commercialType.CreatedBy
 
 	_, err = c.db.NamedExec(`
 		UPDATE
@@ -164,7 +177,8 @@ func (c *core) Update(commercialType *CommercialType) (err error) {
 		SET
 			description = :description,
 			name = :name,
-			updated_at = :updated_at
+			updated_at = :updated_at,
+			last_update_by = :last_update_by
 		WHERE
 			id = :id
 	`, commercialType)

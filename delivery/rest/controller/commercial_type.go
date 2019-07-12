@@ -10,9 +10,19 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
+	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 func (c *Controller) handleGetAllcommercialTypes(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.GetUser(r)
+    if !ok {
+		view.RenderJSONError(w, "Failed get User for CommercialTypes", http.StatusInternalServerError)
+		return
+    }
+   _, ok = user["sub"]
+   if !ok {
+		c.reporter.Errorf("[handleGetAllCommercialTypes] error get IDUser")
+   }
 	commercialTypes, err := c.commercialType.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllcommercialTypes] error get from repository, err: %s", err.Error())
@@ -33,6 +43,8 @@ func (c *Controller) handleGetAllcommercialTypes(w http.ResponseWriter, r *http.
 				UpdatedAt		:  commercialType.UpdatedAt,
 				DeletedAt		:  commercialType.DeletedAt,
 				ProjectID		:  commercialType.ProjectID,
+				CreatedBy		:  commercialType.CreatedBy,
+				LastUpdateBy	:  commercialType.LastUpdateBy,
 			},
 		})
 	}
@@ -79,11 +91,12 @@ func (c *Controller) handlePostcommercialType(w http.ResponseWriter, r *http.Req
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	
+
 	commercialType := commercial_type.CommercialType{
 		ID				:  params.ID,
 		Name			:  params.Name,
 		Description		:  params.Description,
+		CreatedBy		:  params.CreatedBy,
 	}
 
 	err = c.commercialType.Insert(&commercialType)
@@ -128,6 +141,7 @@ func (c *Controller) handlePatchcommercialType(w http.ResponseWriter, r *http.Re
 		ID				:  id,
 		Name			:  params.Name,
 		Description		:  params.Description,
+		CreatedBy		:  params.CreatedBy,
 	}
 	err = c.commercialType.Update(&commercialType)
 	if err != nil {

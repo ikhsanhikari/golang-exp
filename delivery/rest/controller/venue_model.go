@@ -19,4 +19,5 @@ type reqVenue struct {
 	VenueTechnicianContactNumber	string	  `json:"venueTechnicianContactNumber"`
 	VenuePhone						string	  `json:"venuePhone"`
 	ProjectID						int64	  `json:"projectId"`
+	CreatedBy  						string    `json:"createdBy"`
 }
