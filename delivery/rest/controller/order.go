@@ -29,6 +29,48 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	_, err = c.venue.Get(10, params.VenueID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
+		return
+	}
+
+	device, err := c.device.Get(10, params.DeviceID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Device Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
+		return
+	}
+
+	product, err := c.product.Get(10, params.ProductID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Product Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
+		return
+	}
+
+	installation, err := c.installation.Get(params.InstallationID, 10)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Installation Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
+		return
+	}
+
+	room, err := c.room.Get(10, params.RoomID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Room Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
+		return
+	}
+
+	aging, err := c.aging.Get(params.AgingID, 10)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Aging Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
+		return
+	}
+
 	lastOrderNumber, err := c.order.GetLastOrderNumber()
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] failed get last order number, err: %s", err.Error())
@@ -42,12 +84,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
-	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity, params.AgingID, 10)
-	if err != nil {
-		c.reporter.Errorf("[handlePostOrder] failed calculate total price, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed calculate total price", http.StatusInternalServerError)
-		return
-	}
+	totalPrice := c.calculateTotalPrice(device.Price, product.Price, installation.Price, room.Price, params.RoomQuantity, aging.Price)
 
 	order := order.Order{
 		OrderNumber:     orderNumber,
@@ -126,12 +163,49 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	totalPrice, err := c.calculateTotalPrice(params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity, params.AgingID, 10)
-	if err != nil {
-		c.reporter.Errorf("[handlePatchOrder] failed calculate total price, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed calculate total price", http.StatusInternalServerError)
+	_, err = c.venue.Get(10, params.VenueID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Venue Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
 		return
 	}
+
+	device, err := c.device.Get(10, params.DeviceID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Device Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
+		return
+	}
+
+	product, err := c.product.Get(10, params.ProductID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Product Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
+		return
+	}
+
+	installation, err := c.installation.Get(params.InstallationID, 10)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Installation Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
+		return
+	}
+
+	room, err := c.room.Get(10, params.RoomID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Room Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
+		return
+	}
+
+	aging, err := c.aging.Get(params.AgingID, 10)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Aging Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
+		return
+	}
+
+	totalPrice := c.calculateTotalPrice(device.Price, product.Price, installation.Price, room.Price, params.RoomQuantity, aging.Price)
 
 	order := order.Order{
 		OrderID:         id,
@@ -543,31 +617,7 @@ func leftPadLen(s string, padStr string, overallLen int) string {
 	return retStr[(len(retStr) - overallLen):]
 }
 
-func (c *Controller) calculateTotalPrice(deviceID int64, productID int64, installationID int64, roomID int64, roomQuantity int64, agingID int64, pid int64) (float64, error) {
-	device, err := c.device.Get(pid, deviceID)
-	if err == sql.ErrNoRows {
-		return 0, err
-	}
+func (c *Controller) calculateTotalPrice(devicePrice float64, productPrice float64, installationPrice float64, roomPrice float64, roomQuantity int64, agingPrice float64) float64 {
 
-	product, err := c.product.Get(pid, productID)
-	if err == sql.ErrNoRows {
-		return 0, err
-	}
-
-	installation, err := c.installation.Get(installationID, pid)
-	if err == sql.ErrNoRows {
-		return 0, err
-	}
-
-	room, err := c.room.Get(pid, roomID)
-	if err == sql.ErrNoRows {
-		return 0, err
-	}
-
-	aging, err := c.aging.Get(agingID, pid)
-	if err == sql.ErrNoRows {
-		return 0, err
-	}
-
-	return (device.Price + product.Price + installation.Price + (room.Price * float64(roomQuantity)) + aging.Price), err
+	return (devicePrice + productPrice + installationPrice + (roomPrice * float64(roomQuantity)) + agingPrice)
 }
