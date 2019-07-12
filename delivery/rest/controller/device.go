@@ -4,14 +4,26 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"log"
+
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-)
+	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport")
+
+	
 
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.GetUser(r)
+    if !ok {
+		log.Print("User : ",user)
+    }
+    uid, ok := user["sub"]
+    if !ok {
+		log.Print("User ID : ",uid)
+    }
 	devices, err := c.device.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllDevices] error get from repository, err: %s", err.Error())
@@ -25,13 +37,15 @@ func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request)
 			Type: "devices",
 			ID:   device.ID,
 			Attributes: view.DeviceAttributes{
-				Name:      device.Name,
-				Info:      device.Info,
-				Price:     device.Price,
-				Status:    device.Status,
-				ProjectID: device.ProjectID,
-				CreatedAt: device.CreatedAt,
-				UpdatedAt: device.UpdatedAt,
+				Name:         device.Name,
+				Info:         device.Info,
+				Price:        device.Price,
+				Status:       device.Status,
+				ProjectID:    device.ProjectID,
+				CreatedAt:    device.CreatedAt,
+				UpdatedAt:    device.UpdatedAt,
+				CreatedBy:    device.CreatedBy,
+				LastUpdateBy: device.LastUpdateBy,
 			},
 		})
 	}
@@ -83,6 +97,7 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 		Info:      params.Info,
 		Price:     params.Price,
 		ProjectID: 10,
+		CreatedBy: params.CreatedBy,
 	}
 
 	err = c.device.Insert(&device)
@@ -130,6 +145,7 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 		Info:      params.Info,
 		Price:     params.Price,
 		ProjectID: 10,
+		LastUpdateBy: params.LastUpdateBy,
 	}
 	err = c.device.Update(&device)
 	if err != nil {
