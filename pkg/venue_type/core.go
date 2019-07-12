@@ -58,7 +58,9 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (venueType VenueTy
 			updated_at,
 			deleted_at,
 			status,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			venue_types
 		WHERE
@@ -86,7 +88,9 @@ func (c *core) selectFromDB(pid int64) (venueType VenueTypes, err error) {
 		updated_at,
 		deleted_at,
 		status,
-		project_id
+		project_id,
+		created_by,
+		last_update_by
 		FROM
 			venue_types
 		WHERE
@@ -123,7 +127,9 @@ func (c *core) getFromDB(id int64, pid int64) (venueType VenueType, err error) {
 			updated_at,
 			deleted_at,
 			status,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			venue_types
 		WHERE
@@ -148,7 +154,9 @@ func (c *core) GetByCommercialType(pid int64,commercialTypeId int64) (venueTypes
 			updated_at,
 			deleted_at,
 			status,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			venue_types
 		WHERE
@@ -165,6 +173,7 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 	venueType.UpdatedAt = venueType.CreatedAt
 	venueType.Status = 1
 	venueType.ProjectID = 10
+	venueType.LastUpdateBy = venueType.CreatedBy
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO venue_types (
@@ -176,7 +185,9 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 			created_at,
 			updated_at,
 			status,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		) VALUES (
 			:name,
 			:description,
@@ -186,7 +197,9 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 			:created_at,
 			:updated_at,
 			:status,
-			:project_id
+			:project_id,
+			:created_by,
+			:last_update_by
 		)
 	`, venueType)
 
@@ -202,6 +215,7 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 func (c *core) Update(venueType *VenueType) (err error) {
 	venueType.UpdatedAt = time.Now()
 	venueType.Status = 1
+	venueType.LastUpdateBy = venueType.CreatedBy
 
 	_, err = c.db.NamedExec(`
 		UPDATE
@@ -212,7 +226,8 @@ func (c *core) Update(venueType *VenueType) (err error) {
 			capacity = :capacity,
 			pricing_group_id = :pricing_group_id,
 			commercial_type_id = :commercial_type_id,
-			updated_at = :updated_at
+			updated_at = :updated_at,
+			last_update_by = :last_update_by 
 		WHERE
 			id = :id AND
 			status = 1

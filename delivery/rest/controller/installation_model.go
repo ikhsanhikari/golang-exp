@@ -5,4 +5,5 @@ type reqInstallation struct {
 	Description  	string    `json:"description"`
 	Price  			float64   `json:"price"`
 	DeviceID  		int64     `json:"deviceId"`
+	CreatedBy  		string    `json:"createdBy"`
 }

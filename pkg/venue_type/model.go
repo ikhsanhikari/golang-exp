@@ -17,6 +17,8 @@ type VenueType struct {
 	DeletedAt  						null.Time `db:"deleted_at"`
 	Status     						int64     `db:"status"`
 	ProjectID   					int64     `db:"project_id"`
+	CreatedBy						string	  `db:"created_by"`
+	LastUpdateBy					string	  `db:"last_update_by"`
 }
 
 type VenueTypes []VenueType

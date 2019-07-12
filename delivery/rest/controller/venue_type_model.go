@@ -7,4 +7,5 @@ type reqVenueType struct {
 	Capacity    					int64     `db:"capacity"`
 	PricingGroupID   				int64     `db:"pricingGroupId"`
 	CommercialTypeID        		int64     `db:"commercialTypeId"`
+	CreatedBy  						string    `json:"createdBy"`
 }
