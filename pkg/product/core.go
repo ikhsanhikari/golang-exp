@@ -1,24 +1,25 @@
 package product
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
-	"encoding/json"
+
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
-	"database/sql"
 )
 
 // ICore is the interface
 type ICore interface {
-	SelectByVenueType(pid int64,venue_type int64) (products Products, err error)
-	Select( pid int64) (products Products, err error)
+	SelectByVenueType(pid int64, venue_type int64) (products Products, err error)
+	Select(pid int64) (products Products, err error)
 	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
-	Get(pid int64,id int64) (product Product, err error)
+	Get(pid int64, id int64) (product Product, err error)
 	Insert(product *Product) (err error)
 	Update(product *Product) (err error)
-	Delete(pid int64,id int64) (err error)
+	Delete(pid int64, id int64) (err error)
 }
 
 // core contains db client
@@ -29,7 +30,7 @@ type core struct {
 
 const redisPrefix = "product-v1"
 
-func (c *core) SelectByVenueType(pid int64,venue_type int64) (products Products, err error) {
+func (c *core) SelectByVenueType(pid int64, venue_type int64) (products Products, err error) {
 
 	if venue_type == 0 {
 		return nil, nil
@@ -40,14 +41,14 @@ func (c *core) SelectByVenueType(pid int64,venue_type int64) (products Products,
 	products, err = c.selectFromCache()
 
 	if err != nil {
-		products, err = c.selectByVenueTypeFromDB(pid,venue_type)
+		products, err = c.selectByVenueTypeFromDB(pid, venue_type)
 		byt, _ := jsoniter.ConfigFastest.Marshal(products)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) selectByVenueTypeFromDB(pid int64,venue_type int64) (products Products, err error) {
+func (c *core) selectByVenueTypeFromDB(pid int64, venue_type int64) (products Products, err error) {
 	err = c.db.Select(&products, `SELECT
 		product_id,
 		product_name,
@@ -62,14 +63,16 @@ func (c *core) selectByVenueTypeFromDB(pid int64,venue_type int64) (products Pro
 		created_at,
 		updated_at,
 		deleted_at,
-		project_id
+		project_id,
+		created_by,
+		last_update_by
 	FROM
 		productlist
 	WHERE
 		venue_type_id=? AND 
 		status = 1 AND 
 		project_id = ?
-`, venue_type,pid)
+`, venue_type, pid)
 
 	return
 }
@@ -117,7 +120,9 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (product Product, 
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			productlist
 		WHERE
@@ -148,18 +153,20 @@ func (c *core) selectFromDB(pid int64) (product Products, err error) {
 			updated_at,
 			deleted_at,
 			status,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			productlist
 		WHERE
 			status = 1 AND
 			project_id = ?
-	`,pid)
+	`, pid)
 
 	return
 }
 
-func (c *core) getFromDB(pid int64,id int64) (product Product, err error) {
+func (c *core) getFromDB(pid int64, id int64) (product Product, err error) {
 	err = c.db.Get(&product, `
 		SELECT
 			product_id,
@@ -175,14 +182,16 @@ func (c *core) getFromDB(pid int64,id int64) (product Product, err error) {
 			updated_at,
 			deleted_at,
 			project_id,
-			status
+			status,
+			created_by,
+			last_update_by
 		FROM
 			productlist
 		WHERE
 			product_id = ? AND
 			project_id = ? AND
 			status = 1
-	`, id,pid)
+	`, id, pid)
 
 	return
 }
@@ -191,6 +200,7 @@ func (c *core) Insert(product *Product) (err error) {
 	product.CreatedAt = time.Now()
 	product.UpdatedAt = product.CreatedAt
 	product.Status = 1
+	product.LastUpdateBy = product.CreatedBy
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO productlist (
@@ -206,7 +216,9 @@ func (c *core) Insert(product *Product) (err error) {
 			updated_at,
 			deleted_at,
 			project_id,
-			status
+			status,
+			created_by,
+			last_update_by
 		) VALUES (
 			:product_name,
 			:description,
@@ -220,7 +232,9 @@ func (c *core) Insert(product *Product) (err error) {
 			:updated_at,
 			:deleted_at,
 			:project_id,
-			:status
+			:status,
+			:created_by,
+			:last_update_by
 		)
 	`, product)
 	product.ProductID, err = res.LastInsertId()
@@ -248,7 +262,8 @@ func (c *core) Update(product *Product) (err error) {
 			display_order = :display_order,
 			icon = :icon,
 			updated_at = :updated_at,
-			project_id = :project_id
+			project_id = :project_id,
+			last_update_by = :last_update_by
 		WHERE
 			product_id = :product_id AND
 			project_id = :project_id AND 
@@ -261,7 +276,7 @@ func (c *core) Update(product *Product) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64,id int64) (err error) {
+func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
@@ -274,7 +289,7 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 			product_id = ? AND
 			status = 1 AND 
 			project_id = ?
-	`, now, id,pid)
+	`, now, id, pid)
 
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)

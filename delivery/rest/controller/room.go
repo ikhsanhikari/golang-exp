@@ -32,6 +32,8 @@ func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
 				ProjectID:   room.ProjectID,
 				CreatedAt:   room.CreatedAt,
 				UpdatedAt:   room.UpdatedAt,
+				CreatedBy:		room.CreatedBy,
+				LastUpdateBy: room.LastUpdateBy,
 			},
 		})
 	}
@@ -83,6 +85,7 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 		Description: params.Description,
 		Price:       params.Price,
 		ProjectID:   10,
+		CreatedBy: 		params.CreatedBy,
 	}
 
 	err = c.room.Insert(&room)
@@ -130,6 +133,7 @@ func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 		Description: params.Description,
 		Price:       params.Price,
 		ProjectID:   10,
+		LastUpdateBy: params.LastUpdateBy,
 	}
 	err = c.room.Update(&room)
 	if err != nil {
