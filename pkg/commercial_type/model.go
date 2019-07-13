@@ -14,6 +14,8 @@ type CommercialType struct {
 	DeletedAt    	null.Time `db:"deleted_at"`
 	ProjectID    	int64	  `db:"project_id"`
 	Status	    	int64	  `db:"status"`
+	CreatedBy		string	  `db:"created_by"`
+	LastUpdateBy	string	  `db:"last_update_by"`
 }
 
 type CommercialTypes []CommercialType

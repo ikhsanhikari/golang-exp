@@ -54,7 +54,9 @@ func (c *core) SelectByIDs(ids []int64,pid int64, limit int) (installation Insta
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			installation
 		WHERE
@@ -79,7 +81,9 @@ func (c *core) selectFromDB(pid int64) (installation Installations, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			installation
 		WHERE 
@@ -113,7 +117,9 @@ func (c *core) getFromDB(id int64, pid int64) (installation Installation, err er
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			installation
 		WHERE
@@ -131,6 +137,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 	installation.UpdatedAt = installation.CreatedAt
 	installation.ProjectID = 10
 	installation.Status = 1
+	installation.LastUpdateBy = installation.CreatedBy
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO installation (
@@ -141,7 +148,9 @@ func (c *core) Insert(installation *Installation) (err error) {
 			updated_at,
 			deleted_at,
 			project_id,
-			status
+			status,
+			created_by,
+			last_update_by
 		) VALUES (
 			:description,
 			:price,
@@ -150,7 +159,9 @@ func (c *core) Insert(installation *Installation) (err error) {
 			:updated_at,
 			:deleted_at,
 			:project_id,
-			:status
+			:status,
+			:created_by,
+			:last_update_by
 		)
 	`, installation)
 	//fmt.Println(res)
@@ -164,6 +175,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 
 func (c *core) Update(installation *Installation) (err error) {
 	installation.UpdatedAt = time.Now()
+	installation.LastUpdateBy = installation.CreatedBy
 
 	_, err = c.db.NamedExec(`
 		UPDATE
@@ -172,7 +184,8 @@ func (c *core) Update(installation *Installation) (err error) {
 			description = :description,
 			price = :price,
 			device_id = :device_id,
-			updated_at = :updated_at
+			updated_at = :updated_at,
+			last_update_by = :last_update_by
 		WHERE
 			id = :id
 	`, installation)

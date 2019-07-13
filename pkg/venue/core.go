@@ -66,7 +66,9 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (venue Venue, err 
 			pic_contact_number,
 			venue_technician_name,
 			venue_technician_contact_number,
-			venue_phone
+			venue_phone,
+			created_by,
+			last_update_by
 		FROM
 			venues
 		WHERE
@@ -104,7 +106,9 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			venue_technician_name,
 			venue_technician_contact_number,
 			venue_phone,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			venues
 		WHERE
@@ -151,7 +155,9 @@ func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
 			venue_technician_name,
 			venue_technician_contact_number,
 			venue_phone,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			venues
 		WHERE
@@ -168,6 +174,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	venue.UpdatedAt = venue.CreatedAt
 	venue.Status = 1
 	venue.ProjectID = 10
+	venue.LastUpdateBy = venue.CreatedBy
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO venues (
@@ -189,7 +196,9 @@ func (c *core) Insert(venue *Venue) (err error) {
 			venue_technician_name,
 			venue_technician_contact_number,
 			venue_phone,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		) VALUES (
 			:venue_id,
 			:venue_type,
@@ -209,7 +218,9 @@ func (c *core) Insert(venue *Venue) (err error) {
 			:venue_technician_name,
 			:venue_technician_contact_number,
 			:venue_phone,
-			:project_id
+			:project_id,
+			:created_by,
+			:last_update_by
 		)
 	`, venue)
 
@@ -225,6 +236,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 func (c *core) Update(venue *Venue) (err error) {
 	venue.UpdatedAt = time.Now()
 	venue.Status = 1
+	venue.LastUpdateBy = venue.CreatedBy
 
 	_, err = c.db.NamedExec(`
 		UPDATE
@@ -245,7 +257,8 @@ func (c *core) Update(venue *Venue) (err error) {
 			pic_contact_number = :pic_contact_number,
 			venue_technician_name = :venue_technician_name,
 			venue_technician_contact_number = :venue_technician_contact_number,
-			venue_phone = :venue_phone
+			venue_phone = :venue_phone,
+			last_update_by = :last_update_by
 		WHERE
 			id = :id AND
 			stats = 1
