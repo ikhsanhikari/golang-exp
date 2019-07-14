@@ -157,7 +157,7 @@ func (c *core) Insert(device *Device) (err error) {
 	`, device)
 	device.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
+	redisKey := fmt.Sprintf("%s:devices", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -186,6 +186,9 @@ func (c *core) Update(device *Device) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:devices", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
@@ -205,6 +208,9 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 	`, now, id,pid)
 
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
+	_ = c.deleteCache(redisKey)
+	
+	redisKey = fmt.Sprintf("%s:devices", redisPrefix)
 	_ = c.deleteCache(redisKey)
 	return
 }

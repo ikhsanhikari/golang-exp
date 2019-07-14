@@ -242,6 +242,9 @@ func (c *core) Insert(product *Product) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, product.ProjectID, product.ProductID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:products", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
@@ -273,6 +276,9 @@ func (c *core) Update(product *Product) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, product.ProjectID, product.ProductID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:products", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
@@ -293,6 +299,10 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:products", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 

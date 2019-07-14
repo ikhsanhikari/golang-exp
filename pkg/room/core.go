@@ -162,7 +162,7 @@ func (c *core) Insert(room *Room) (err error) {
 	`, room)
 	room.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, room.ProjectID, room.ID)
+	redisKey := fmt.Sprintf("%s:rooms", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -191,6 +191,9 @@ func (c *core) Update(room *Room) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, room.ProjectID, room.ID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:rooms", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
@@ -211,6 +214,10 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:rooms", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
