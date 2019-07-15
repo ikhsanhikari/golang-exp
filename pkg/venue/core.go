@@ -31,7 +31,7 @@ const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (venues Venues, err error) {
 	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, pid)
-	venues, err = c.selectFromCache()
+	venues, err = c.selectFromCache(redisKey)
 	if err != nil {
 		venues, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(venues)
@@ -193,7 +193,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 
 func (c *core) Update(venue *Venue) (err error) {
 	venue.UpdatedAt = time.Now()
-
+	venue.ProjectID = 10
 	_, err = c.db.NamedExec(`
 		UPDATE
 			venues
@@ -251,11 +251,11 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 	return
 }
 
-func (c *core) selectFromCache() (venues Venues, err error) {
+func (c *core) selectFromCache(redisKey string) (venues Venues, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET"))
+	b, err := redis.Bytes(conn.Do("GET",redisKey))
 	err = json.Unmarshal(b, &venues)
 	return
 }

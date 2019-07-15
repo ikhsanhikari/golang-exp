@@ -18,8 +18,8 @@ type ICore interface {
 	Get(pid int64,id int64) (venueType VenueType, err error)
 	GetByCommercialType(pid int64,id int64) (venueTypes VenueTypes, err error)
 	Insert(venueType *VenueType) (err error)
-	Update(venueType *VenueType) (err error)
-	Delete(pid int64,id int64) (err error)
+	Update(venueType *VenueType, comId int64) (err error)
+	Delete(pid int64,id int64, comId int64) (err error)
 }
 
 // core contains db client
@@ -32,7 +32,7 @@ const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (venueTypes VenueTypes, err error) {
 	redisKey := fmt.Sprintf("%s:%d:venueType", redisPrefix, pid)
-	venueTypes, err = c.selectFromCache()
+	venueTypes, err = c.selectFromCache(redisKey)
 	if err != nil {
 		venueTypes, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(venueTypes)
@@ -108,11 +108,12 @@ func (c *core) getFromDB(id int64, pid int64) (venueType VenueType, err error) {
 }
 
 func (c *core) GetByCommercialType(pid int64,id int64) (venueTypes VenueTypes, err error) {
-	redisKey := fmt.Sprintf("%s:%d:venueType-by-commercial-type", redisPrefix, pid)
-
-	venueTypes, err = c.getFromCaches(redisKey)
+	redisKey := fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, pid,id)
+	fmt.Println("save ",redisKey)
+	venueTypes, err = c.selectFromCache(redisKey)
 	if err != nil {
 		venueTypes, err = c.GetByCommercialTypeID(pid, id)
+		fmt.Println(venueTypes)
 		if err != sql.ErrNoRows {
 			byt, _ := jsoniter.ConfigFastest.Marshal(venueTypes)
 			_ = c.setToCache(redisKey, 300, byt)
@@ -188,14 +189,15 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:venueType", redisPrefix, venueType.ProjectID)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type", redisPrefix, venueType.ProjectID)
+	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, venueType.ProjectID, venueType.CommercialTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Update(venueType *VenueType) (err error) {
+func (c *core) Update(venueType *VenueType, comId int64) (err error) {
 	venueType.UpdatedAt = time.Now()
+	venueType.ProjectID = 10
 
 	_, err = c.db.NamedExec(`
 		UPDATE
@@ -216,13 +218,15 @@ func (c *core) Update(venueType *VenueType) (err error) {
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, venueType.ProjectID)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type", redisPrefix, venueType.ProjectID)
+	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, venueType.ProjectID, comId)
+	fmt.Println("last ",redisKey)
+	fmt.Println("now ",venueType.CommercialTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(pid int64,id int64) (err error) {
+func (c *core) Delete(pid int64,id int64, comId int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
@@ -236,21 +240,21 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 			status = 1 AND 
 			project_id = 10
 	`, now, id)
-
+	fmt.Println(comId)
 	redisKey := fmt.Sprintf("%s:%d:venueType:%d", redisPrefix, 10, id)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, 10)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type", redisPrefix, 10)
+	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, 10, comId)
 	_ = c.deleteCache(redisKey)
 	return
 }
 
-func (c *core) selectFromCache() (venueTypes VenueTypes, err error) {
+func (c *core) selectFromCache(redisKey string) (venueTypes VenueTypes, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET"))
+	b, err := redis.Bytes(conn.Do("GET",redisKey))
 	err = json.Unmarshal(b, &venueTypes)
 	return
 }
@@ -263,16 +267,6 @@ func (c *core) getFromCache(key string) (venueType VenueType, err error) {
 	err = json.Unmarshal(b, &venueType)
 	return
 }
-
-func (c *core) getFromCaches(key string) (venueTypes VenueTypes, err error) {
-	conn := c.redis.Get()
-	defer conn.Close()
-
-	b, err := redis.Bytes(conn.Do("GET", key))
-	err = json.Unmarshal(b, &venueTypes)
-	return
-}
-
 
 func (c *core) setToCache(key string, expired int, data []byte) (err error) {
 	conn := c.redis.Get()

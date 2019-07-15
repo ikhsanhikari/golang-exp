@@ -31,7 +31,7 @@ const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (commercialTypes CommercialTypes, err error) {
 	redisKey := fmt.Sprintf("%s:%d:commercial_type", redisPrefix,pid)
-	commercialTypes, err = c.selectFromCache()
+	commercialTypes, err = c.selectFromCache(redisKey)
 	if err != nil {
 		commercialTypes, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(commercialTypes)
@@ -131,7 +131,7 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 	//fmt.Println(res)
 	commercialType.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:commercial_type", redisPrefix, commercialType.ProjectID , commercialType.ID)
+	redisKey := fmt.Sprintf("%s:%d:commercial_type", redisPrefix, commercialType.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -139,7 +139,7 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 
 func (c *core) Update(commercialType *CommercialType) (err error) {
 	commercialType.UpdatedAt = time.Now()
-
+	commercialType.ProjectID = 10
 	_, err = c.db.NamedExec(`
 		UPDATE
 			commercial_type
@@ -183,11 +183,11 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 	return
 }
 
-func (c *core) selectFromCache() (commercialType CommercialTypes, err error) {
+func (c *core) selectFromCache(redisKey string) (commercialType CommercialTypes, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET"))
+	b, err := redis.Bytes(conn.Do("GET", redisKey))
 	err = json.Unmarshal(b, &commercialType)
 	return
 }
