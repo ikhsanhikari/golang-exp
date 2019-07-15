@@ -13,4 +13,6 @@ type CommercialTypeAttributes struct {
 	UpdatedAt    	time.Time `json:"updatedAt"`
 	DeletedAt    	null.Time `json:"deletedAt"`
 	ProjectID    	int64	  `json:"projectId"`
+	CreatedBy		string	  `json:"createdBy"`
+	LastUpdateBy	string	  `json:"lastUpdateBy"`
 } 

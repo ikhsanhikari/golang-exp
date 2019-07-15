@@ -17,4 +17,6 @@ type VenueTypeAttributes struct {
 	DeletedAt  						null.Time `json:"deletedAt"`
 	Status     						int64     `json:"status"`
 	ProjectID   					int64     `json:"projectId"`
+	CreatedBy						string	  `json:"createdBy"`
+	LastUpdateBy					string	  `json:"lastUpdateBy"`
 }

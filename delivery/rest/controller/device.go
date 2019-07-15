@@ -25,13 +25,15 @@ func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request)
 			Type: "devices",
 			ID:   device.ID,
 			Attributes: view.DeviceAttributes{
-				Name:      device.Name,
-				Info:      device.Info,
-				Price:     device.Price,
-				Status:    device.Status,
-				ProjectID: device.ProjectID,
-				CreatedAt: device.CreatedAt,
-				UpdatedAt: device.UpdatedAt,
+				Name:         device.Name,
+				Info:         device.Info,
+				Price:        device.Price,
+				Status:       device.Status,
+				ProjectID:    device.ProjectID,
+				CreatedAt:    device.CreatedAt,
+				UpdatedAt:    device.UpdatedAt,
+				CreatedBy:    device.CreatedBy,
+				LastUpdateBy: device.LastUpdateBy,
 			},
 		})
 	}
@@ -83,6 +85,7 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 		Info:      params.Info,
 		Price:     params.Price,
 		ProjectID: 10,
+		CreatedBy: params.CreatedBy,
 	}
 
 	err = c.device.Insert(&device)
@@ -125,11 +128,12 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 	}
 
 	device := device.Device{
-		ID:        id,
-		Name:      params.Name,
-		Info:      params.Info,
-		Price:     params.Price,
-		ProjectID: 10,
+		ID:           id,
+		Name:         params.Name,
+		Info:         params.Info,
+		Price:        params.Price,
+		ProjectID:    10,
+		LastUpdateBy: params.LastUpdateBy,
 	}
 	err = c.device.Update(&device)
 	if err != nil {

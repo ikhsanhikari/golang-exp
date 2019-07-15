@@ -10,9 +10,19 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
+	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) {
+	user, ok := auth.GetUser(r)
+    if !ok {
+		view.RenderJSONError(w, "Failed get User for Venues", http.StatusInternalServerError)
+		return
+    }
+   _, ok = user["sub"]
+   if !ok {
+		c.reporter.Errorf("[handleGetAllVenues] error get IDUser")
+   }
 	venues, err := c.venue.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
@@ -46,6 +56,8 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 				VenueTechnicianName			:  venue.VenueTechnicianName,
 				VenueTechnicianContactNumber:  venue.VenueTechnicianContactNumber,
 				VenuePhone					:  venue.VenuePhone,
+				CreatedBy					:  venue.CreatedBy,
+				LastUpdateBy				:  venue.LastUpdateBy,
 			},
 		})
 	}
@@ -110,6 +122,7 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		VenueTechnicianName			:  params.VenueTechnicianName,
 		VenueTechnicianContactNumber:  params.VenueTechnicianContactNumber,
 		VenuePhone					:  params.VenuePhone,
+		CreatedBy					:  params.CreatedBy,
 	}
 
 	err = c.venue.Insert(&venue)
@@ -169,6 +182,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		VenueTechnicianName			:  params.VenueTechnicianName,
 		VenueTechnicianContactNumber:  params.VenueTechnicianContactNumber,
 		VenuePhone					:  params.VenuePhone,
+		CreatedBy					:  params.CreatedBy,
 	}
 	err = c.venue.Update(&venue)
 	if err != nil {
@@ -198,7 +212,8 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 			PicContactNumber				:	params.PicContactNumber,
 			VenueTechnicianName				:	params.VenueTechnicianName,
 			VenueTechnicianContactNumber	:	params.VenueTechnicianContactNumber,
-			VenuePhone					:  params.VenuePhone,
+			VenuePhone						:  params.VenuePhone,
+			CreatedBy						:  params.CreatedBy,
 		},
 	}
 

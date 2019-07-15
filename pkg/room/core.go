@@ -92,7 +92,9 @@ func (c *core) selectFromDB(pid int64) (room Rooms, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			room
 		WHERE
@@ -113,7 +115,9 @@ func (c *core) getFromDB(pid int64, id int64) (room Room, err error) {
 				created_at,
 				updated_at,
 				deleted_at,
-				project_id
+				project_id,
+				created_by,
+				last_update_by
 			FROM
 				room
 			WHERE
@@ -129,6 +133,7 @@ func (c *core) Insert(room *Room) (err error) {
 	room.CreatedAt = time.Now()
 	room.UpdatedAt = room.CreatedAt
 	room.Status = 1
+	room.LastUpdateBy = room.CreatedBy
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO room (
@@ -139,7 +144,9 @@ func (c *core) Insert(room *Room) (err error) {
 			updated_at,
 			deleted_at,
 			project_id,
-			status
+			status,
+			created_by,
+			last_update_by
 		) VALUES (
 			:name,
 			:description,
@@ -148,7 +155,9 @@ func (c *core) Insert(room *Room) (err error) {
 			:updated_at,
 			:deleted_at,
 			:project_id,
-			:status
+			:status,
+			:created_by,
+			:last_update_by
 		)
 	`, room)
 	room.ID, err = res.LastInsertId()
@@ -171,7 +180,8 @@ func (c *core) Update(room *Room) (err error) {
 			description = :description,
 			price = :price,
 			updated_at = :updated_at,
-			project_id = :project_id
+			project_id = :project_id,
+			last_update_by = :last_update_by
 		WHERE
 			id = :id AND
 			project_id = :project_id AND 

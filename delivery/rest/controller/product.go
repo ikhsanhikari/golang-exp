@@ -39,6 +39,8 @@ func (c *Controller) handleGetAllByVenueType(w http.ResponseWriter, r *http.Requ
 				UpdatedAt:    product.UpdatedAt,
 				DeletedAt:    product.DeletedAt,
 				ProjectID:    product.ProjectID,
+				CreatedBy:    product.CreatedBy,
+				LastUpdateBy: product.LastUpdateBy,
 			},
 		})
 	}
@@ -71,6 +73,8 @@ func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request
 				ProjectID:    product.ProjectID,
 				CreatedAt:    product.CreatedAt,
 				UpdatedAt:    product.UpdatedAt,
+				CreatedBy:    product.CreatedBy,
+				LastUpdateBy: product.LastUpdateBy,
 			},
 		})
 	}
@@ -128,6 +132,7 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
 		ProjectID:    10,
+		CreatedBy:    params.CreatedBy,
 	}
 
 	err = c.product.Insert(&product)
@@ -180,6 +185,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
 		ProjectID:    10,
+		LastUpdateBy: params.LastUpdateBy,
 	}
 	err = c.product.Update(&product)
 	if err != nil {

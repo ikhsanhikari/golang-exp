@@ -72,7 +72,9 @@ func (c *core) selectFromDB(pid int64) (device Devices, err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		FROM
 			devices
 		WHERE
@@ -108,7 +110,9 @@ func (c *core) getFromDB(pid int64,id int64) (device Device, err error) {
 		created_at,
 		updated_at,
 		deleted_at,
-		project_id
+		project_id,
+		created_by,
+		last_update_by
 	FROM
 		devices
 	WHERE
@@ -124,6 +128,7 @@ func (c *core) Insert(device *Device) (err error) {
 	device.CreatedAt = time.Now()
 	device.UpdatedAt = device.CreatedAt
 	device.Status = 1
+	device.LastUpdateBy = device.CreatedBy
 
 	res, err := c.db.NamedExec(`
 		INSERT INTO devices (
@@ -134,7 +139,9 @@ func (c *core) Insert(device *Device) (err error) {
 			created_at,
 			updated_at,
 			deleted_at,
-			project_id
+			project_id,
+			created_by,
+			last_update_by
 		) VALUES (
 			:name,
 			:info,
@@ -143,7 +150,9 @@ func (c *core) Insert(device *Device) (err error) {
 			:created_at,
 			:updated_at,
 			:deleted_at,
-			:project_id
+			:project_id,
+			:created_by,
+			:last_update_by
 		)
 	`, device)
 	device.ID, err = res.LastInsertId()
@@ -166,7 +175,8 @@ func (c *core) Update(device *Device) (err error) {
 			info = 		:info,
 			price = 	:price,
 			updated_at=	:updated_at,
-			project_id=	:project_id
+			project_id=	:project_id,
+			last_update_by= :last_update_by
 		WHERE
 			id = 		:id AND
 			project_id =:project_id AND 
