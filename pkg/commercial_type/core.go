@@ -15,7 +15,6 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64) (commercialTypes CommercialTypes, err error)
-	SelectByIDs(ids []int64,pid int64, limit int) (CommercialType CommercialType, err error)
 	Get(id int64,pid int64) (commercial_type CommercialType, err error)
 	Insert(commercialType *CommercialType) (err error)
 	Update(commercialType *CommercialType) (err error)
@@ -38,35 +37,6 @@ func (c *core) Select(pid int64) (commercialTypes CommercialTypes, err error) {
 		byt, _ := jsoniter.ConfigFastest.Marshal(commercialTypes)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
-	return
-}
-
-func (c *core) SelectByIDs(ids []int64,pid int64, limit int) (commercialType CommercialType, err error) {
-	// if len(ids) == 0 {
-	// 	return nil,nil
-	// }
-	query, args, err := sqlx.In(`
-		SELECT
-			id,
-			name,
-			description,
-			created_at,
-			updated_at,
-			deleted_at,
-			project_id,
-			created_by,
-			last_update_by
-		FROM
-			commercial_type
-		WHERE
-			id in (?) AND
-			project_id = ? AND
-			deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT ?
-	`, ids, pid, limit)
-
-	err = c.db.Select(&commercialType, query, args...)
 	return
 }
 
@@ -143,8 +113,8 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 			description,
 			created_at,
 			updated_at,
-			deleted_at,
 			project_id,
+			status,
 			created_by,
 			last_update_by
 		) VALUES (
@@ -152,8 +122,8 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 			:description,
 			:created_at,
 			:updated_at,
-			:deleted_at,
 			:project_id,
+			:status,
 			:created_by,
 			:last_update_by
 		)
@@ -161,7 +131,7 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 	//fmt.Println(res)
 	commercialType.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:commercial_type:%d", redisPrefix, commercialType.ProjectID , commercialType.ID)
+	redisKey := fmt.Sprintf("%s:%d:commercial_type", redisPrefix, commercialType.ProjectID , commercialType.ID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -169,7 +139,6 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 
 func (c *core) Update(commercialType *CommercialType) (err error) {
 	commercialType.UpdatedAt = time.Now()
-	commercialType.LastUpdateBy = commercialType.CreatedBy
 
 	_, err = c.db.NamedExec(`
 		UPDATE
@@ -180,10 +149,14 @@ func (c *core) Update(commercialType *CommercialType) (err error) {
 			updated_at = :updated_at,
 			last_update_by = :last_update_by
 		WHERE
-			id = :id
+			id = :id AND
+			project_id = 10 AND 
+			status = 1
 	`, commercialType)
 
 	redisKey := fmt.Sprintf("%s:%d:commercial_type:%d", redisPrefix, commercialType.ProjectID, commercialType.ID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:commercial_type", redisPrefix, commercialType.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -204,6 +177,8 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 	`, now, id,pid)
 
 	redisKey := fmt.Sprintf("%s:%d:commercial_type:%d", redisPrefix, pid, id)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:commercial_type", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)
 	return
 }

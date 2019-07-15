@@ -10,19 +10,10 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
+	//auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 func (c *Controller) handleGetAllInstallations(w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.GetUser(r)
-    if !ok {
-		view.RenderJSONError(w, "Failed get User", http.StatusInternalServerError)
-		return
-    }
-   _, ok = user["sub"]
-   if !ok {
-		c.reporter.Errorf("[handleGetAllInstalation] error get IDUser")
-   }
 	installations, err := c.installation.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllInstallations] error get from repository, err: %s", err.Error())
@@ -144,7 +135,7 @@ func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Requ
 		Description		:  params.Description,
 		Price			:  params.Price,
 		DeviceID		:  params.DeviceID,
-		CreatedBy		:  params.CreatedBy,
+		LastUpdateBy	:  params.LastUpdateBy,
 	}
 	err = c.installation.Update(&installation)
 	if err != nil {

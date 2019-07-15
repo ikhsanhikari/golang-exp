@@ -20,4 +20,5 @@ type reqVenue struct {
 	VenuePhone						string	  `json:"venuePhone"`
 	ProjectID						int64	  `json:"projectId"`
 	CreatedBy  						string    `json:"createdBy"`
+	LastUpdateBy					string    `json:"lastUpdateBy"`
 }
