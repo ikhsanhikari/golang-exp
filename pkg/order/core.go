@@ -17,21 +17,22 @@ type ICore interface {
 	Insert(order *Order) (err error)
 	Update(order *Order) (err error)
 	UpdateStatus(order *Order) (err error)
-	Delete(id int64, pid int64) (err error)
+	Delete(order *Order) (err error)
 
-	Get(id int64, pid int64) (order Order, err error)
+	Get(id int64, pid int64, uid string) (order Order, err error)
 	GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error)
 
-	Select(pid int64) (orders Orders, err error)
-	SelectByBuyerID(buyerID int64, pid int64) (orders Orders, err error)
-	SelectByVenueID(venueID int64, pid int64) (orders Orders, err error)
-	SelectByPaidDate(paidDate string, pid int64) (orders Orders, err error)
+	Select(pid int64, uid string) (orders Orders, err error)
+	SelectByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error)
+	SelectByVenueID(venueID int64, pid int64, uid string) (orders Orders, err error)
+	SelectByPaidDate(paidDate string, pid int64, uid string) (orders Orders, err error)
 }
 
 // core contains db client
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db              *sqlx.DB
+	redis           *redis.Pool
+	paymentMethodID int64
 }
 
 const redisPrefix = "molanobar-v1"
@@ -40,6 +41,7 @@ func (c *core) Insert(order *Order) (err error) {
 	order.CreatedAt = time.Now()
 	order.UpdatedAt = order.CreatedAt
 	order.Status = 0
+	order.PaymentMethodID = c.paymentMethodID
 
 	res, err := c.db.NamedExec(`
 	 	INSERT INTO orders (
@@ -58,8 +60,11 @@ func (c *core) Insert(order *Order) (err error) {
 			payment_fee,
 			status,
 			created_at,
+			created_by,
 			updated_at,
-			project_id
+			last_update_by,
+			project_id,
+			email
 		) VALUES (
 			:order_number,
 			:buyer_id,
@@ -76,13 +81,20 @@ func (c *core) Insert(order *Order) (err error) {
 			:payment_fee,
 			:status,
 			:created_at,
+			:buyer_id,
 			:updated_at,
-			:project_id
+			:buyer_id,
+			:project_id,
+			:email
 		)
 	`, order)
 	order.OrderID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, order.ProjectID)
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -90,6 +102,7 @@ func (c *core) Insert(order *Order) (err error) {
 
 func (c *core) Update(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
+	order.PaymentMethodID = c.paymentMethodID
 
 	if order.Status == 1 {
 		order.PendingAt = null.TimeFrom(time.Now())
@@ -116,19 +129,33 @@ func (c *core) Update(order *Order) (err error) {
 			payment_fee = :payment_fee,
 			status = :status,
 			updated_at = :updated_at,
+			last_update_by = :last_update_by,
 			pending_at = :pending_at,
 			paid_at = :paid_at,
-			failed_at = :failed_at
+			failed_at = :failed_at,
+			email = :email
 		WHERE
 			order_id = :order_id AND
 			project_id = :project_id AND 
+			created_by = :created_by AND
 			deleted_at IS NULL
 	`, order)
 
-	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, order.ProjectID)
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:orders:%d", redisPrefix, order.ProjectID, order.OrderID)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
+	_ = c.deleteCache(redisKey)
+
+	if order.Status == 2 {
+		paidDate := order.PaidAt.Time.String()
+		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
+		_ = c.deleteCache(redisKey)
+	}
 
 	return
 }
@@ -150,51 +177,77 @@ func (c *core) UpdateStatus(order *Order) (err error) {
 		SET
 			status = :status,
 			updated_at = :updated_at,
+			last_update_by = :last_update_by,
 			pending_at = :pending_at,
 			paid_at = :paid_at,
 			failed_at = :failed_at
 		WHERE
 			order_id = :order_id AND
 			project_id = :project_id AND 
+			created_by = :created_by AND
 			deleted_at IS NULL
 	`, order)
 
-	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, order.ProjectID)
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:orders:%d", redisPrefix, order.ProjectID, order.OrderID)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
+	_ = c.deleteCache(redisKey)
+
+	if order.Status == 2 {
+		paidDate := order.PaidAt.Time.String()
+		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
+		_ = c.deleteCache(redisKey)
+	}
 
 	return
 }
 
-func (c *core) Delete(id int64, pid int64) (err error) {
+func (c *core) Delete(order *Order) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
 		UPDATE
 			orders
 		SET
+			last_update_by = ?,
 			deleted_at = ?
 		WHERE
 			order_id = ? AND
 			project_id = ? AND
+			created_by = ? AND
 			deleted_at IS NULL
-	`, now, id, pid)
+	`, order.LastUpdateBy, now, order.OrderID, order.ProductID, order.CreatedBy)
 
-	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, pid)
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:orders:%d", redisPrefix, pid, id)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
+	_ = c.deleteCache(redisKey)
+
+	if order.Status == 2 {
+		paidDate := order.PaidAt.Time.String()
+		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
+		_ = c.deleteCache(redisKey)
+	}
 
 	return
 }
 
-func (c *core) Get(id int64, pid int64) (order Order, err error) {
-	redisKey := fmt.Sprintf("%s:%d:orders:%d", redisPrefix, pid, id)
+func (c *core) Get(id int64, pid int64, uid string) (order Order, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, pid, uid, id)
 
 	order, err = c.getFromCache(redisKey)
 	if err != nil {
-		order, err = c.getFromDB(id, pid)
+		order, err = c.getFromDB(id, pid, uid)
 		if err != sql.ErrNoRows {
 			byt, _ := jsoniter.ConfigFastest.Marshal(order)
 			_ = c.setToCache(redisKey, 300, byt)
@@ -203,7 +256,7 @@ func (c *core) Get(id int64, pid int64) (order Order, err error) {
 	return
 }
 
-func (c *core) getFromDB(id int64, pid int64) (order Order, err error) {
+func (c *core) getFromDB(id int64, pid int64, uid string) (order Order, err error) {
 	err = c.db.Get(&order, `
 		SELECT
 			order_id,
@@ -222,19 +275,23 @@ func (c *core) getFromDB(id int64, pid int64) (order Order, err error) {
 			payment_fee,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			deleted_at,
 			pending_at,
 			paid_at,
 			failed_at,
-			project_id
+			project_id,
+			email
 		FROM
 			orders
 		WHERE
 			order_id = ? AND
 			project_id = ? AND 
-			deleted_at IS NULL
-	`, id, pid)
+			created_by = ? AND
+			deleted_at IS NULL 
+	`, id, pid, uid)
 	return
 }
 
@@ -251,19 +308,19 @@ func (c *core) GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error)
 	return
 }
 
-func (c *core) Select(pid int64) (orders Orders, err error) {
-	redisKey := fmt.Sprintf("%s:%d:orders", redisPrefix, pid)
+func (c *core) Select(pid int64, uid string) (orders Orders, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, pid, uid)
 
 	orders, err = c.selectFromCache()
 	if err != nil {
-		orders, err = c.selectFromDB(pid)
+		orders, err = c.selectFromDB(pid, uid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) selectFromDB(pid int64) (orders Orders, err error) {
+func (c *core) selectFromDB(pid int64, uid string) (orders Orders, err error) {
 	err = c.db.Select(&orders, `
 		SELECT
 			order_id,
@@ -282,37 +339,41 @@ func (c *core) selectFromDB(pid int64) (orders Orders, err error) {
 			payment_fee,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			deleted_at,
 			pending_at,
 			paid_at,
 			failed_at,
-			project_id
+			project_id,
+			email
 		FROM
 			orders
 		WHERE
 			project_id = ? AND 
+			created_by = ? AND
 			deleted_at IS NULL
-	`, pid)
+	`, pid, uid)
 	return
 }
 
-func (c *core) SelectByVenueID(venueID int64, pid int64) (orders Orders, err error) {
+func (c *core) SelectByVenueID(venueID int64, pid int64, uid string) (orders Orders, err error) {
 	if venueID == 0 {
 		return nil, nil
 	}
-	redisKey := fmt.Sprintf("%s:%d:orders-venueid:%d", redisPrefix, pid, venueID)
+	redisKey := fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, pid, uid, venueID)
 
 	orders, err = c.selectFromCache()
 	if err != nil {
-		orders, err = c.selectFromDBByVenueID(venueID, pid)
+		orders, err = c.selectFromDBByVenueID(venueID, pid, uid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) selectFromDBByVenueID(venueID int64, pid int64) (orders Orders, err error) {
+func (c *core) selectFromDBByVenueID(venueID int64, pid int64, uid string) (orders Orders, err error) {
 	err = c.db.Select(&orders, `
 		SELECT
 			order_id,
@@ -331,39 +392,43 @@ func (c *core) selectFromDBByVenueID(venueID int64, pid int64) (orders Orders, e
 			payment_fee,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			deleted_at,
 			pending_at,
 			paid_at,
 			failed_at,
-			project_id
+			project_id,
+			email
 		FROM
 			orders
 		WHERE
 			venue_id = ? AND
 			project_id = ? AND
+			created_by = ? AND
 			deleted_at IS NULL
-	`, venueID, pid)
+	`, venueID, pid, uid)
 	return
 }
 
-func (c *core) SelectByBuyerID(buyerID int64, pid int64) (orders Orders, err error) {
-	if buyerID == 0 {
+func (c *core) SelectByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error) {
+	if buyerID == "" {
 		return nil, nil
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:orders-buyerid:%d", redisPrefix, pid, buyerID)
+	redisKey := fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, pid, uid, buyerID)
 
 	orders, err = c.selectFromCache()
 	if err != nil {
-		orders, err = c.selectFromDBByBuyerID(buyerID, pid)
+		orders, err = c.selectFromDBByBuyerID(buyerID, pid, uid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) selectFromDBByBuyerID(buyerID int64, pid int64) (orders Orders, err error) {
+func (c *core) selectFromDBByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error) {
 	err = c.db.Select(&orders, `
 		SELECT
 			order_id,
@@ -382,31 +447,35 @@ func (c *core) selectFromDBByBuyerID(buyerID int64, pid int64) (orders Orders, e
 			payment_fee,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			deleted_at,
 			pending_at,
 			paid_at,
 			failed_at,
-			project_id
+			project_id,
+			email
 		FROM
 			orders
 		WHERE
 			buyer_id = ? AND
 			project_id = ? AND
+			created_by = ? AND
 			deleted_at IS NULL
-	`, buyerID, pid)
+	`, buyerID, pid, uid)
 	return
 }
 
-func (c *core) SelectByPaidDate(paidDate string, pid int64) (orders Orders, err error) {
+func (c *core) SelectByPaidDate(paidDate string, pid int64, uid string) (orders Orders, err error) {
 	if paidDate == "" {
 		return nil, nil
 	}
-	redisKey := fmt.Sprintf("%s:%d:orders-paiddate:%s", redisPrefix, pid, paidDate)
+	redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, pid, uid, paidDate)
 
 	orders, err = c.selectFromCache()
 	if err != nil {
-		orders, err = c.selectFromDBByPaidDate(paidDate, pid)
+		orders, err = c.selectFromDBByPaidDate(paidDate, pid, uid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orders)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
@@ -414,7 +483,7 @@ func (c *core) SelectByPaidDate(paidDate string, pid int64) (orders Orders, err 
 	return
 }
 
-func (c *core) selectFromDBByPaidDate(paidDate string, pid int64) (orders Orders, err error) {
+func (c *core) selectFromDBByPaidDate(paidDate string, pid int64, uid string) (orders Orders, err error) {
 	if paidDate == "" {
 		return nil, nil
 	}
@@ -436,19 +505,23 @@ func (c *core) selectFromDBByPaidDate(paidDate string, pid int64) (orders Orders
 			payment_fee,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			deleted_at,
 			pending_at,
 			paid_at,
 			failed_at,
-			project_id
+			project_id,
+			email
 	 	FROM
 	 		orders
 	 	WHERE
 			paid_at like ? AND
 			project_id = ? AND 
+			created_by = ? AND
 			deleted_at IS NULL
-	`, paidDate, pid)
+	`, paidDate, pid, uid)
 
 	err = c.db.Select(&orders, query, args...)
 	return

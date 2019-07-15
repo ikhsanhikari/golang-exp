@@ -13,18 +13,14 @@ type DataResponseAging struct {
 }
 
 type AgingAttributes struct {
-	Name        string    `json:"name"`
-	Description string    `json:"description"`
-	Price       float64   `json:"price"`
-	Status      int8      `json:"status"`
-	CreatedAt   time.Time `json:"created_at"`
-	UpdatedAt   null.Time `json:"updated_at"`
-	DeletedAt   null.Time `json:"deleted_at"`
-	ProjectID   int64     `json:"project_id"`
-}
-
-type AgingAttributesResponse struct {
-	Name        string  `json:"name"`
-	Description string  `json:"description"`
-	Price       float64 `json:"price"`
+	Name         string    `json:"name"`
+	Description  string    `json:"description"`
+	Price        float64   `json:"price"`
+	Status       int8      `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+	CreatedBy    string    `json:"created_by"`
+	UpdatedAt    null.Time `json:"updated_at"`
+	LastUpdateBy string    `json:"last_update_by"`
+	DeletedAt    null.Time `json:"deleted_at"`
+	ProjectID    int64     `json:"project_id"`
 }

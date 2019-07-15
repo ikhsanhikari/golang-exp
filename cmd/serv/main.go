@@ -87,7 +87,7 @@ func main() {
 	coreProduct := _products.Init(db, redis)
 	reporter.Infoln("/pkg/products successfully initialized")
 
-	coreOrder := order.Init(db, redis)
+	coreOrder := order.Init(db, redis, cfg.PaymentMethodID)
 	reporter.Infoln("/pkg/order successfully initialized")
 
 	coreVenue := venue.Init(db, redis)
@@ -116,6 +116,9 @@ func main() {
 
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
+
+	// coreEmail := email.Init(cfg.EmailBaseURL, tokenGenerator)
+	// reporter.Infoln("/pkg/email successfully initialized")
 
 	var (
 		server = webserver.New(&cfg.Webserver)
