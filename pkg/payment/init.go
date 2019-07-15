@@ -6,5 +6,8 @@ type TokenGenerator interface {
 
 // Init is used to initialize room package
 func Init(apiBaseURL string, tokenGenerator TokenGenerator) ICore {
-	return &core{}
+	return &core{
+		apiBaseURL:     apiBaseURL,
+		tokenGenerator: tokenGenerator,
+	}
 }

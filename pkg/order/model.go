@@ -10,7 +10,7 @@ import (
 type Order struct {
 	OrderID         int64     `db:"order_id"`
 	OrderNumber     string    `db:"order_number"`
-	BuyerID         int64     `db:"buyer_id"`
+	BuyerID         string    `db:"buyer_id"`
 	VenueID         int64     `db:"venue_id"`
 	DeviceID        int64     `db:"device_id"`
 	ProductID       int64     `db:"product_id"`
@@ -24,12 +24,15 @@ type Order struct {
 	PaymentFee      float64   `db:"payment_fee"`
 	Status          int16     `db:"status"`
 	CreatedAt       time.Time `db:"created_at"`
+	CreatedBy       string    `db:"created_by"`
 	UpdatedAt       time.Time `db:"updated_at"`
+	LastUpdateBy    string    `db:"last_update_by"`
 	DeletedAt       null.Time `db:"deleted_at"`
 	PendingAt       null.Time `db:"pending_at"`
 	PaidAt          null.Time `db:"paid_at"`
 	FailedAt        null.Time `db:"failed_at"`
 	ProjectID       int64     `db:"project_id"`
+	Email           string    `db:"email"`
 }
 
 //Orders is list of order
