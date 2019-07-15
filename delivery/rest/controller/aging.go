@@ -15,7 +15,7 @@ func (c *Controller) handlePostAging(w http.ResponseWriter, r *http.Request) {
 	var (
 		// project, _ = authpassport.GetProject(r)
 		// pid        = project.ID
-		params reqAging
+		params reqInsertAging
 	)
 
 	err := form.Bind(&params, r)
@@ -26,10 +26,12 @@ func (c *Controller) handlePostAging(w http.ResponseWriter, r *http.Request) {
 	}
 
 	aging := aging.Aging{
-		Name:        params.Name,
-		Description: params.Description,
-		Price:       params.Price,
-		ProjectID:   10,
+		Name:         params.Name,
+		Description:  params.Description,
+		Price:        params.Price,
+		ProjectID:    10,
+		CreatedBy:    params.CreatedBy,
+		LastUpdateBy: params.CreatedBy,
 	}
 
 	err = c.aging.Insert(&aging)
@@ -42,10 +44,17 @@ func (c *Controller) handlePostAging(w http.ResponseWriter, r *http.Request) {
 	res := view.DataResponse{
 		ID:   aging.ID,
 		Type: "aging",
-		Attributes: view.AgingAttributesResponse{
-			Name:        aging.Name,
-			Description: aging.Description,
-			Price:       aging.Price,
+		Attributes: view.AgingAttributes{
+			Name:         aging.Name,
+			Description:  aging.Description,
+			Price:        aging.Price,
+			Status:       aging.Status,
+			CreatedAt:    aging.CreatedAt,
+			CreatedBy:    aging.CreatedBy,
+			UpdatedAt:    aging.UpdatedAt,
+			LastUpdateBy: aging.LastUpdateBy,
+			DeletedAt:    aging.DeletedAt,
+			ProjectID:    aging.ProjectID,
 		},
 	}
 
@@ -56,7 +65,7 @@ func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 	var (
 		// project, _ = authpassport.GetProject(r)
 		// pid        = project.ID
-		params  reqAging
+		params  reqUpdateAging
 		_id     = router.GetParam(r, "id")
 		id, err = strconv.ParseInt(_id, 10, 64)
 	)
@@ -86,11 +95,12 @@ func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 	}
 
 	aging := aging.Aging{
-		ID:          id,
-		Name:        params.Name,
-		Description: params.Description,
-		Price:       params.Price,
-		ProjectID:   10,
+		ID:           id,
+		Name:         params.Name,
+		Description:  params.Description,
+		Price:        params.Price,
+		ProjectID:    10,
+		LastUpdateBy: params.LastUpdateBy,
 	}
 
 	err = c.aging.Update(&aging)
@@ -103,10 +113,17 @@ func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 	res := view.DataResponse{
 		ID:   aging.ID,
 		Type: "aging",
-		Attributes: view.AgingAttributesResponse{
-			Name:        aging.Name,
-			Description: aging.Description,
-			Price:       aging.Price,
+		Attributes: view.AgingAttributes{
+			Name:         aging.Name,
+			Description:  aging.Description,
+			Price:        aging.Price,
+			Status:       aging.Status,
+			CreatedAt:    aging.CreatedAt,
+			CreatedBy:    aging.CreatedBy,
+			UpdatedAt:    aging.UpdatedAt,
+			LastUpdateBy: aging.LastUpdateBy,
+			DeletedAt:    aging.DeletedAt,
+			ProjectID:    aging.ProjectID,
 		},
 	}
 
@@ -176,14 +193,16 @@ func (c *Controller) handleGetAllAgings(w http.ResponseWriter, r *http.Request) 
 			ID:   aging.ID,
 			Type: "aging",
 			Attributes: view.AgingAttributes{
-				Name:        aging.Name,
-				Description: aging.Description,
-				Price:       aging.Price,
-				Status:      aging.Status,
-				CreatedAt:   aging.CreatedAt,
-				UpdatedAt:   aging.UpdatedAt,
-				DeletedAt:   aging.DeletedAt,
-				ProjectID:   aging.ProjectID,
+				Name:         aging.Name,
+				Description:  aging.Description,
+				Price:        aging.Price,
+				Status:       aging.Status,
+				CreatedAt:    aging.CreatedAt,
+				CreatedBy:    aging.CreatedBy,
+				UpdatedAt:    aging.UpdatedAt,
+				LastUpdateBy: aging.LastUpdateBy,
+				DeletedAt:    aging.DeletedAt,
+				ProjectID:    aging.ProjectID,
 			},
 		})
 	}
