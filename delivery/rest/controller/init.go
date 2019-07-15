@@ -10,6 +10,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
@@ -38,6 +39,7 @@ type Controller struct {
 	aging          aging.ICore
 	venueType      venue_type.ICore
 	payment        payment.ICore
+	license        license.ICore
 }
 
 // New ...
@@ -55,6 +57,7 @@ func New(
 	aging aging.ICore,
 	venueType venue_type.ICore,
 	payment payment.ICore,
+	license license.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -70,6 +73,7 @@ func New(
 		aging:          aging,
 		venueType:      venueType,
 		payment:        payment,
+		license:        license,
 	}
 }
 
@@ -126,4 +130,10 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/venue_type", c.auth.MustAuthorize(c.handlePostVenueType, "molanobar:venue_types.create"))
 	router.PATCH("/venue_type/:id", c.auth.MustAuthorize(c.handlePatchVenueType, "molanobar:venue_types.update"))
 	router.DELETE("/venue_type/:id", c.auth.MustAuthorize(c.handleDeleteVenueType, "molanobar:venue_types.delete"))
+
+	router.GET("/licenses", c.auth.MustAuthorize(c.handleGetAllLicenses, "molanobar:licenses.read"))
+	router.POST("/licenses", c.auth.MustAuthorize(c.handlePostLicense, "molanobar:licenses.create"))
+	router.PATCH("/licenses/:id", c.auth.MustAuthorize(c.handlePatchLicense, "molanobar:licenses.update"))
+	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
+	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
 }
