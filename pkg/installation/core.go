@@ -15,7 +15,6 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64) (installations Installations, err error)
-	SelectByIDs(ids []int64,pid int64, limit int) (installation Installation, err error)
 	Get(id int64,pid int64) (installation Installation, err error)
 	Insert(installation *Installation) (err error)
 	Update(installation *Installation) (err error)
@@ -32,42 +31,12 @@ const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (installations Installations, err error) {
 	redisKey := fmt.Sprintf("%s:%d:installation", redisPrefix,pid)
-	installations, err = c.selectFromCache()
+	installations, err = c.selectFromCache(redisKey)
 	if err != nil {
 		installations, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(installations)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
-	return
-}
-
-func (c *core) SelectByIDs(ids []int64,pid int64, limit int) (installation Installation, err error) {
-	// if len(ids) == 0 {
-	// 	return nil,nil
-	// }
-	query, args, err := sqlx.In(`
-		SELECT
-			id,
-			description,
-			price,
-			device_id,
-			created_at,
-			updated_at,
-			deleted_at,
-			project_id,
-			created_by,
-			last_update_by
-		FROM
-			installation
-		WHERE
-			id in (?) AND
-			project_id = ? AND
-			deleted_at IS NULL
-		ORDER BY created_at DESC
-		LIMIT ?
-	`, ids, pid, limit)
-
-	err = c.db.Select(&installation, query, args...)
 	return
 }
 
@@ -167,7 +136,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 	//fmt.Println(res)
 	installation.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:installation:%d", redisPrefix, installation.ProjectID , installation.ID)
+	redisKey := fmt.Sprintf("%s:%d:installation", redisPrefix, installation.ProjectID )
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -175,7 +144,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 
 func (c *core) Update(installation *Installation) (err error) {
 	installation.UpdatedAt = time.Now()
-	installation.LastUpdateBy = installation.CreatedBy
+	installation.ProjectID = 10
 
 	_, err = c.db.NamedExec(`
 		UPDATE
@@ -187,10 +156,14 @@ func (c *core) Update(installation *Installation) (err error) {
 			updated_at = :updated_at,
 			last_update_by = :last_update_by
 		WHERE
-			id = :id
+			id = :id AND 
+			project_id = 10 AND 
+			status = 	1
 	`, installation)
 
 	redisKey := fmt.Sprintf("%s:%d:installation:%d", redisPrefix, installation.ProjectID, installation.ID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:installation", redisPrefix, installation.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -212,14 +185,16 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:installation:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:installation", redisPrefix, pid)
+	_ = c.deleteCache(redisKey)
 	return
 }
 
-func (c *core) selectFromCache() (installations Installations, err error) {
+func (c *core) selectFromCache(redisKey string) (installations Installations, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET"))
+	b, err := redis.Bytes(conn.Do("GET", redisKey))
 	err = json.Unmarshal(b, &installations)
 	return
 }
