@@ -7,7 +7,6 @@ import (
 	"strings"
 	"time"
 
-	// "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 
@@ -22,6 +21,21 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		params reqOrderInsert
 	)
 
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handlePostOrder] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handlePostOrder] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	//validation
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrder] invalid parameter, err: %s", err.Error())
@@ -86,44 +100,99 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 
 	totalPrice := c.calculateTotalPrice(device.Price, product.Price, installation.Price, room.Price, params.RoomQuantity, aging.Price)
 
-	order := order.Order{
-		OrderNumber:     orderNumber,
-		BuyerID:         123,
-		VenueID:         params.VenueID,
-		DeviceID:        params.DeviceID,
-		ProductID:       params.ProductID,
-		InstallationID:  params.InstallationID,
-		Quantity:        params.Quantity,
-		AgingID:         params.AgingID,
-		RoomID:          params.RoomID,
-		RoomQuantity:    params.RoomQuantity,
-		TotalPrice:      totalPrice,
-		PaymentMethodID: params.PaymentMethodID,
-		PaymentFee:      params.PaymentFee,
-		ProjectID:       10,
+	//insert order
+	insertOrder := order.Order{
+		OrderNumber:    orderNumber,
+		BuyerID:        "uid",
+		VenueID:        params.VenueID,
+		DeviceID:       params.DeviceID,
+		ProductID:      params.ProductID,
+		InstallationID: params.InstallationID,
+		Quantity:       params.Quantity,
+		AgingID:        params.AgingID,
+		RoomID:         params.RoomID,
+		RoomQuantity:   params.RoomQuantity,
+		TotalPrice:     totalPrice,
+		PaymentFee:     params.PaymentFee,
+		CreatedBy:      "uid",
+		LastUpdateBy:   "uid",
+		ProjectID:      10,
+		Email:          params.Email,
 	}
 
-	err = c.order.Insert(&order)
+	err = c.order.Insert(&insertOrder)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrder] failed post order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order", http.StatusInternalServerError)
 		return
 	}
 
-	res := view.DataResponse{
-		ID:   order.OrderID,
+	//panggil endpoint payment
+	// payment, err := c.payment.Pay(strconv.FormatInt(updateOrder.OrderID, 10), updateOrder.PaymentMethodID)
+	// if err != nil {
+	// 	c.reporter.Errorf("[handlePostOrder] failed processing payment, err: %s", err.Error())
+	// 	view.RenderJSONError(w, "Failed processing payment", http.StatusInternalServerError)
+	// 	return
+	// }
+	// if payment.PaymentData.URL == "" {
+	// 	c.reporter.Errorf("[handlePostOrder] Failed processing payment, URL is empty")
+	// 	view.RenderJSONError(w, "Failed processing payment, URL is empty", http.StatusInternalServerError)
+	// 	return
+	// }
+	// log.Println(payment)
+
+	//update status = 1
+	updateStatus := order.Order{
+		OrderID:      insertOrder.OrderID,
+		ProjectID:    insertOrder.ProjectID,
+		Status:       1,
+		CreatedBy:    insertOrder.CreatedBy,
+		LastUpdateBy: "uid",
+		BuyerID:      insertOrder.BuyerID,
+		VenueID:      insertOrder.VenueID,
+	}
+
+	err = c.order.UpdateStatus(&updateStatus)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] failed update status order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed update order", http.StatusInternalServerError)
+		return
+	}
+
+	//set response
+	res := view.DataResponseOrder{
+		ID:   insertOrder.OrderID,
 		Type: "order",
-		Attributes: view.OrderAttributesInsert{
-			VenueID:         order.VenueID,
-			DeviceID:        order.DeviceID,
-			ProductID:       order.ProductID,
-			InstallationID:  order.InstallationID,
-			Quantity:        order.Quantity,
-			AgingID:         order.AgingID,
-			RoomID:          order.RoomID,
-			RoomQuantity:    order.RoomQuantity,
-			PaymentMethodID: order.PaymentMethodID,
-			PaymentFee:      order.PaymentFee,
+		Attributes: view.OrderAttributes{
+			OrderNumber:     insertOrder.OrderNumber,
+			BuyerID:         insertOrder.BuyerID,
+			VenueID:         insertOrder.VenueID,
+			DeviceID:        insertOrder.DeviceID,
+			ProductID:       insertOrder.ProductID,
+			InstallationID:  insertOrder.InstallationID,
+			Quantity:        insertOrder.Quantity,
+			AgingID:         insertOrder.AgingID,
+			RoomID:          insertOrder.RoomID,
+			RoomQuantity:    insertOrder.RoomQuantity,
+			TotalPrice:      insertOrder.TotalPrice,
+			PaymentMethodID: insertOrder.PaymentMethodID,
+			PaymentFee:      insertOrder.PaymentFee,
+			Status:          updateStatus.Status,
+			CreatedAt:       insertOrder.CreatedAt,
+			CreatedBy:       insertOrder.CreatedBy,
+			UpdatedAt:       updateStatus.UpdatedAt,
+			LastUpdateBy:    updateStatus.LastUpdateBy,
+			DeletedAt:       insertOrder.DeletedAt,
+			PendingAt:       updateStatus.PendingAt,
+			PaidAt:          insertOrder.PaidAt,
+			FailedAt:        insertOrder.FailedAt,
+			ProjectID:       insertOrder.ProjectID,
+			Email:           insertOrder.Email,
+		},
+		ResponseType:    "",
+		HTMLRedirection: "",
+		PaymentData: view.PaymentAttributes{
+			URL: "",
 		},
 	}
 
@@ -144,7 +213,21 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getOrder, err := c.order.Get(id, 10)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handlePAtchOrder] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handlePatchOrder] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	getOrder, err := c.order.Get(id, 10, "uid")
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -207,48 +290,63 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 
 	totalPrice := c.calculateTotalPrice(device.Price, product.Price, installation.Price, room.Price, params.RoomQuantity, aging.Price)
 
-	order := order.Order{
-		OrderID:         id,
-		VenueID:         params.VenueID,
-		DeviceID:        params.DeviceID,
-		ProductID:       params.ProductID,
-		InstallationID:  params.InstallationID,
-		Quantity:        params.Quantity,
-		AgingID:         params.AgingID,
-		RoomID:          params.RoomID,
-		RoomQuantity:    params.RoomQuantity,
-		TotalPrice:      totalPrice,
-		PaymentMethodID: params.PaymentMethodID,
-		PaymentFee:      params.PaymentFee,
-		Status:          params.Status,
-		ProjectID:       10,
-		PendingAt:       getOrder.PendingAt,
-		PaidAt:          getOrder.PaidAt,
-		FailedAt:        getOrder.FailedAt,
+	updateOrder := order.Order{
+		OrderID:        id,
+		VenueID:        params.VenueID,
+		DeviceID:       params.DeviceID,
+		ProductID:      params.ProductID,
+		InstallationID: params.InstallationID,
+		Quantity:       params.Quantity,
+		AgingID:        params.AgingID,
+		RoomID:         params.RoomID,
+		RoomQuantity:   params.RoomQuantity,
+		TotalPrice:     totalPrice,
+		PaymentFee:     params.PaymentFee,
+		Status:         params.Status,
+		ProjectID:      10,
+		CreatedBy:      getOrder.CreatedBy,
+		LastUpdateBy:   "uid",
+		PendingAt:      getOrder.PendingAt,
+		PaidAt:         getOrder.PaidAt,
+		FailedAt:       getOrder.FailedAt,
+		Email:          params.Email,
 	}
 
-	err = c.order.Update(&order)
+	err = c.order.Update(&updateOrder)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrder] failed update order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order", http.StatusInternalServerError)
 		return
 	}
 
-	res := view.DataResponse{
-		ID:   order.OrderID,
+	res := view.DataResponseOrder{
+		ID:   updateOrder.OrderID,
 		Type: "order",
-		Attributes: view.OrderAttributesUpdate{
-			VenueID:         order.VenueID,
-			DeviceID:        order.DeviceID,
-			ProductID:       order.ProductID,
-			InstallationID:  order.InstallationID,
-			Quantity:        order.Quantity,
-			AgingID:         order.AgingID,
-			RoomID:          order.RoomID,
-			RoomQuantity:    order.RoomQuantity,
-			PaymentMethodID: order.PaymentMethodID,
-			PaymentFee:      order.PaymentFee,
-			Status:          order.Status,
+		Attributes: view.OrderAttributes{
+			OrderNumber:     getOrder.OrderNumber,
+			BuyerID:         getOrder.BuyerID,
+			VenueID:         updateOrder.VenueID,
+			DeviceID:        updateOrder.DeviceID,
+			ProductID:       updateOrder.ProductID,
+			InstallationID:  updateOrder.InstallationID,
+			Quantity:        updateOrder.Quantity,
+			AgingID:         updateOrder.AgingID,
+			RoomID:          updateOrder.RoomID,
+			RoomQuantity:    updateOrder.RoomQuantity,
+			TotalPrice:      updateOrder.TotalPrice,
+			PaymentMethodID: updateOrder.PaymentMethodID,
+			PaymentFee:      updateOrder.PaymentFee,
+			Status:          updateOrder.Status,
+			CreatedAt:       getOrder.CreatedAt,
+			CreatedBy:       getOrder.CreatedBy,
+			UpdatedAt:       updateOrder.UpdatedAt,
+			LastUpdateBy:    updateOrder.LastUpdateBy,
+			DeletedAt:       getOrder.DeletedAt,
+			PendingAt:       updateOrder.PendingAt,
+			PaidAt:          updateOrder.PaidAt,
+			FailedAt:        updateOrder.FailedAt,
+			ProjectID:       updateOrder.ProjectID,
+			Email:           updateOrder.Email,
 		},
 	}
 
@@ -269,7 +367,21 @@ func (c *Controller) handleUpdateStatusOrderByID(w http.ResponseWriter, r *http.
 		return
 	}
 
-	getOrder, err := c.order.Get(id, 10)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleUpdateStatusOrder] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleUpdateStatusOrder] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	getOrder, err := c.order.Get(id, 10, "uid")
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleUpdateStatusOrder] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -288,27 +400,63 @@ func (c *Controller) handleUpdateStatusOrderByID(w http.ResponseWriter, r *http.
 		return
 	}
 
-	order := order.Order{
-		OrderID:   id,
-		ProjectID: 10,
-		Status:    params.Status,
-		PendingAt: getOrder.PendingAt,
-		PaidAt:    getOrder.PaidAt,
-		FailedAt:  getOrder.FailedAt,
+	updateStatus := order.Order{
+		OrderID:      id,
+		ProjectID:    10,
+		Status:       params.Status,
+		CreatedBy:    getOrder.CreatedBy,
+		LastUpdateBy: "uid",
+		PendingAt:    getOrder.PendingAt,
+		PaidAt:       getOrder.PaidAt,
+		FailedAt:     getOrder.FailedAt,
+		VenueID:      getOrder.VenueID,
+		BuyerID:      getOrder.BuyerID,
 	}
 
-	err = c.order.UpdateStatus(&order)
+	err = c.order.UpdateStatus(&updateStatus)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateStatusOrder] failed update status order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order", http.StatusInternalServerError)
 		return
 	}
 
-	res := view.DataResponse{
-		ID:   order.OrderID,
+	// if order.Status == 2 {
+	// 	err = c.email.Sent(order.Email, "7f0afa0deb2844c2b4a923b14ed75d7e")
+	// 	if err != nil {
+	// 		c.reporter.Errorf("[handleUpdateStatusOrder] failed sent email, err: %s", err.Error())
+	// 		view.RenderJSONError(w, "Failed sent email", http.StatusInternalServerError)
+	// 		return
+	// 	}
+	// }
+
+	res := view.DataResponseOrder{
+		ID:   updateStatus.OrderID,
 		Type: "order",
-		Attributes: view.OrderAttributesUpdateStatus{
-			Status: order.Status,
+		Attributes: view.OrderAttributes{
+			OrderNumber:     getOrder.OrderNumber,
+			BuyerID:         updateStatus.BuyerID,
+			VenueID:         updateStatus.VenueID,
+			DeviceID:        getOrder.DeviceID,
+			ProductID:       getOrder.ProductID,
+			InstallationID:  getOrder.InstallationID,
+			Quantity:        getOrder.Quantity,
+			AgingID:         getOrder.AgingID,
+			RoomID:          getOrder.RoomID,
+			RoomQuantity:    getOrder.RoomQuantity,
+			TotalPrice:      getOrder.TotalPrice,
+			PaymentMethodID: getOrder.PaymentMethodID,
+			PaymentFee:      getOrder.PaymentFee,
+			Status:          updateStatus.Status,
+			CreatedAt:       getOrder.CreatedAt,
+			CreatedBy:       updateStatus.CreatedBy,
+			UpdatedAt:       updateStatus.UpdatedAt,
+			LastUpdateBy:    updateStatus.LastUpdateBy,
+			DeletedAt:       getOrder.DeletedAt,
+			PendingAt:       updateStatus.PendingAt,
+			PaidAt:          updateStatus.PaidAt,
+			FailedAt:        updateStatus.FailedAt,
+			ProjectID:       updateStatus.ProjectID,
+			Email:           getOrder.Email,
 		},
 	}
 
@@ -328,7 +476,21 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.order.Get(id, 10)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleDeleteOrder] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleDeleteOrder] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	getOrder, err := c.order.Get(id, 10, "uid")
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleDeleteOrder] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -340,14 +502,25 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.order.Delete(id, 10)
+	deleteOrder := order.Order{
+		OrderID:      id,
+		ProjectID:    10,
+		CreatedBy:    getOrder.CreatedBy,
+		LastUpdateBy: "uid",
+		BuyerID:      getOrder.BuyerID,
+		VenueID:      getOrder.VenueID,
+		Status:       getOrder.Status,
+		PaidAt:       getOrder.PaidAt,
+	}
+
+	err = c.order.Delete(&deleteOrder)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteOrder] failed delete order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete order", http.StatusInternalServerError)
 		return
 	}
 
-	res := view.DataResponse{
+	res := view.DataResponseOrder{
 		ID: id,
 	}
 
@@ -355,12 +528,21 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) {
-	var (
-	// project, _ = authpassport.GetProject(r)
-	// pid        = project.ID
-	)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrder] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrder] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
 
-	orders, err := c.order.Select(10)
+	orders, err := c.order.Select(10, "uid")
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrders] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
@@ -376,7 +558,7 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 	for _, order := range orders {
 		res = append(res, view.DataResponseOrder{
 			ID:   order.OrderID,
-			Type: "orders",
+			Type: "order",
 			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
 				BuyerID:         order.BuyerID,
@@ -393,12 +575,15 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 				PaymentFee:      order.PaymentFee,
 				Status:          order.Status,
 				CreatedAt:       order.CreatedAt,
+				CreatedBy:       order.CreatedBy,
 				UpdatedAt:       order.UpdatedAt,
+				LastUpdateBy:    order.LastUpdateBy,
 				DeletedAt:       order.DeletedAt,
 				PendingAt:       order.PendingAt,
 				PaidAt:          order.PaidAt,
 				FailedAt:        order.FailedAt,
 				ProjectID:       order.ProjectID,
+				Email:           order.Email,
 			},
 		})
 	}
@@ -407,8 +592,6 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 
 func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		// project, _ = authpassport.GetProject(r)
-		// pid        = project.ID
 		_id     = router.GetParam(r, "id")
 		id, err = strconv.ParseInt(_id, 10, 64)
 	)
@@ -418,7 +601,21 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	order, err := c.order.Get(id, 10)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetOrderByID] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetOrderByID] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	order, err := c.order.Get(id, 10, "uid")
 	if err != nil {
 		c.reporter.Errorf("[handleGetOrderByID] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
@@ -430,7 +627,7 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	res := view.DataResponse{
+	res := view.DataResponseOrder{
 		ID:   order.OrderID,
 		Type: "order",
 		Attributes: view.OrderAttributes{
@@ -449,21 +646,46 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 			PaymentFee:      order.PaymentFee,
 			Status:          order.Status,
 			CreatedAt:       order.CreatedAt,
+			CreatedBy:       order.CreatedBy,
 			UpdatedAt:       order.UpdatedAt,
+			LastUpdateBy:    order.LastUpdateBy,
 			DeletedAt:       order.DeletedAt,
 			PendingAt:       order.PendingAt,
 			PaidAt:          order.PaidAt,
 			FailedAt:        order.FailedAt,
 			ProjectID:       order.ProjectID,
+			Email:           order.Email,
 		},
 	}
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
 func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Request) {
-	venue_id, err := strconv.ParseInt(router.GetParam(r, "venue_id"), 10, 64)
+	var (
+		_venueID     = router.GetParam(r, "venue_id")
+		venueID, err = strconv.ParseInt(_venueID, 10, 64)
+	)
+	if err != nil {
+		c.reporter.Errorf("[handleGetAllOrdersByVenueID] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
 
-	orders, err := c.order.SelectByVenueID(venue_id, 10)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrdersByVenueID] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrdersByVenueID] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	orders, err := c.order.SelectByVenueID(venueID, 10, "uid")
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByVenueID] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -475,10 +697,10 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	res := make([]view.DataResponse, 0, len(orders))
+	res := make([]view.DataResponseOrder, 0, len(orders))
 	for _, order := range orders {
-		res = append(res, view.DataResponse{
-			Type: "orders",
+		res = append(res, view.DataResponseOrder{
+			Type: "order",
 			ID:   order.OrderID,
 			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
@@ -496,12 +718,15 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 				PaymentFee:      order.PaymentFee,
 				Status:          order.Status,
 				CreatedAt:       order.CreatedAt,
+				CreatedBy:       order.CreatedBy,
 				UpdatedAt:       order.UpdatedAt,
+				LastUpdateBy:    order.LastUpdateBy,
 				DeletedAt:       order.DeletedAt,
 				PendingAt:       order.PendingAt,
 				PaidAt:          order.PaidAt,
 				FailedAt:        order.FailedAt,
 				ProjectID:       order.ProjectID,
+				Email:           order.Email,
 			},
 		})
 	}
@@ -510,9 +735,25 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 }
 
 func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Request) {
-	buyer_id, err := strconv.ParseInt(router.GetParam(r, "buyer_id"), 10, 64)
+	var (
+		buyerID = router.GetParam(r, "buyer_id")
+	)
 
-	orders, err := c.order.SelectByBuyerID(buyer_id, 10)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrdersByBuyerID] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrdersByBuyerID] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	orders, err := c.order.SelectByBuyerID(buyerID, 10, "uid")
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByBuyerID] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -524,10 +765,10 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	res := make([]view.DataResponse, 0, len(orders))
+	res := make([]view.DataResponseOrder, 0, len(orders))
 	for _, order := range orders {
-		res = append(res, view.DataResponse{
-			Type: "orders",
+		res = append(res, view.DataResponseOrder{
+			Type: "order",
 			ID:   order.OrderID,
 			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
@@ -545,12 +786,15 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 				PaymentFee:      order.PaymentFee,
 				Status:          order.Status,
 				CreatedAt:       order.CreatedAt,
+				CreatedBy:       order.CreatedBy,
 				UpdatedAt:       order.UpdatedAt,
+				LastUpdateBy:    order.LastUpdateBy,
 				DeletedAt:       order.DeletedAt,
 				PendingAt:       order.PendingAt,
 				PaidAt:          order.PaidAt,
 				FailedAt:        order.FailedAt,
 				ProjectID:       order.ProjectID,
+				Email:           order.Email,
 			},
 		})
 	}
@@ -559,12 +803,26 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 }
 
 func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Request) {
-	paiddate := router.GetParam(r, "paid_date")
+	var (
+		_paidDate = router.GetParam(r, "paid_date")
+		paidDate  = _paidDate[:10]
+	)
 
-	//layout := "2006-01-02T15:04:05"
-	//t, err := time.Parse(layout, paiddate)
-	paidd := paiddate[:10]
-	orders, err := c.order.SelectByPaidDate(paidd, 10)
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrdersByPaidDate] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+	// 	return
+	// }
+	// uid, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllOrdersByPaidDate] failed get userID")
+	// 	view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+	// }
+	// userID := fmt.Sprintf("%v", uid)
+	// fmt.Println(userID, uid)
+
+	orders, err := c.order.SelectByPaidDate(paidDate, 10, "uid")
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByPaidDate] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -576,10 +834,10 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	res := make([]view.DataResponse, 0, len(orders))
+	res := make([]view.DataResponseOrder, 0, len(orders))
 	for _, order := range orders {
-		res = append(res, view.DataResponse{
-			Type: "orders",
+		res = append(res, view.DataResponseOrder{
+			Type: "order",
 			ID:   order.OrderID,
 			Attributes: view.OrderAttributes{
 				OrderNumber:     order.OrderNumber,
@@ -597,12 +855,15 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 				PaymentFee:      order.PaymentFee,
 				Status:          order.Status,
 				CreatedAt:       order.CreatedAt,
+				CreatedBy:       order.CreatedBy,
 				UpdatedAt:       order.UpdatedAt,
+				LastUpdateBy:    order.LastUpdateBy,
 				DeletedAt:       order.DeletedAt,
 				PendingAt:       order.PendingAt,
 				PaidAt:          order.PaidAt,
 				FailedAt:        order.FailedAt,
 				ProjectID:       order.ProjectID,
+				Email:           order.Email,
 			},
 		})
 	}

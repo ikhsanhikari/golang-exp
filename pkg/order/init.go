@@ -10,11 +10,12 @@ import (
 )
 
 // Init is used to initialize order package
-func Init(db *sqlx.DB, redis *redis.Pool) ICore {
+func Init(db *sqlx.DB, redis *redis.Pool, paymentMethodID int64) ICore {
 	examineDBHealth(db)
 	return &core{
-		db:    db,
-		redis: redis,
+		db:              db,
+		redis:           redis,
+		paymentMethodID: paymentMethodID,
 	}
 }
 

@@ -43,7 +43,9 @@ func (c *core) Insert(aging *Aging) (err error) {
 			price,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			project_id
 		) VALUES (
 			:name,
@@ -51,7 +53,9 @@ func (c *core) Insert(aging *Aging) (err error) {
 			:price,
 			:status,
 			:created_at,
+			:created_by,
 			:updated_at,
+			:last_update_by,
 			:project_id
 		)
 	`, aging)
@@ -73,7 +77,8 @@ func (c *core) Update(aging *Aging) (err error) {
 			name = :name,
 			description = :description,
 			price = :price,
-			updated_at = :updated_at
+			updated_at = :updated_at,
+			last_update_by = :last_update_by
 		WHERE
 			id = :id AND
 			project_id = :project_id AND 
@@ -134,7 +139,9 @@ func (c *core) getFromDB(id int64, pid int64) (aging Aging, err error) {
 			price,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			deleted_at,
 			project_id
 		FROM
@@ -168,7 +175,9 @@ func (c *core) selectFromDB(pid int64) (agings Agings, err error) {
 			price,
 			status,
 			created_at,
+			created_by,
 			updated_at,
+			last_update_by,
 			deleted_at,
 			project_id
 		FROM

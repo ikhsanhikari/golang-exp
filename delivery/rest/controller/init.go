@@ -38,6 +38,7 @@ type Controller struct {
 	aging          aging.ICore
 	venueType      venue_type.ICore
 	payment        payment.ICore
+	// email          email.ICore
 }
 
 // New ...
@@ -55,6 +56,7 @@ func New(
 	aging aging.ICore,
 	venueType venue_type.ICore,
 	payment payment.ICore,
+	// email email.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -70,6 +72,7 @@ func New(
 		aging:          aging,
 		venueType:      venueType,
 		payment:        payment,
+		// email:          email,
 	}
 }
 
