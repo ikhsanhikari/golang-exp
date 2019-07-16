@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"log"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
@@ -283,6 +284,7 @@ func (c *core) Delete(order *Order) (err error) {
 }
 
 func (c *core) Get(id int64, pid int64, uid string) (order Order, err error) {
+	log.Println("order_id: ", id, " project_id:", pid, " created_by:", uid)
 	redisKey := fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, pid, uid, id)
 
 	order, err = c.getFromCache(redisKey)
@@ -297,6 +299,7 @@ func (c *core) Get(id int64, pid int64, uid string) (order Order, err error) {
 }
 
 func (c *core) getFromDB(id int64, pid int64, uid string) (order Order, err error) {
+	log.Println("order_id: ", id, " project_id:", pid, " created_by:", uid)
 	err = c.db.Get(&order, `
 		SELECT
 			order_id,

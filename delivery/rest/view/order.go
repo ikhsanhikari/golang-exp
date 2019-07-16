@@ -46,7 +46,7 @@ type OrderAttributes struct {
 	FailedAt          null.Time `json:"failed_at"`
 	ProjectID         int64     `json:"project_id"`
 	Email             string    `json:"email"`
-	OpenPaymentStatus int16     `json:open_payment_status`
+	OpenPaymentStatus int16     `json:"open_payment_status"`
 }
 
 type PaymentAttributes struct {
