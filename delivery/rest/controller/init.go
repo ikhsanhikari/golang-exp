@@ -38,7 +38,6 @@ type Controller struct {
 	aging          aging.ICore
 	venueType      venue_type.ICore
 	payment        payment.ICore
-	// email          email.ICore
 }
 
 // New ...
@@ -56,7 +55,6 @@ func New(
 	aging aging.ICore,
 	venueType venue_type.ICore,
 	payment payment.ICore,
-	// email email.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -72,7 +70,6 @@ func New(
 		aging:          aging,
 		venueType:      venueType,
 		payment:        payment,
-		// email:          email,
 	}
 }
 
@@ -86,7 +83,9 @@ func (c *Controller) Register(router *router.Router) {
 
 	router.POST("/orders", c.auth.MustAuthorize(c.handlePostOrder, "molanobar:orders.create"))
 	router.PATCH("/orders/:id", c.auth.MustAuthorize(c.handlePatchOrder, "molanobar:orders.update"))
-	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateStatusOrderByID, "molanobar:orders.update"))
+	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateOrderStatusByID, "molanobar:orders.update"))
+	router.PATCH("/orders-open-payment-status/:id", c.auth.MustAuthorize(c.handleUpdateOpenPaymentStatusByID, "molanobar:orders.update"))
+	router.PATCH("/orders-do-payment/:id", c.auth.MustAuthorize(c.handlePatchOrderForPayment, "molanobar:orders.update"))
 	router.DELETE("/orders/:id", c.auth.MustAuthorize(c.handleDeleteOrder, "molanobar:orders.delete"))
 	router.GET("/orders", c.auth.MustAuthorize(c.handleGetAllOrders, "molanobar:orders.read"))
 	router.GET("/orders/:id", c.auth.MustAuthorize(c.handleGetOrderByID, "molanobar:orders.read"))

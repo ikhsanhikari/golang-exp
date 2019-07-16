@@ -16,7 +16,8 @@ import (
 type ICore interface {
 	Insert(order *Order) (err error)
 	Update(order *Order) (err error)
-	UpdateStatus(order *Order) (err error)
+	UpdateOrderStatus(order *Order) (err error)
+	UpdateOpenPaymentStatus(order *Order) (err error)
 	Delete(order *Order) (err error)
 
 	Get(id int64, pid int64, uid string) (order Order, err error)
@@ -42,9 +43,10 @@ func (c *core) Insert(order *Order) (err error) {
 	order.UpdatedAt = order.CreatedAt
 	order.Status = 0
 	order.PaymentMethodID = c.paymentMethodID
+	order.OpenPaymentStatus = 0
 
 	res, err := c.db.NamedExec(`
-	 	INSERT INTO orders (
+	 	INSERT INTO mla_orders (
 			order_number,
 			buyer_id,
 			venue_id,
@@ -64,14 +66,15 @@ func (c *core) Insert(order *Order) (err error) {
 			updated_at,
 			last_update_by,
 			project_id,
-			email
+			email,
+			open_payment_status
 		) VALUES (
 			:order_number,
 			:buyer_id,
 			:venue_id,
 			:device_id,
-			:installation_id,
 			:product_id,
+			:installation_id,
 			:quantity,
 			:aging_id,
 			:room_id,
@@ -81,11 +84,12 @@ func (c *core) Insert(order *Order) (err error) {
 			:payment_fee,
 			:status,
 			:created_at,
-			:buyer_id,
+			:created_by,
 			:updated_at,
-			:buyer_id,
+			:last_update_by,
 			:project_id,
-			:email
+			:email,
+			:open_payment_status
 		)
 	`, order)
 	order.OrderID, err = res.LastInsertId()
@@ -114,7 +118,7 @@ func (c *core) Update(order *Order) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			orders
+			mla_orders
 		SET
 			venue_id = :venue_id,
 			device_id = :device_id,
@@ -160,7 +164,7 @@ func (c *core) Update(order *Order) (err error) {
 	return
 }
 
-func (c *core) UpdateStatus(order *Order) (err error) {
+func (c *core) UpdateOrderStatus(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
 
 	if order.Status == 1 {
@@ -173,7 +177,7 @@ func (c *core) UpdateStatus(order *Order) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			orders
+			mla_orders
 		SET
 			status = :status,
 			updated_at = :updated_at,
@@ -207,12 +211,48 @@ func (c *core) UpdateStatus(order *Order) (err error) {
 	return
 }
 
+func (c *core) UpdateOpenPaymentStatus(order *Order) (err error) {
+	order.UpdatedAt = time.Now()
+
+	_, err = c.db.NamedExec(`
+		UPDATE
+			mla_orders
+		SET
+			open_payment_status = :open_payment_status,
+			updated_at = :updated_at,
+			last_update_by = :last_update_by,
+		WHERE
+			order_id = :order_id AND
+			project_id = :project_id AND 
+			created_by = :created_by AND
+			deleted_at IS NULL
+	`, order)
+
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
+	_ = c.deleteCache(redisKey)
+
+	if order.Status == 2 {
+		paidDate := order.PaidAt.Time.String()
+		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
+		_ = c.deleteCache(redisKey)
+	}
+
+	return
+}
+
 func (c *core) Delete(order *Order) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
 		UPDATE
-			orders
+			mla_orders
 		SET
 			last_update_by = ?,
 			deleted_at = ?
@@ -221,7 +261,7 @@ func (c *core) Delete(order *Order) (err error) {
 			project_id = ? AND
 			created_by = ? AND
 			deleted_at IS NULL
-	`, order.LastUpdateBy, now, order.OrderID, order.ProductID, order.CreatedBy)
+	`, order.LastUpdateBy, now, order.OrderID, order.ProjectID, order.CreatedBy)
 
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
@@ -283,9 +323,10 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (order Order, err erro
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			order_id = ? AND
 			project_id = ? AND 
@@ -301,7 +342,7 @@ func (c *core) GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error)
 			SUBSTRING(order_number, 3, 6) AS date,
 			CAST(SUBSTRING(order_number, 9, 7) AS SIGNED) AS number
 		FROM
-			orders
+			mla_orders
 		ORDER BY order_id DESC
 		LIMIT 1
 	`)
@@ -347,9 +388,10 @@ func (c *core) selectFromDB(pid int64, uid string) (orders Orders, err error) {
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			project_id = ? AND 
 			created_by = ? AND
@@ -400,9 +442,10 @@ func (c *core) selectFromDBByVenueID(venueID int64, pid int64, uid string) (orde
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment,status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			venue_id = ? AND
 			project_id = ? AND
@@ -455,9 +498,10 @@ func (c *core) selectFromDBByBuyerID(buyerID string, pid int64, uid string) (ord
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			buyer_id = ? AND
 			project_id = ? AND
@@ -513,9 +557,10 @@ func (c *core) selectFromDBByPaidDate(paidDate string, pid int64, uid string) (o
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 	 	FROM
-	 		orders
+	 		mla_orders
 	 	WHERE
 			paid_at like ? AND
 			project_id = ? AND 
