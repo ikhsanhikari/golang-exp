@@ -16,6 +16,7 @@ import (
 	payment "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	venueType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
@@ -117,6 +118,9 @@ func main() {
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
 
+	coreTemplate := template.New("./file/template")
+	reporter.Infoln("/pkg/template successfully initialized")
+
 	// coreEmail := email.Init(cfg.EmailBaseURL, tokenGenerator)
 	// reporter.Infoln("/pkg/email successfully initialized")
 
@@ -137,6 +141,7 @@ func main() {
 			coreVenueType,
 			corePayment,
 			coreLicense,
+			coreTemplate,
 		)
 	)
 	rest.Register(server.Router())
