@@ -4,13 +4,12 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"time"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
-	"gopkg.in/guregu/null.v3"
+	null "gopkg.in/guregu/null.v3"
 )
 
 // ICore is the interface
@@ -284,7 +283,6 @@ func (c *core) Delete(order *Order) (err error) {
 }
 
 func (c *core) Get(id int64, pid int64, uid string) (order Order, err error) {
-	log.Println("order_id: ", id, " project_id:", pid, " created_by:", uid)
 	redisKey := fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, pid, uid, id)
 
 	order, err = c.getFromCache(redisKey)
@@ -299,10 +297,7 @@ func (c *core) Get(id int64, pid int64, uid string) (order Order, err error) {
 }
 
 func (c *core) getFromDB(id int64, pid int64, uid string) (order Order, err error) {
-	log.Println("order_id: ", id, " project_id:", pid, " created_by:", uid)
-	err = c.db.Get(&order, `
-		SELECT
-			order_id,
+	qs := `SELECT order_id,
 			order_number,
 			buyer_id,
 			device_id,
@@ -332,10 +327,18 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (order Order, err erro
 			mla_orders
 		WHERE
 			order_id = ? AND
-			project_id = ? AND 
-			created_by = ? AND
-			deleted_at IS NULL 
-	`, id, pid, uid)
+			project_id = ? AND `
+	if uid != "" {
+		qs += ` created_by = ? AND `
+	}
+	qs += `deleted_at IS NULL `
+
+	if uid != "" {
+		err = c.db.Get(&order, qs, id, pid, uid)
+	} else {
+		err = c.db.Get(&order, qs, id, pid)
+	}
+
 	return
 }
 
