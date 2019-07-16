@@ -9,19 +9,10 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
+	//auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.GetUser(r)
-    if !ok {
-		view.RenderJSONError(w, "Failed get User for VenueTypes", http.StatusInternalServerError)
-		return
-    }
-   _, ok = user["sub"]
-   if !ok {
-		c.reporter.Errorf("[handleGetAllVenueTypes] error get IDUser")
-   }
 	venueTypes, err := c.venueType.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenueTypes] error get from repository, err: %s", err.Error())
@@ -63,7 +54,7 @@ func (c *Controller) handleDeleteVenueType(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	_, err = c.venueType.Get(10,id)
+	venueTy, err := c.venueType.Get(10,id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteVenueType] VenueType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "VenueType not found", http.StatusNotFound)
@@ -76,7 +67,7 @@ func (c *Controller) handleDeleteVenueType(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = c.venueType.Delete(10,id)
+	err = c.venueType.Delete(10,id, venueTy.CommercialTypeID)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteVenueType] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete VenueType", http.StatusInternalServerError)
@@ -132,7 +123,7 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	_, err = c.venueType.Get(10,id)
+	venueTy, err := c.venueType.Get(10,id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchVenueType] VenueType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "VenueType not found", http.StatusNotFound)
@@ -144,18 +135,17 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		view.RenderJSONError(w, "Failed get VenueType", http.StatusInternalServerError)
 		return
 	}
-	
 	venueType := venue_type.VenueType{
-		Id							:  params.Id,
+		Id							:  id,
 		Name						:  params.Name,
 		Description					:  params.Description,
 		Capacity					:  params.Capacity,
 		CommercialTypeID			:  params.CommercialTypeID,
 		PricingGroupID				:  params.PricingGroupID,
-		CreatedBy					:  params.CreatedBy,
+		LastUpdateBy				:  params.LastUpdateBy,
 				
 	}
-	err = c.venueType.Update(&venueType)
+	err = c.venueType.Update(&venueType, venueTy.CommercialTypeID)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchVenueType] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update VenueType", http.StatusInternalServerError)
@@ -170,6 +160,7 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 			Description					:  venueType.Description,
 			Capacity					:  venueType.Capacity,
 			PricingGroupID				:  venueType.PricingGroupID,
+			CommercialTypeID			:  venueType.CommercialTypeID,
 			CreatedAt					:  venueType.CreatedAt,
 			UpdatedAt					:  venueType.UpdatedAt,
 			DeletedAt					:  venueType.DeletedAt,
@@ -184,15 +175,6 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 }
 
 func (c *Controller) handleGetVenueTypeByCommercialTypeID(w http.ResponseWriter, r *http.Request) {
-	user, ok := auth.GetUser(r)
-    if !ok {
-		view.RenderJSONError(w, "Failed get User for VenueTypes", http.StatusInternalServerError)
-		return
-    }
-   _, ok = user["sub"]
-   if !ok {
-		c.reporter.Errorf("[handleGetAllVenueTypes] error get IDUser")
-   }
 	ctid, err := strconv.ParseInt(router.GetParam(r, "commercialTypeId"), 10, 64)
 
 	if err != nil {

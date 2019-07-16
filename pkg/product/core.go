@@ -18,8 +18,8 @@ type ICore interface {
 	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
 	Get(pid int64, id int64) (product Product, err error)
 	Insert(product *Product) (err error)
-	Update(product *Product) (err error)
-	Delete(pid int64, id int64) (err error)
+	Update(product *Product,venueTypeID int64) (err error)
+	Delete(pid int64, id int64,venueTypeID int64) (err error)
 }
 
 // core contains db client
@@ -28,18 +28,14 @@ type core struct {
 	redis *redis.Pool
 }
 
-const redisPrefix = "product-v1"
+const redisPrefix = "molanobar-v1"
 
 func (c *core) SelectByVenueType(pid int64, venue_type int64) (products Products, err error) {
-
 	if venue_type == 0 {
 		return nil, nil
 	}
-
-	redisKey := fmt.Sprintf("%s:products-venuetype:%d", redisPrefix, venue_type)
-
-	products, err = c.selectFromCache()
-
+	redisKey := fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,venue_type)
+	products, err = c.getFromCacheByVenue(redisKey)
 	if err != nil {
 		products, err = c.selectByVenueTypeFromDB(pid, venue_type)
 		byt, _ := jsoniter.ConfigFastest.Marshal(products)
@@ -67,7 +63,7 @@ func (c *core) selectByVenueTypeFromDB(pid int64, venue_type int64) (products Pr
 		created_by,
 		last_update_by
 	FROM
-		productlist
+		mla_productlist
 	WHERE
 		venue_type_id=? AND 
 		status = 1 AND 
@@ -79,7 +75,7 @@ func (c *core) selectByVenueTypeFromDB(pid int64, venue_type int64) (products Pr
 
 func (c *core) Select(pid int64) (products Products, err error) {
 	redisKey := fmt.Sprintf("%s:products", redisPrefix)
-	products, err = c.selectFromCache()
+	products, err = c.selectFromCache(redisKey)
 	if err != nil {
 		products, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(products)
@@ -124,7 +120,7 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (product Product, 
 			created_by,
 			last_update_by
 		FROM
-			productlist
+			mla_productlist
 		WHERE
 			id in (?) AND
 			project_id = ? AND
@@ -157,7 +153,7 @@ func (c *core) selectFromDB(pid int64) (product Products, err error) {
 			created_by,
 			last_update_by
 		FROM
-			productlist
+			mla_productlist
 		WHERE
 			status = 1 AND
 			project_id = ?
@@ -186,7 +182,7 @@ func (c *core) getFromDB(pid int64, id int64) (product Product, err error) {
 			created_by,
 			last_update_by
 		FROM
-			productlist
+			mla_productlist
 		WHERE
 			product_id = ? AND
 			project_id = ? AND
@@ -203,7 +199,7 @@ func (c *core) Insert(product *Product) (err error) {
 	product.LastUpdateBy = product.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO productlist (
+		INSERT INTO mla_productlist (
 			product_name,
 			description,
 			venue_type_id,
@@ -239,19 +235,22 @@ func (c *core) Insert(product *Product) (err error) {
 	`, product)
 	product.ProductID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, product.ProjectID, product.ProductID)
+	redisKey := fmt.Sprintf("%s:products", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,product.VenueTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Update(product *Product) (err error) {
+func (c *core) Update(product *Product, venueTypeID int64) (err error) {
 	product.UpdatedAt = time.Now()
 	product.Status = 1
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			productlist
+			mla_productlist
 		SET
 			product_name = :product_name,
 			description = :description,
@@ -273,15 +272,21 @@ func (c *core) Update(product *Product) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, product.ProjectID, product.ProductID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:products", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,venueTypeID)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
-func (c *core) Delete(pid int64, id int64) (err error) {
+func (c *core) Delete(pid int64, id int64,venueTypeID int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
 		UPDATE
-			productlist
+			mla_productlist
 		SET
 			deleted_at = ?,
 			status = 0
@@ -293,14 +298,21 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:products", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,venueTypeID)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
-func (c *core) selectFromCache() (products Products, err error) {
+func (c *core) selectFromCache(redisKey string) (products Products, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET"))
+	b, err := redis.Bytes(conn.Do("GET", redisKey))
 	err = json.Unmarshal(b, &products)
 	return
 }
@@ -311,6 +323,15 @@ func (c *core) getFromCache(key string) (product Product, err error) {
 
 	b, err := redis.Bytes(conn.Do("GET", key))
 	err = json.Unmarshal(b, &product)
+	return
+}
+
+func (c *core) getFromCacheByVenue(key string) (products Products, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET", key))
+	err = json.Unmarshal(b, &products)
 	return
 }
 

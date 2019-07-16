@@ -90,7 +90,7 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	_, err = c.product.Get(10, id)
+	productParam, err := c.product.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteProduct] product not found, err: %s", err.Error())
 		view.RenderJSONError(w, "product not found", http.StatusNotFound)
@@ -102,8 +102,8 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 		view.RenderJSONError(w, "Failed get product", http.StatusInternalServerError)
 		return
 	}
-
-	err = c.product.Delete(10, id)
+	venueTypeID, err := strconv.ParseInt(productParam.VenueTypeID, 10, 64)
+	err = c.product.Delete(10, id, venueTypeID)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteProduct] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete product", http.StatusInternalServerError)
@@ -161,7 +161,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = c.product.Get(10, id)
+	productParam, err := c.product.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchProduct] product not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product not found", http.StatusNotFound)
@@ -187,7 +187,8 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		ProjectID:    10,
 		LastUpdateBy: params.LastUpdateBy,
 	}
-	err = c.product.Update(&product)
+	venueTypeID, err := strconv.ParseInt(productParam.VenueTypeID, 10, 64)
+	err = c.product.Update(&product,venueTypeID)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchProduct] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update product", http.StatusInternalServerError)

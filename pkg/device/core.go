@@ -1,22 +1,23 @@
 package device
 
 import (
+	"database/sql"
+	"encoding/json"
 	"fmt"
 	"time"
-	"encoding/json"
+
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
-	"database/sql"
 )
 
 type ICore interface {
-	Select( pid int64) (devices Devices, err error)
+	Select(pid int64) (devices Devices, err error)
 	SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error)
-	Get(pid int64,id int64) (device Device, err error)
+	Get(pid int64, id int64) (device Device, err error)
 	Insert(device *Device) (err error)
 	Update(device *Device) (err error)
-	Delete(pid int64,id int64) (err error)
+	Delete(pid int64, id int64) (err error)
 }
 
 type core struct {
@@ -24,11 +25,11 @@ type core struct {
 	redis *redis.Pool
 }
 
-const redisPrefix = "devices-v1"
+const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (devices Devices, err error) {
 	redisKey := fmt.Sprintf("%s:devices", redisPrefix)
-	devices, err = c.selectFromCache()
+	devices, err = c.selectFromCache(redisKey)
 	if err != nil {
 		devices, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(devices)
@@ -76,11 +77,11 @@ func (c *core) selectFromDB(pid int64) (device Devices, err error) {
 			created_by,
 			last_update_by
 		FROM
-			devices
+			mla_devices
 		WHERE
 			status = 1 AND 
 			project_id = ?
-	`,pid)
+	`, pid)
 
 	return
 }
@@ -99,7 +100,7 @@ func (c *core) Get(pid int64, id int64) (device Device, err error) {
 	return
 }
 
-func (c *core) getFromDB(pid int64,id int64) (device Device, err error) {
+func (c *core) getFromDB(pid int64, id int64) (device Device, err error) {
 	err = c.db.Get(&device, `
 	SELECT
 		id,
@@ -114,12 +115,12 @@ func (c *core) getFromDB(pid int64,id int64) (device Device, err error) {
 		created_by,
 		last_update_by
 	FROM
-		devices
+		mla_devices
 	WHERE
 		status = 1 AND 
 		project_id = ? AND
 		id = ?
-	`,pid, id)
+	`, pid, id)
 
 	return
 }
@@ -131,7 +132,7 @@ func (c *core) Insert(device *Device) (err error) {
 	device.LastUpdateBy = device.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO devices (
+		INSERT INTO mla_devices (
 			name,
 			info,
 			price,
@@ -157,7 +158,7 @@ func (c *core) Insert(device *Device) (err error) {
 	`, device)
 	device.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
+	redisKey := fmt.Sprintf("%s:devices", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -169,7 +170,7 @@ func (c *core) Update(device *Device) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			devices
+			mla_devices
 		SET
 			name = 		:name,
 			info = 		:info,
@@ -186,15 +187,18 @@ func (c *core) Update(device *Device) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:devices", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
-func (c *core) Delete(pid int64,id int64) (err error) {
+func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
 		UPDATE
-			devices
+			mla_devices
 		SET
 			deleted_at = ?,
 			status = 0
@@ -202,18 +206,21 @@ func (c *core) Delete(pid int64,id int64) (err error) {
 			id = ? AND
 			status = 1 AND 
 			project_id = ?
-	`, now, id,pid)
+	`, now, id, pid)
 
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:devices", redisPrefix)
 	_ = c.deleteCache(redisKey)
 	return
 }
 
-func (c *core) selectFromCache() (devices Devices, err error) {
+func (c *core) selectFromCache(key string) (devices Devices, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET"))
+	b, err := redis.Bytes(conn.Do("GET", key))
 	err = json.Unmarshal(b, &devices)
 	return
 }
