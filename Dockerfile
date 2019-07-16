@@ -35,6 +35,6 @@ COPY --from=builder /$CI_PROJECT_NAME/$CI_PROJECT_NAME ./app
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 # Add dummy .env file
 COPY .env.sample .env
-COPY file .
+COPY file file
 # Run
 CMD ./app
