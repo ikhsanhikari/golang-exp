@@ -9,6 +9,7 @@ type VenueAttributes struct {
 	Id         						int64     `json:"id"`
 	VenueId    						int64     `json:"venueId"`
 	VenueType  						int64     `json:"venueType"`
+	VenueName  						string    `json:"venueName"`
 	Address    						string    `json:"address"`
 	Province   						string    `json:"province"`
 	Zip        						string    `json:"zip"`
