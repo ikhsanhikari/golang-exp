@@ -11,6 +11,7 @@ import (
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
+	license "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	payment "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
@@ -110,6 +111,9 @@ func main() {
 	coreVenueType := venueType.Init(db, redis)
 	reporter.Infoln("/pkg/venue_type successfully initialized")
 
+	coreLicense := license.Init(db, redis)
+	reporter.Infoln("/pkg/license successfully initialized")
+
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
 
@@ -132,7 +136,7 @@ func main() {
 			coreAging,
 			coreVenueType,
 			corePayment,
-			// coreEmail,
+			coreLicense,
 		)
 	)
 	rest.Register(server.Router())

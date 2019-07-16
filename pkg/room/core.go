@@ -27,11 +27,11 @@ type core struct {
 	redis *redis.Pool
 }
 
-const redisPrefix = "room-v1"
+const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (rooms Rooms, err error) {
 	redisKey := fmt.Sprintf("%s:rooms", redisPrefix)
-	rooms, err = c.selectFromCache()
+	rooms, err = c.selectFromCache(redisKey)
 	if err != nil {
 		rooms, err = c.selectFromDB(pid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(rooms)
@@ -162,7 +162,7 @@ func (c *core) Insert(room *Room) (err error) {
 	`, room)
 	room.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, room.ProjectID, room.ID)
+	redisKey := fmt.Sprintf("%s:rooms", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -191,6 +191,9 @@ func (c *core) Update(room *Room) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, room.ProjectID, room.ID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:rooms", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
@@ -211,14 +214,18 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:rooms", redisPrefix)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
-func (c *core) selectFromCache() (rooms Rooms, err error) {
+func (c *core) selectFromCache(key string) (rooms Rooms, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET"))
+	b, err := redis.Bytes(conn.Do("GET", key))
 	err = json.Unmarshal(b, &rooms)
 	return
 }
