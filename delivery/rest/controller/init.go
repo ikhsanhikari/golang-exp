@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
@@ -40,6 +41,7 @@ type Controller struct {
 	venueType      venue_type.ICore
 	payment        payment.ICore
 	license        license.ICore
+	email          email.ICore
 }
 
 // New ...
@@ -58,6 +60,7 @@ func New(
 	venueType venue_type.ICore,
 	payment payment.ICore,
 	license license.ICore,
+	email email.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -74,6 +77,7 @@ func New(
 		venueType:      venueType,
 		payment:        payment,
 		license:        license,
+		email:          email,
 	}
 }
 
