@@ -10,17 +10,18 @@ import (
 )
 
 type config struct {
-	Database        conn.DBConfig          `envconfig:"DATABASE"`
-	Redis           conn.RedisConfig       `envconfig:"REDIS"`
-	Sentry          sentry.Option          `envconfig:"SENTRY"`
-	SlackHookURL    string                 `envconfig:"SLACK_HOOK_URL"`
-	Webserver       webserver.Options      `envconfig:"WEBSERVER"`
-	Auth            authpassport.Config    `envconfig:"AUTH_PASSPORT"`
-	TokenGenerator  token_generator.Option `envconfig:"TOKEN_GENERATOR"`
-	PaymentBaseURL  string                 `envconfig:"PAYMENT_BASE_URL"`
-	PaymentMethodID int64                  `envconfig:"PAYMENT_METHOD_ID"`
-	EmailBaseURL    string                 `envconfig:"EMAIL_BASE_URL"`
-	TemplatePaths   []string               `envconfig:"TEMPLATE_PATHS"`
+	Database            conn.DBConfig          `envconfig:"DATABASE"`
+	Redis               conn.RedisConfig       `envconfig:"REDIS"`
+	Sentry              sentry.Option          `envconfig:"SENTRY"`
+	SlackHookURL        string                 `envconfig:"SLACK_HOOK_URL"`
+	Webserver           webserver.Options      `envconfig:"WEBSERVER"`
+	Auth                authpassport.Config    `envconfig:"AUTH_PASSPORT"`
+	TokenGenerator      token_generator.Option `envconfig:"TOKEN_GENERATOR"`
+	TokenGeneratorEmail token_generator.Option `envconfig:"TOKEN_EMAIL_GENERATOR"`
+	PaymentBaseURL      string                 `envconfig:"PAYMENT_BASE_URL"`
+	PaymentMethodID     int64                  `envconfig:"PAYMENT_METHOD_ID"`
+	EmailBaseURL        string                 `envconfig:"EMAIL_BASE_URL"`
+	TemplatePaths   	[]string               `envconfig:"TEMPLATE_PATHS"`
 }
 
 var loadAndParse = env.LoadAndParse

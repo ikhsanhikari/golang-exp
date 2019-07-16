@@ -3,11 +3,10 @@ package controller
 import (
 	"net/http"
 
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
-
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
@@ -15,6 +14,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
@@ -41,6 +41,7 @@ type Controller struct {
 	venueType      venue_type.ICore
 	payment        payment.ICore
 	license        license.ICore
+	email          email.ICore
 	template       template.ICore
 }
 
@@ -60,6 +61,7 @@ func New(
 	venueType venue_type.ICore,
 	payment payment.ICore,
 	license license.ICore,
+	email email.ICore,
 	template template.ICore,
 ) *Controller {
 	return &Controller{
@@ -77,6 +79,7 @@ func New(
 		venueType:      venueType,
 		payment:        payment,
 		license:        license,
+		email:          email,
 		template:       template,
 	}
 }
