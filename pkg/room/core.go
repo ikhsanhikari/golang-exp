@@ -69,7 +69,7 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (room Room, err er
 			deleted_at,
 			project_id
 		FROM
-			room
+			mla_room
 		WHERE
 			id in (?) AND
 			project_id = ? AND
@@ -96,7 +96,7 @@ func (c *core) selectFromDB(pid int64) (room Rooms, err error) {
 			created_by,
 			last_update_by
 		FROM
-			room
+			mla_room
 		WHERE
 			status = 1 AND
 			project_id = ?
@@ -119,7 +119,7 @@ func (c *core) getFromDB(pid int64, id int64) (room Room, err error) {
 				created_by,
 				last_update_by
 			FROM
-				room
+				mla_room
 			WHERE
 				id = ? AND
 				project_id = ? AND
@@ -136,7 +136,7 @@ func (c *core) Insert(room *Room) (err error) {
 	room.LastUpdateBy = room.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO room (
+		INSERT INTO mla_room (
 			name,
 			description,
 			price,
@@ -174,7 +174,7 @@ func (c *core) Update(room *Room) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			room
+			mla_room
 		SET
 			name = :name,
 			description = :description,
@@ -202,7 +202,7 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	_, err = c.db.Exec(`
 		UPDATE
-			room
+			mla_room
 		SET
 			deleted_at = ?,
 			status = 0

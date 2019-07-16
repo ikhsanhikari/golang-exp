@@ -1,9 +1,9 @@
 package venue
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
-	"database/sql"
 
 	"encoding/json"
 
@@ -14,11 +14,11 @@ import (
 
 // ICore is the interface
 type ICore interface {
-	Select( pid int64) (venues Venues, err error)
-	Get(pid int64,id int64) (venue Venue, err error)
+	Select(pid int64) (venues Venues, err error)
+	Get(pid int64, id int64) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
 	Update(venue *Venue) (err error)
-	Delete(pid int64,id int64) (err error)
+	Delete(pid int64, id int64) (err error)
 }
 
 // core contains db client
@@ -39,7 +39,6 @@ func (c *core) Select(pid int64) (venues Venues, err error) {
 	}
 	return
 }
-
 
 func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 	err = c.db.Select(&venue, `
@@ -66,18 +65,19 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			venue_phone,
 			project_id,
 			created_by,
-			last_update_by
+			last_update_by,
+			province
 		FROM
-			venues
+			mla_venues
 		WHERE
 			stats = 1 AND
 			project_id = ?
-	`,pid)
+	`, pid)
 
 	return
 }
 
-func (c *core) Get(pid int64,id int64) (venue Venue, err error) {
+func (c *core) Get(pid int64, id int64) (venue Venue, err error) {
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, pid, id)
 
 	venue, err = c.getFromCache(redisKey)
@@ -115,9 +115,10 @@ func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
 			venue_phone,
 			project_id,
 			created_by,
-			last_update_by
+			last_update_by,
+			province
 		FROM
-			venues
+			mla_venues
 		WHERE
 			id = ? AND
 			stats = 1 AND
@@ -135,7 +136,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	venue.LastUpdateBy = venue.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO venues (
+		INSERT INTO mla_venues (
 			venue_id,
 			venue_type,
 			address,
@@ -156,7 +157,8 @@ func (c *core) Insert(venue *Venue) (err error) {
 			venue_phone,
 			project_id,
 			created_by,
-			last_update_by
+			last_update_by,
+			province
 		) VALUES (
 			:venue_id,
 			:venue_type,
@@ -178,7 +180,8 @@ func (c *core) Insert(venue *Venue) (err error) {
 			:venue_phone,
 			:project_id,
 			:created_by,
-			:last_update_by
+			:last_update_by,
+			:province
 		)
 	`, venue)
 
@@ -196,7 +199,7 @@ func (c *core) Update(venue *Venue) (err error) {
 	venue.ProjectID = 10
 	_, err = c.db.NamedExec(`
 		UPDATE
-			venues
+			mla_venues
 		SET
 			venue_id = :venue_id,
 			venue_type = :venue_type,
@@ -214,7 +217,8 @@ func (c *core) Update(venue *Venue) (err error) {
 			venue_technician_name = :venue_technician_name,
 			venue_technician_contact_number = :venue_technician_contact_number,
 			venue_phone = :venue_phone,
-			last_update_by = :last_update_by
+			last_update_by = :last_update_by,
+			province= :province
 		WHERE
 			id = :id AND
 			project_id = 10 AND
@@ -229,12 +233,12 @@ func (c *core) Update(venue *Venue) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64,id int64) (err error) {
+func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
 		UPDATE
-			venues
+			mla_venues
 		SET
 			deleted_at = ?,
 			stats = 0
@@ -255,7 +259,7 @@ func (c *core) selectFromCache(redisKey string) (venues Venues, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET",redisKey))
+	b, err := redis.Bytes(conn.Do("GET", redisKey))
 	err = json.Unmarshal(b, &venues)
 	return
 }

@@ -63,7 +63,7 @@ func (c *core) selectByVenueTypeFromDB(pid int64, venue_type int64) (products Pr
 		created_by,
 		last_update_by
 	FROM
-		productlist
+		mla_productlist
 	WHERE
 		venue_type_id=? AND 
 		status = 1 AND 
@@ -120,7 +120,7 @@ func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (product Product, 
 			created_by,
 			last_update_by
 		FROM
-			productlist
+			mla_productlist
 		WHERE
 			id in (?) AND
 			project_id = ? AND
@@ -153,7 +153,7 @@ func (c *core) selectFromDB(pid int64) (product Products, err error) {
 			created_by,
 			last_update_by
 		FROM
-			productlist
+			mla_productlist
 		WHERE
 			status = 1 AND
 			project_id = ?
@@ -182,7 +182,7 @@ func (c *core) getFromDB(pid int64, id int64) (product Product, err error) {
 			created_by,
 			last_update_by
 		FROM
-			productlist
+			mla_productlist
 		WHERE
 			product_id = ? AND
 			project_id = ? AND
@@ -199,7 +199,7 @@ func (c *core) Insert(product *Product) (err error) {
 	product.LastUpdateBy = product.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO productlist (
+		INSERT INTO mla_productlist (
 			product_name,
 			description,
 			venue_type_id,
@@ -250,7 +250,7 @@ func (c *core) Update(product *Product, venueTypeID int64) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			productlist
+			mla_productlist
 		SET
 			product_name = :product_name,
 			description = :description,
@@ -286,7 +286,7 @@ func (c *core) Delete(pid int64, id int64,venueTypeID int64) (err error) {
 
 	_, err = c.db.Exec(`
 		UPDATE
-			productlist
+			mla_productlist
 		SET
 			deleted_at = ?,
 			status = 0

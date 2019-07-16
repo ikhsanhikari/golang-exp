@@ -37,7 +37,7 @@ func (c *core) Insert(aging *Aging) (err error) {
 	aging.Status = 1
 
 	res, err := c.db.NamedExec(`
-	 	INSERT INTO aging(
+	 	INSERT INTO mla_aging(
 			name,
 			description,
 			price,
@@ -72,7 +72,7 @@ func (c *core) Update(aging *Aging) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			aging
+			mla_aging
 		SET
 			name = :name,
 			description = :description,
@@ -98,7 +98,7 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 
 	_, err = c.db.Exec(`
 		UPDATE
-			aging
+			mla_aging
 		SET
 			deleted_at = ?,
 			status = 0
@@ -145,7 +145,7 @@ func (c *core) getFromDB(id int64, pid int64) (aging Aging, err error) {
 			deleted_at,
 			project_id
 		FROM
-			aging
+			mla_aging
 		WHERE
 			id = ? AND
 			project_id = ? AND 
@@ -181,7 +181,7 @@ func (c *core) selectFromDB(pid int64) (agings Agings, err error) {
 			deleted_at,
 			project_id
 		FROM
-			aging
+			mla_aging
 		WHERE
 			project_id = ? AND 
 			status = 1

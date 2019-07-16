@@ -1,9 +1,9 @@
 package commercial_type
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
-	"database/sql"
 
 	"encoding/json"
 
@@ -15,10 +15,10 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64) (commercialTypes CommercialTypes, err error)
-	Get(id int64,pid int64) (commercial_type CommercialType, err error)
+	Get(id int64, pid int64) (commercial_type CommercialType, err error)
 	Insert(commercialType *CommercialType) (err error)
 	Update(commercialType *CommercialType) (err error)
-	Delete(id int64,pid int64) (err error)
+	Delete(id int64, pid int64) (err error)
 }
 
 // core contains db client
@@ -30,7 +30,7 @@ type core struct {
 const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (commercialTypes CommercialTypes, err error) {
-	redisKey := fmt.Sprintf("%s:%d:commercial_type", redisPrefix,pid)
+	redisKey := fmt.Sprintf("%s:%d:commercial_type", redisPrefix, pid)
 	commercialTypes, err = c.selectFromCache(redisKey)
 	if err != nil {
 		commercialTypes, err = c.selectFromDB(pid)
@@ -53,7 +53,7 @@ func (c *core) selectFromDB(pid int64) (commercialType CommercialTypes, err erro
 			created_by,
 			last_update_by
 		FROM
-			commercial_type
+			mla_commercial_type
 		WHERE 
 			project_id = ? AND
 			deleted_at IS NULL
@@ -62,7 +62,7 @@ func (c *core) selectFromDB(pid int64) (commercialType CommercialTypes, err erro
 	return
 }
 
-func (c *core) Get(id int64,pid int64) (commercialType CommercialType, err error) {
+func (c *core) Get(id int64, pid int64) (commercialType CommercialType, err error) {
 	redisKey := fmt.Sprintf("%s:%d:commercial_type:%d", redisPrefix, pid, id)
 
 	commercialType, err = c.getFromCache(redisKey)
@@ -88,7 +88,7 @@ func (c *core) getFromDB(id int64, pid int64) (commercialType CommercialType, er
 			created_by,
 			last_update_by
 		FROM
-			commercial_type
+			mla_commercial_type
 		WHERE
 			id = ? 
 			AND project_id = ?
@@ -97,7 +97,6 @@ func (c *core) getFromDB(id int64, pid int64) (commercialType CommercialType, er
 
 	return
 }
-	
 
 func (c *core) Insert(commercialType *CommercialType) (err error) {
 	commercialType.CreatedAt = time.Now()
@@ -106,9 +105,8 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 	commercialType.Status = 1
 	commercialType.LastUpdateBy = commercialType.CreatedBy
 
-
 	res, err := c.db.NamedExec(`
-		INSERT INTO commercial_type (
+		INSERT INTO mla_commercial_type (
 			name,
 			description,
 			created_at,
@@ -142,7 +140,7 @@ func (c *core) Update(commercialType *CommercialType) (err error) {
 	commercialType.ProjectID = 10
 	_, err = c.db.NamedExec(`
 		UPDATE
-			commercial_type
+			mla_commercial_type
 		SET
 			description = :description,
 			name = :name,
@@ -167,14 +165,14 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 
 	_, err = c.db.Exec(`
 		UPDATE
-			commercial_type
+			mla_commercial_type
 		SET
 			deleted_at = ? ,
 			status = 0
 		WHERE
 			id = ? AND 
 			project_id = ?
-	`, now, id,pid)
+	`, now, id, pid)
 
 	redisKey := fmt.Sprintf("%s:%d:commercial_type:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
