@@ -3,18 +3,18 @@ package controller
 import (
 	"net/http"
 
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
-
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
@@ -42,6 +42,7 @@ type Controller struct {
 	payment        payment.ICore
 	license        license.ICore
 	email          email.ICore
+	template       template.ICore
 }
 
 // New ...
@@ -61,6 +62,7 @@ func New(
 	payment payment.ICore,
 	license license.ICore,
 	email email.ICore,
+	template template.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -78,6 +80,7 @@ func New(
 		payment:        payment,
 		license:        license,
 		email:          email,
+		template:       template,
 	}
 }
 
@@ -140,4 +143,6 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/licenses/:id", c.auth.MustAuthorize(c.handlePatchLicense, "molanobar:licenses.update"))
 	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
 	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
+
+	router.GET("/pdf", c.handlePdf)
 }

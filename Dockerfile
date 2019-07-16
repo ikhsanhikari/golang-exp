@@ -15,7 +15,7 @@ RUN mkdir ~/.ssh/ && \
     chmod 600 ~/.ssh/id_rsa
 RUN git config --global url."git@git.sstv.io:".insteadOf "https://git.sstv.io/"
 # Install dependencies
-RUN GO111MODULE=on go mod vendor
+RUN go mod download
 # Build binary
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -a -installsuffix cgo -o $CI_PROJECT_NAME ./cmd/serv/
 
@@ -30,9 +30,11 @@ FROM alpine:latest
 ARG CI_PROJECT_NAME
 # Setup
 WORKDIR /$CI_PROJECT_NAME
+RUN apk --update add wkhtmltopdf
 COPY --from=builder /$CI_PROJECT_NAME/$CI_PROJECT_NAME ./app
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 # Add dummy .env file
 COPY .env.sample .env
+COPY file file
 # Run
 CMD ./app
