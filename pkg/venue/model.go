@@ -9,6 +9,7 @@ type Venue struct {
 	Id         						int64     `db:"id"`
 	VenueId    						int64     `db:"venue_id"`
 	VenueType  						int64     `db:"venue_type"`
+	VenueName 						string    `db:"venue_name"`
 	Address    						string    `db:"address"`
 	Province   						string    `db:"province"`
 	Zip        						string    `db:"zip"`
