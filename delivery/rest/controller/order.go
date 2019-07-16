@@ -457,8 +457,9 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleUpdateStatusOrder] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		userID = ""
+		// c.reporter.Errorf("[handleUpdateStatusOrder] failed get userID")
+		// view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}
 

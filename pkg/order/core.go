@@ -175,22 +175,25 @@ func (c *core) UpdateOrderStatus(order *Order) (err error) {
 		order.FailedAt = null.TimeFrom(time.Now())
 	}
 
-	_, err = c.db.NamedExec(`
-		UPDATE
-			mla_orders
-		SET
-			status = :status,
-			updated_at = :updated_at,
-			last_update_by = :last_update_by,
-			pending_at = :pending_at,
-			paid_at = :paid_at,
-			failed_at = :failed_at
-		WHERE
-			order_id = :order_id AND
-			project_id = :project_id AND 
-			created_by = :created_by AND
-			deleted_at IS NULL
-	`, order)
+	qs := `UPDATE
+				mla_orders
+			SET
+				status = :status,
+				updated_at = :updated_at,
+				last_update_by = :last_update_by,
+				pending_at = :pending_at,
+				paid_at = :paid_at,
+				failed_at = :failed_at
+			WHERE
+				order_id = :order_id AND
+				project_id = :project_id AND `
+
+	if order.LastUpdateBy != "" {
+		qs += ` created_by = :created_by AND `
+	}
+	qs += `deleted_at IS NULL `
+
+	_, err = c.db.NamedExec(qs, order)
 
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
