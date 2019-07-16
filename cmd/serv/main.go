@@ -9,6 +9,7 @@ import (
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
+	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	license "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
@@ -82,6 +83,12 @@ func main() {
 	}
 	reporter.Infoln("Token Generator successfully initialized")
 
+	tokenGeneratorEmail, err := token_generator.Init(&cfg.TokenGeneratorEmail)
+	if err != nil {
+		panic(err)
+	}
+	reporter.Infoln("Token Generator Email successfully initialized")
+
 	coreHistory := _history.Init(db, redis)
 	reporter.Infoln("/pkg/history successfully initialized")
 
@@ -118,6 +125,9 @@ func main() {
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
 
+	coreEmail := email.Init(cfg.EmailBaseURL, tokenGeneratorEmail)
+	reporter.Infoln("/pkg/email successfully initialized")
+
 	coreTemplate := template.New("./file/template")
 	reporter.Infoln("/pkg/template successfully initialized")
 
@@ -141,6 +151,7 @@ func main() {
 			coreVenueType,
 			corePayment,
 			coreLicense,
+			coreEmail,
 			coreTemplate,
 		)
 	)
