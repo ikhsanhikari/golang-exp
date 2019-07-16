@@ -769,9 +769,10 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetOrderByID] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
+		// c.reporter.Errorf("[handleGetOrderByID] failed get userID")
+		// view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		// return
 	}
 
 	order, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
