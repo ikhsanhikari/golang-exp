@@ -1,9 +1,9 @@
 package installation
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
-	"database/sql"
 
 	"encoding/json"
 
@@ -15,10 +15,10 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64) (installations Installations, err error)
-	Get(id int64,pid int64) (installation Installation, err error)
+	Get(id int64, pid int64) (installation Installation, err error)
 	Insert(installation *Installation) (err error)
 	Update(installation *Installation) (err error)
-	Delete(id int64,pid int64) (err error)
+	Delete(id int64, pid int64) (err error)
 }
 
 // core contains db client
@@ -30,7 +30,7 @@ type core struct {
 const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64) (installations Installations, err error) {
-	redisKey := fmt.Sprintf("%s:%d:installation", redisPrefix,pid)
+	redisKey := fmt.Sprintf("%s:%d:installation", redisPrefix, pid)
 	installations, err = c.selectFromCache(redisKey)
 	if err != nil {
 		installations, err = c.selectFromDB(pid)
@@ -54,7 +54,7 @@ func (c *core) selectFromDB(pid int64) (installation Installations, err error) {
 			created_by,
 			last_update_by
 		FROM
-			installation
+			mla_installation
 		WHERE 
 			project_id = ? AND
 			deleted_at IS NULL
@@ -63,7 +63,7 @@ func (c *core) selectFromDB(pid int64) (installation Installations, err error) {
 	return
 }
 
-func (c *core) Get(id int64,pid int64) (installation Installation, err error) {
+func (c *core) Get(id int64, pid int64) (installation Installation, err error) {
 	redisKey := fmt.Sprintf("%s:%d:installation:%d", redisPrefix, pid, id)
 
 	installation, err = c.getFromCache(redisKey)
@@ -90,7 +90,7 @@ func (c *core) getFromDB(id int64, pid int64) (installation Installation, err er
 			created_by,
 			last_update_by
 		FROM
-			installation
+			mla_installation
 		WHERE
 			id = ? 
 			AND project_id = ?
@@ -99,7 +99,6 @@ func (c *core) getFromDB(id int64, pid int64) (installation Installation, err er
 
 	return
 }
-	
 
 func (c *core) Insert(installation *Installation) (err error) {
 	installation.CreatedAt = time.Now()
@@ -109,7 +108,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 	installation.LastUpdateBy = installation.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO installation (
+		INSERT INTO mla_installation (
 			description,
 			price,
 			device_id,
@@ -136,7 +135,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 	//fmt.Println(res)
 	installation.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:installation", redisPrefix, installation.ProjectID )
+	redisKey := fmt.Sprintf("%s:%d:installation", redisPrefix, installation.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -148,7 +147,7 @@ func (c *core) Update(installation *Installation) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			installation
+			mla_installation
 		SET
 			description = :description,
 			price = :price,
@@ -174,14 +173,14 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 
 	_, err = c.db.Exec(`
 		UPDATE
-			installation
+			mla_installation
 		SET
 			deleted_at = ? ,
 			status = 0
 		WHERE
 			id = ? AND 
 			project_id = ?
-	`, now, id,pid)
+	`, now, id, pid)
 
 	redisKey := fmt.Sprintf("%s:%d:installation:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)

@@ -81,7 +81,7 @@ func (c *core) selectFromDB(pid int64) (license Licenses, err error) {
 			last_update_by,
 			buyer_id
 		FROM
-			license
+			mla_license
 		WHERE
 			status = 1 AND 
 			project_id = ?
@@ -122,7 +122,7 @@ func (c *core) getFromDB(pid int64, id int64) (license License, err error) {
 		last_update_by,
 		buyer_id
 	FROM
-		license
+		mla_license
 	WHERE
 		status = 1 AND 
 		project_id = ? AND
@@ -162,7 +162,7 @@ func (c *core) getByBuyerIdFromDB(pid int64, buyerID string) (licenses Licenses,
 		last_update_by,
 		buyer_id
 	FROM
-		license
+		mla_license
 	WHERE
 		status = 1 AND 
 		project_id = ? AND
@@ -179,7 +179,7 @@ func (c *core) Insert(license *License) (err error) {
 	license.LastUpdateBy = license.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO license (
+		INSERT INTO mla_license (
 			license_number,
 			order_id,
 			license_status,
@@ -226,7 +226,7 @@ func (c *core) Update(license *License,buyerID string) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			license
+			mla_license
 		SET
 			order_id= :order_id,
 			license_status = :license_status,
@@ -259,7 +259,7 @@ func (c *core) Delete(pid int64, id int64,buyerID string) (err error) {
 
 	_, err = c.db.Exec(`
 		UPDATE
-			license
+			mla_license
 		SET
 			deleted_at = ?,
 			status = 0

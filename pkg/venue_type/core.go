@@ -1,9 +1,9 @@
 package venue_type
 
 import (
+	"database/sql"
 	"fmt"
 	"time"
-	"database/sql"
 
 	"encoding/json"
 
@@ -14,12 +14,12 @@ import (
 
 // ICore is the interface
 type ICore interface {
-	Select( pid int64) (venueTypes VenueTypes, err error)
-	Get(pid int64,id int64) (venueType VenueType, err error)
-	GetByCommercialType(pid int64,id int64) (venueTypes VenueTypes, err error)
+	Select(pid int64) (venueTypes VenueTypes, err error)
+	Get(pid int64, id int64) (venueType VenueType, err error)
+	GetByCommercialType(pid int64, id int64) (venueTypes VenueTypes, err error)
 	Insert(venueType *VenueType) (err error)
 	Update(venueType *VenueType, comId int64) (err error)
-	Delete(pid int64,id int64, comId int64) (err error)
+	Delete(pid int64, id int64, comId int64) (err error)
 }
 
 // core contains db client
@@ -58,16 +58,16 @@ func (c *core) selectFromDB(pid int64) (venueType VenueTypes, err error) {
 		created_by,
 		last_update_by
 		FROM
-			venue_types
+			mla_venue_types
 		WHERE
 			status = 1 AND
 			project_id = ?
-	`,pid)
+	`, pid)
 
 	return
 }
 
-func (c *core) Get(pid int64,id int64) (venueType VenueType, err error) {
+func (c *core) Get(pid int64, id int64) (venueType VenueType, err error) {
 	redisKey := fmt.Sprintf("%s:%d:venueType:%d", redisPrefix, pid, id)
 
 	venueType, err = c.getFromCache(redisKey)
@@ -97,7 +97,7 @@ func (c *core) getFromDB(id int64, pid int64) (venueType VenueType, err error) {
 			created_by,
 			last_update_by
 		FROM
-			venue_types
+			mla_venue_types
 		WHERE
 			id = ? AND
 			status = 1 AND
@@ -107,9 +107,9 @@ func (c *core) getFromDB(id int64, pid int64) (venueType VenueType, err error) {
 	return
 }
 
-func (c *core) GetByCommercialType(pid int64,id int64) (venueTypes VenueTypes, err error) {
-	redisKey := fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, pid,id)
-	fmt.Println("save ",redisKey)
+func (c *core) GetByCommercialType(pid int64, id int64) (venueTypes VenueTypes, err error) {
+	redisKey := fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, pid, id)
+	fmt.Println("save ", redisKey)
 	venueTypes, err = c.selectFromCache(redisKey)
 	if err != nil {
 		venueTypes, err = c.GetByCommercialTypeID(pid, id)
@@ -122,7 +122,7 @@ func (c *core) GetByCommercialType(pid int64,id int64) (venueTypes VenueTypes, e
 	return
 }
 
-func (c *core) GetByCommercialTypeID(pid int64,commercialTypeId int64) (venueTypes VenueTypes, err error) {
+func (c *core) GetByCommercialTypeID(pid int64, commercialTypeId int64) (venueTypes VenueTypes, err error) {
 	err = c.db.Select(&venueTypes, `
 		SELECT
 			id,
@@ -139,7 +139,7 @@ func (c *core) GetByCommercialTypeID(pid int64,commercialTypeId int64) (venueTyp
 			created_by,
 			last_update_by
 		FROM
-			venue_types
+			mla_venue_types
 		WHERE
 			commercial_type_id = ? AND
 			status = 1 AND
@@ -157,7 +157,7 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 	venueType.LastUpdateBy = venueType.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO venue_types (
+		INSERT INTO mla_venue_types (
 			name,
 			description,
 			capacity,
@@ -201,7 +201,7 @@ func (c *core) Update(venueType *VenueType, comId int64) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			venue_types
+			mla_venue_types
 		SET
 			name = :name,
 			description = :description,
@@ -219,19 +219,19 @@ func (c *core) Update(venueType *VenueType, comId int64) (err error) {
 	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, venueType.ProjectID)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, venueType.ProjectID, comId)
-	fmt.Println("last ",redisKey)
-	fmt.Println("now ",venueType.CommercialTypeID)
+	fmt.Println("last ", redisKey)
+	fmt.Println("now ", venueType.CommercialTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(pid int64,id int64, comId int64) (err error) {
+func (c *core) Delete(pid int64, id int64, comId int64) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
 		UPDATE
-			venue_types
+			mla_venue_types
 		SET
 			deleted_at = ?,
 			status = 0
@@ -254,7 +254,7 @@ func (c *core) selectFromCache(redisKey string) (venueTypes VenueTypes, err erro
 	conn := c.redis.Get()
 	defer conn.Close()
 
-	b, err := redis.Bytes(conn.Do("GET",redisKey))
+	b, err := redis.Bytes(conn.Do("GET", redisKey))
 	err = json.Unmarshal(b, &venueTypes)
 	return
 }

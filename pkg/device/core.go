@@ -77,7 +77,7 @@ func (c *core) selectFromDB(pid int64) (device Devices, err error) {
 			created_by,
 			last_update_by
 		FROM
-			devices
+			mla_devices
 		WHERE
 			status = 1 AND 
 			project_id = ?
@@ -115,7 +115,7 @@ func (c *core) getFromDB(pid int64, id int64) (device Device, err error) {
 		created_by,
 		last_update_by
 	FROM
-		devices
+		mla_devices
 	WHERE
 		status = 1 AND 
 		project_id = ? AND
@@ -132,7 +132,7 @@ func (c *core) Insert(device *Device) (err error) {
 	device.LastUpdateBy = device.CreatedBy
 
 	res, err := c.db.NamedExec(`
-		INSERT INTO devices (
+		INSERT INTO mla_devices (
 			name,
 			info,
 			price,
@@ -170,7 +170,7 @@ func (c *core) Update(device *Device) (err error) {
 
 	_, err = c.db.NamedExec(`
 		UPDATE
-			devices
+			mla_devices
 		SET
 			name = 		:name,
 			info = 		:info,
@@ -198,7 +198,7 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	_, err = c.db.Exec(`
 		UPDATE
-			devices
+			mla_devices
 		SET
 			deleted_at = ?,
 			status = 0
