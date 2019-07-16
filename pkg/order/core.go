@@ -220,7 +220,7 @@ func (c *core) UpdateOpenPaymentStatus(order *Order) (err error) {
 		SET
 			open_payment_status = :open_payment_status,
 			updated_at = :updated_at,
-			last_update_by = :last_update_by,
+			last_update_by = :last_update_by
 		WHERE
 			order_id = :order_id AND
 			project_id = :project_id AND 

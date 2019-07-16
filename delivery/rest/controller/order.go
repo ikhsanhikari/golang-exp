@@ -205,13 +205,13 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 	//do payment
 	payment, err := c.payment.Pay(strconv.FormatInt(getOrder.OrderID, 10), getOrder.PaymentMethodID)
 	if err != nil {
-		c.reporter.Errorf("[handlePatchOrderForPayment] failed processing payment, err: %s", err.Error())
+		c.reporter.Errorf("[handlePatchOrderForPayment] Failed processing payment, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed processing payment", http.StatusInternalServerError)
 		return
 	}
 	if payment == nil {
-		c.reporter.Errorf("[handlePatchOrderForPayment] Failed processing payment, payment not found")
-		view.RenderJSONError(w, "Failed processing payment, payment not found", http.StatusInternalServerError)
+		c.reporter.Errorf("[handlePatchOrderForPayment] Failed processing payment")
+		view.RenderJSONError(w, "Failed processing payment", http.StatusInternalServerError)
 		return
 	}
 	if payment.PaymentData.URL == "" {
