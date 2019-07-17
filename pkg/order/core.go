@@ -108,14 +108,6 @@ func (c *core) Update(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
 	order.PaymentMethodID = c.paymentMethodID
 
-	if order.Status == 1 {
-		order.PendingAt = null.TimeFrom(time.Now())
-	} else if order.Status == 2 {
-		order.PaidAt = null.TimeFrom(time.Now())
-	} else if order.Status == 3 {
-		order.FailedAt = null.TimeFrom(time.Now())
-	}
-
 	_, err = c.db.NamedExec(`
 		UPDATE
 			mla_orders
@@ -134,9 +126,6 @@ func (c *core) Update(order *Order) (err error) {
 			status = :status,
 			updated_at = :updated_at,
 			last_update_by = :last_update_by,
-			pending_at = :pending_at,
-			paid_at = :paid_at,
-			failed_at = :failed_at,
 			email = :email
 		WHERE
 			order_id = :order_id AND

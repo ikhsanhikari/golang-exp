@@ -30,7 +30,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var params reqOrderInsert
+	var params reqOrder
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrder] invalid parameter, err: %s", err.Error())
@@ -270,7 +270,7 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 			FailedAt:          updateStatus.FailedAt,
 			ProjectID:         updateStatus.ProjectID,
 			Email:             getOrder.Email,
-			OpenPaymentStatus: updateStatus.OpenPaymentStatus,
+			OpenPaymentStatus: getOrder.OpenPaymentStatus,
 		},
 		ResponseType:    payment.ResponseType,
 		HTMLRedirection: payment.HTMLRedirection,
@@ -284,7 +284,7 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 
 func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	var (
-		params  reqOrderUpdate
+		params  reqOrder
 		_id     = router.GetParam(r, "id")
 		id, err = strconv.ParseInt(_id, 10, 64)
 	)
@@ -384,13 +384,10 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		RoomQuantity:   params.RoomQuantity,
 		TotalPrice:     totalPrice,
 		PaymentFee:     params.PaymentFee,
-		Status:         params.Status,
 		ProjectID:      10,
+		Status:         getOrder.Status,
 		CreatedBy:      getOrder.CreatedBy,
 		LastUpdateBy:   fmt.Sprintf("%v", userID),
-		PendingAt:      getOrder.PendingAt,
-		PaidAt:         getOrder.PaidAt,
-		FailedAt:       getOrder.FailedAt,
 		Email:          params.Email,
 	}
 
@@ -419,15 +416,15 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 			TotalPrice:        updateOrder.TotalPrice,
 			PaymentMethodID:   updateOrder.PaymentMethodID,
 			PaymentFee:        updateOrder.PaymentFee,
-			Status:            updateOrder.Status,
+			Status:            getOrder.Status,
 			CreatedAt:         getOrder.CreatedAt,
 			CreatedBy:         getOrder.CreatedBy,
 			UpdatedAt:         updateOrder.UpdatedAt,
 			LastUpdateBy:      updateOrder.LastUpdateBy,
 			DeletedAt:         getOrder.DeletedAt,
-			PendingAt:         updateOrder.PendingAt,
-			PaidAt:            updateOrder.PaidAt,
-			FailedAt:          updateOrder.FailedAt,
+			PendingAt:         getOrder.PendingAt,
+			PaidAt:            getOrder.PaidAt,
+			FailedAt:          getOrder.FailedAt,
 			ProjectID:         updateOrder.ProjectID,
 			Email:             updateOrder.Email,
 			OpenPaymentStatus: getOrder.OpenPaymentStatus,
@@ -458,9 +455,6 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 	userID, ok := user["sub"]
 	if !ok {
 		userID = ""
-		// c.reporter.Errorf("[handleUpdateStatusOrder] failed get userID")
-		// view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
 	}
 
 	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
@@ -541,9 +535,17 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 
 func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r *http.Request) {
 	var (
+		params  reqUpdateOpenPaymentStatus
 		_id     = router.GetParam(r, "id")
 		id, err = strconv.ParseInt(_id, 10, 64)
 	)
+	if err != nil {
+		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -558,9 +560,12 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		if params.UserID == "" {
+			c.reporter.Errorf("[handleUpdateOpenPaymentStatus] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
 	}
 
 	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
@@ -578,7 +583,7 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 	updateStatus := order.Order{
 		OrderID:           id,
 		ProjectID:         10,
-		OpenPaymentStatus: 1,
+		OpenPaymentStatus: params.OpenPaymentStatus,
 		CreatedBy:         getOrder.CreatedBy,
 		LastUpdateBy:      fmt.Sprintf("%v", userID),
 		VenueID:           getOrder.VenueID,
