@@ -16,8 +16,8 @@ type ICore interface {
 	SelectByIDs(ids []int64, pid int64, limit int) (license License, err error)
 	Get(pid int64, id int64) (license License, err error)
 	Insert(license *License) (err error)
-	Update(license *License,buyerID string) (err error)
-	Delete(pid int64, id int64,buyerID string) (err error)
+	Update(license *License, buyerID string) (err error)
+	Delete(pid int64, id int64, buyerID string) (err error)
 	GetByBuyerId(pid int64, id string) (licenses Licenses, err error)
 }
 
@@ -91,7 +91,7 @@ func (c *core) selectFromDB(pid int64) (license Licenses, err error) {
 }
 
 func (c *core) Get(pid int64, id int64) (license License, err error) {
-	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, pid,id)
+	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, pid, id)
 
 	license, err = c.getFromCache(redisKey)
 	if err != nil {
@@ -133,7 +133,7 @@ func (c *core) getFromDB(pid int64, id int64) (license License, err error) {
 }
 
 func (c *core) GetByBuyerId(pid int64, id string) (licenses Licenses, err error) {
-	redisKey := fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,id)
+	redisKey := fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, id)
 	licenses, err = c.selectFromCache(redisKey)
 
 	if err != nil {
@@ -214,13 +214,13 @@ func (c *core) Insert(license *License) (err error) {
 	redisKey := fmt.Sprintf("%s:licenses", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,license.BuyerID)
+	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, license.BuyerID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Update(license *License,buyerID string) (err error) {
+func (c *core) Update(license *License, buyerID string) (err error) {
 	license.UpdatedAt = time.Now()
 	license.Status = 1
 
@@ -248,13 +248,13 @@ func (c *core) Update(license *License,buyerID string) (err error) {
 	redisKey = fmt.Sprintf("%s:licenses", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,buyerID)
+	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(pid int64, id int64,buyerID string) (err error) {
+func (c *core) Delete(pid int64, id int64, buyerID string) (err error) {
 	now := time.Now()
 
 	_, err = c.db.Exec(`
@@ -275,7 +275,7 @@ func (c *core) Delete(pid int64, id int64,buyerID string) (err error) {
 	redisKey = fmt.Sprintf("%s:licenses", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,buyerID)
+	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
 	_ = c.deleteCache(redisKey)
 
 	return
