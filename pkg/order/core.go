@@ -27,6 +27,8 @@ type ICore interface {
 	SelectByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error)
 	SelectByVenueID(venueID int64, pid int64, uid string) (orders Orders, err error)
 	SelectByPaidDate(paidDate string, pid int64, uid string) (orders Orders, err error)
+	SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error)
+	SelectSummaryOrderByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error)
 }
 
 // core contains db client
@@ -570,12 +572,152 @@ func (c *core) selectFromDBByPaidDate(paidDate string, pid int64, uid string) (o
 	return
 }
 
+func (c *core) SelectSummaryOrderByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:sumorder-id:%d", redisPrefix, pid, uid, orderID)
+
+	sumorder, err = c.selectSumFromCache1()
+	if err != nil {
+		sumorder, err = c.selectSumFromDBByID(orderID, pid, uid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(sumorder)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error) {
+	err = c.db.Get(&sumorder, `
+	select
+	orders.order_id as order_id,
+	COALESCE(orders.order_number,'') as order_number,
+    COALESCE(orders.total_price,0) as order_total_price,
+    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
+    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
+    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    COALESCE(orders.email,'') as order_email,
+	COALESCE(venues.venue_name,'') as venue_name,
+    COALESCE(venues.venue_type,0) as venue_type,
+    COALESCE(venues.address,'') as venue_address,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip,
+    COALESCE(venues.capacity,0) as venue_capacity,
+    COALESCE(venues.longitude,0) as venue_longitude,
+    COALESCE(venues.latitude,0) as venue_latitude,
+    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(devices.description,'') as device_name,
+	COALESCE(product.description,'') as product_name,
+	COALESCE(installation.description,'') as installation_name,
+	COALESCE(room.description,'') as room_name,
+    COALESCE(room.quantity,0) as room_qty,
+	COALESCE(aging.description,'') as aging_name,
+	COALESCE(orders.status,0) as order_status,
+	COALESCE(orders.open_payment_status,0) as open_payment_status,
+    COALESCE(license.license_number,'') as license_number,
+    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
+    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+	from 
+	v2_subscriptions.mla_orders orders   
+	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
+	left join v2_subscriptions.mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join v2_subscriptions.mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join v2_subscriptions.mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join v2_subscriptions.mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
+	where
+	orders.order_id = ? AND
+	orders.project_id = ? AND
+	orders.buyer_id = ? AND
+	orders.deleted_at IS NULL
+	LIMIT 1
+	;
+	`, orderID, pid, uid)
+	return
+}
+
+func (c *core) SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:sumorders-userid", redisPrefix, pid, uid)
+
+	sumorders, err = c.selectSumFromCache()
+	if err != nil {
+		sumorders, err = c.selectSumFromDBByUserID(pid, uid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(sumorders)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders SummaryOrders, err error) {
+	err = c.db.Select(&sumorders, `
+	select
+	orders.order_id as order_id,
+	COALESCE(orders.order_number,'') as order_number,
+    COALESCE(orders.total_price,0) as order_total_price,
+    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
+    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
+    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    COALESCE(orders.email,'') as order_email,
+	COALESCE(venues.venue_name,'') as venue_name,
+    COALESCE(venues.venue_type,0) as venue_type,
+    COALESCE(venues.address,'') as venue_address,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip,
+    COALESCE(venues.capacity,0) as venue_capacity,
+    COALESCE(venues.longitude,0) as venue_longitude,
+    COALESCE(venues.latitude,0) as venue_latitude,
+    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(devices.description,'') as device_name,
+	COALESCE(product.description,'') as product_name,
+	COALESCE(installation.description,'') as installation_name,
+	COALESCE(room.description,'') as room_name,
+    COALESCE(room.quantity,0) as room_qty,
+	COALESCE(aging.description,'') as aging_name,
+	COALESCE(orders.status,0) as order_status,
+	COALESCE(orders.open_payment_status,0) as open_payment_status,
+    COALESCE(license.license_number,'') as license_number,
+    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
+    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+	from 
+	v2_subscriptions.mla_orders orders   
+	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
+	left join v2_subscriptions.mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join v2_subscriptions.mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join v2_subscriptions.mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join v2_subscriptions.mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
+	where
+	orders.project_id = ? AND
+	orders.buyer_id = ? AND
+	orders.deleted_at IS NULL
+	;
+	`, pid, uid)
+	return
+}
+
 func (c *core) selectFromCache() (orders Orders, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET"))
 	err = json.Unmarshal(b, &orders)
+	return
+}
+
+func (c *core) selectSumFromCache1() (sumorder SummaryOrder, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &sumorder)
+	return
+}
+
+func (c *core) selectSumFromCache() (sumorders SummaryOrders, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &sumorders)
 	return
 }
 

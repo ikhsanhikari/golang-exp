@@ -889,6 +889,143 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Request) {
+	var (
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+	)
+	if err != nil {
+		c.reporter.Errorf("[handleGetSumOrderByID] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetSumOrderByID] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		userID = ""
+		// c.reporter.Errorf("[handleGetOrderByID] failed get userID")
+		// view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		// return
+	}
+
+	sumorder, err := c.order.SelectSummaryOrderByID(id, 10, fmt.Sprintf("%v", userID))
+	if err != nil {
+		c.reporter.Errorf("[handleGetSumOrderByID] sum order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Sum Order not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetSumOrderByID] failed get sum order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get sum order", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponseOrder{
+		ID:   sumorder.OrderID,
+		Type: "sum_order",
+		Attributes: view.SumOrderAttributes{
+			OrderNumber:        sumorder.OrderNumber,
+			OrderTotalPrice:    sumorder.OrderTotalPrice,
+			OrderCreatedAt:     sumorder.OrderCreatedAt,
+			OrderPaidAt:        sumorder.OrderPaidAt,
+			OrderFailedAt:      sumorder.OrderFailedAt,
+			OrderEmail:         sumorder.OrderEmail,
+			VenueName:          sumorder.VenueName,
+			VenueType:          sumorder.VenueType,
+			VenueAddress:       sumorder.VenueAddress,
+			VenueProvince:      sumorder.VenueProvince,
+			VenueZip:           sumorder.VenueZip,
+			VenueCapacity:      sumorder.VenueCapacity,
+			VenueLongitude:     sumorder.VenueLongitude,
+			VenueLatitude:      sumorder.VenueLatitude,
+			VenueCategory:      sumorder.VenueCategory,
+			DeviceName:         sumorder.DeviceName,
+			ProductName:        sumorder.ProductName,
+			InstallationName:   sumorder.InstallationName,
+			RoomName:           sumorder.RoomName,
+			RoomQty:            sumorder.RoomQty,
+			AgingName:          sumorder.AgingName,
+			OrderStatus:        sumorder.OrderStatus,
+			OpenPaymentStatus:  sumorder.OpenPaymentStatus,
+			LicenseNumber:      sumorder.LicenseNumber,
+			LicenseActiveDate:  sumorder.LicenseActiveDate,
+			LicenseExpiredDate: sumorder.LicenseExpiredDate,
+		},
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.Request) {
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+
+	sumorders, err := c.order.SelectSummaryOrdersByUserID(10, fmt.Sprintf("%v", userID))
+	if err != nil {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Sum orders not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponseOrder, 0, len(sumorders))
+	for _, sumorder := range sumorders {
+		res = append(res, view.DataResponseOrder{
+			ID:   sumorder.OrderID,
+			Type: "sum_order",
+			Attributes: view.SumOrderAttributes{
+				OrderNumber:        sumorder.OrderNumber,
+				OrderTotalPrice:    sumorder.OrderTotalPrice,
+				OrderCreatedAt:     sumorder.OrderCreatedAt,
+				OrderPaidAt:        sumorder.OrderPaidAt,
+				OrderFailedAt:      sumorder.OrderFailedAt,
+				OrderEmail:         sumorder.OrderEmail,
+				VenueName:          sumorder.VenueName,
+				VenueType:          sumorder.VenueType,
+				VenueAddress:       sumorder.VenueAddress,
+				VenueProvince:      sumorder.VenueProvince,
+				VenueZip:           sumorder.VenueZip,
+				VenueCapacity:      sumorder.VenueCapacity,
+				VenueLongitude:     sumorder.VenueLongitude,
+				VenueLatitude:      sumorder.VenueLatitude,
+				VenueCategory:      sumorder.VenueCategory,
+				DeviceName:         sumorder.DeviceName,
+				ProductName:        sumorder.ProductName,
+				InstallationName:   sumorder.InstallationName,
+				RoomName:           sumorder.RoomName,
+				RoomQty:            sumorder.RoomQty,
+				AgingName:          sumorder.AgingName,
+				OrderStatus:        sumorder.OrderStatus,
+				OpenPaymentStatus:  sumorder.OpenPaymentStatus,
+				LicenseNumber:      sumorder.LicenseNumber,
+				LicenseActiveDate:  sumorder.LicenseActiveDate,
+				LicenseExpiredDate: sumorder.LicenseExpiredDate,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Request) {
 	var (
 		_venueID     = router.GetParam(r, "venue_id")
