@@ -50,14 +50,32 @@ type OrderAttributes struct {
 }
 
 type SumOrderAttributes struct {
-	VenueName         string `db:"venue_name"`
-	DeviceName        string `db:"device_name"`
-	ProductName       string `db:"product_name"`
-	InstallationName  string `db:"installation_name"`
-	RoomName          string `db:"room_name"`
-	AgingName         string `db:"aging_name"`
-	OrderStatus       int64  `db:"order_status"`
-	OpenPaymentStatus int64  `db:"open_payment_status"`
+	OrderNumber        string    `db:"order_number"`
+	OrderTotalPrice    float64   `db:"order_total_price"`
+	OrderCreatedAt     time.Time `db:"order_created_at"`
+	OrderPaidAt        time.Time `db:"order_paid_at"`
+	OrderFailedAt      time.Time `db:"order_failed_at"`
+	OrderEmail         string    `db:"order_email"`
+	VenueName          string    `db:"venue_name"`
+	VenueType          int64     `db:"venue_type"`
+	VenueAddress       string    `db:"venue_address"`
+	VenueProvince      string    `db:"venue_province"`
+	VenueZip           string    `db:"venue_zip"`
+	VenueCapacity      int64     `db:"venue_capacity"`
+	VenueLongitude     float64   `db:"venue_longitude"`
+	VenueLatitude      float64   `db:"venue_latitude"`
+	VenueCategory      int64     `db:"venue_category"`
+	DeviceName         string    `db:"device_name"`
+	ProductName        string    `db:"product_name"`
+	InstallationName   string    `db:"installation_name"`
+	RoomName           string    `db:"room_name"`
+	RoomQty            int64     `db:"room_qty"`
+	AgingName          string    `db:"aging_name"`
+	OrderStatus        int64     `db:"order_status"`
+	OpenPaymentStatus  int64     `db:"open_payment_status"`
+	LicenseNumber      string    `db:"license_number"`
+	LicenseActiveDate  time.Time `db:"license_active_date"`
+	LicenseExpiredDate time.Time `db:"license_expired_date"`
 }
 
 type PaymentAttributes struct {

@@ -587,14 +587,32 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	err = c.db.Select(&sumorders, `
 	select
 	orders.order_id as order_id,
+	COALESCE(orders.order_number,'') as order_number,
+    COALESCE(orders.total_price,0) as order_total_price,
+    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
+    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
+    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    COALESCE(orders.email,'') as order_email,
 	COALESCE(venues.venue_name,'') as venue_name,
+    COALESCE(venues.venue_type,0) as venue_type,
+    COALESCE(venues.address,'') as venue_address,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip,
+    COALESCE(venues.capacity,0) as venue_capacity,
+    COALESCE(venues.longitude,0) as venue_longitude,
+    COALESCE(venues.latitude,0) as venue_latitude,
+    COALESCE(venues.venue_category,0) as venue_category,
 	COALESCE(devices.description,'') as device_name,
 	COALESCE(product.description,'') as product_name,
 	COALESCE(installation.description,'') as installation_name,
 	COALESCE(room.description,'') as room_name,
+    COALESCE(room.quantity,0) as room_qty,
 	COALESCE(aging.description,'') as aging_name,
 	COALESCE(orders.status,0) as order_status,
-	COALESCE(orders.open_payment_status,0) as open_payment_status
+	COALESCE(orders.open_payment_status,0) as open_payment_status,
+    COALESCE(license.license_number,'') as license_number,
+    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
+    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
 	from 
 	v2_subscriptions.mla_orders orders   
 	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
