@@ -94,13 +94,16 @@ func (c *Controller) Register(router *router.Router) {
 
 	router.POST("/orders", c.auth.MustAuthorize(c.handlePostOrder, "molanobar:orders.create"))
 	router.PATCH("/orders/:id", c.auth.MustAuthorize(c.handlePatchOrder, "molanobar:orders.update"))
-	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateStatusOrderByID, "molanobar:orders.update"))
+	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateOrderStatusByID, "molanobar:orders.update"))
+	router.PATCH("/orders-open-payment-status/:id", c.auth.MustAuthorize(c.handleUpdateOpenPaymentStatusByID, "molanobar:orders.update"))
+	router.PATCH("/orders-do-payment/:id", c.auth.MustAuthorize(c.handlePatchOrderForPayment, "molanobar:orders.update"))
 	router.DELETE("/orders/:id", c.auth.MustAuthorize(c.handleDeleteOrder, "molanobar:orders.delete"))
 	router.GET("/orders", c.auth.MustAuthorize(c.handleGetAllOrders, "molanobar:orders.read"))
 	router.GET("/orders/:id", c.auth.MustAuthorize(c.handleGetOrderByID, "molanobar:orders.read"))
 	router.GET("/orders-by-venueid/:venue_id", c.auth.MustAuthorize(c.handleGetAllByVenueID, "molanobar:orders.read"))
 	router.GET("/orders-by-buyerid/:buyer_id", c.auth.MustAuthorize(c.handleGetAllByBuyerID, "molanobar:orders.read"))
 	router.GET("/orders-by-paiddate/:paid_date", c.auth.MustAuthorize(c.handleGetAllByPaidDate, "molanobar:orders.read"))
+	router.GET("/sumorders", c.auth.MustAuthorize(c.handleGetSumOrdersByUserID, "molanobar:orders.read"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
