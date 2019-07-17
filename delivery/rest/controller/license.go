@@ -2,11 +2,13 @@ package controller
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
+	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 	"git.sstv.io/lib/go/gojunkyard.git/util"
@@ -108,8 +110,27 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *Controller) handlePostLicense(w http.ResponseWriter, r *http.Request) {
+
 	var params reqLicense
+
+	user, ok := auth.GetUser(r)
+	if !ok {
+		c.reporter.Warningf("[handlePostLicense] [GetUser] Failed get user")
+		view.RenderJSONError(w, "Failed get user from token", http.StatusBadRequest)
+		return
+	}
+	uid, ok := user["sub"]
+	if !ok {
+		c.reporter.Warningf("[handlePostLicense] user[sub] Failed get id user because nil")
+	}
+
 	err := form.Bind(&params, r)
+
+	if uid != nil {
+		uidStr := fmt.Sprintf("%v", uid)
+		params.CreatedBy = uidStr
+	}
+
 	if err != nil {
 		c.reporter.Warningf("[handlePostLicense] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -148,14 +169,33 @@ func (c *Controller) handlePatchLicense(w http.ResponseWriter, r *http.Request) 
 	}
 
 	var params reqLicense
+
+	user, ok := auth.GetUser(r)
+	if !ok {
+		c.reporter.Warningf("[handlePatchLicense][GetUser] Failed get user")
+		view.RenderJSONError(w, "Failed get user from token", http.StatusBadRequest)
+		return
+	}
+	uid, ok := user["sub"]
+	if !ok {
+		c.reporter.Warningf("[handlePatchLicense] user[sub] Failed get id user because nil")
+	}
+
+	uid = "newUID"
 	err = form.Bind(&params, r)
+
+	if uid != nil {
+		uidStr := fmt.Sprintf("%v", uid)
+		params.LastUpdateBy = uidStr
+	}
+
 	if err != nil {
 		c.reporter.Warningf("[handlePatchLicense] form binding, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
-	licenseParam , err := c.license.Get(10, id)
+	licenseParam, err := c.license.Get(10, id)
 	buyerID := licenseParam.BuyerID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchLicense] license not found, err: %s", err.Error())
@@ -179,7 +219,7 @@ func (c *Controller) handlePatchLicense(w http.ResponseWriter, r *http.Request) 
 		LastUpdateBy:  params.LastUpdateBy,
 		BuyerID:       params.BuyerID,
 	}
-	err = c.license.Update(&license,buyerID)
+	err = c.license.Update(&license, buyerID)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchLicense] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update license", http.StatusInternalServerError)
