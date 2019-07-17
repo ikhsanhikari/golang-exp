@@ -3,7 +3,7 @@ package order
 import (
 	"time"
 
-	"gopkg.in/guregu/null.v3"
+	null "gopkg.in/guregu/null.v3"
 )
 
 //Order is model for mla_orders in db
@@ -43,3 +43,19 @@ type LastOrderNumber struct {
 	Date   string `db:"date"`
 	Number int64  `db:"number"`
 }
+
+//Order is model for mla_orders in db
+type SummaryOrder struct {
+	OrderID           int64  `db:"order_id"`
+	VenueName         string `db:"venue_name"`
+	DeviceName        string `db:"device_name"`
+	ProductName       string `db:"product_name"`
+	InstallationName  string `db:"installation_name"`
+	RoomName          string `db:"room_name"`
+	AgingName         string `db:"aging_name"`
+	OrderStatus       int64  `db:"order_status"`
+	OpenPaymentStatus int64  `db:"open_payment_status"`
+}
+
+//Orders is list of order
+type SummaryOrders []SummaryOrder

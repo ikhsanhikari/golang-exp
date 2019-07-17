@@ -3,7 +3,7 @@ package view
 import (
 	"time"
 
-	"gopkg.in/guregu/null.v3"
+	null "gopkg.in/guregu/null.v3"
 )
 
 type DataResponseOrder struct {
@@ -47,6 +47,17 @@ type OrderAttributes struct {
 	ProjectID         int64     `json:"project_id"`
 	Email             string    `json:"email"`
 	OpenPaymentStatus int16     `json:"open_payment_status"`
+}
+
+type SumOrderAttributes struct {
+	VenueName         string `db:"venue_name"`
+	DeviceName        string `db:"device_name"`
+	ProductName       string `db:"product_name"`
+	InstallationName  string `db:"installation_name"`
+	RoomName          string `db:"room_name"`
+	AgingName         string `db:"aging_name"`
+	OrderStatus       int64  `db:"order_status"`
+	OpenPaymentStatus int64  `db:"open_payment_status"`
 }
 
 type PaymentAttributes struct {
