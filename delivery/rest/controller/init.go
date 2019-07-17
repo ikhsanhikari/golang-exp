@@ -103,6 +103,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/orders-by-venueid/:venue_id", c.auth.MustAuthorize(c.handleGetAllByVenueID, "molanobar:orders.read"))
 	router.GET("/orders-by-buyerid/:buyer_id", c.auth.MustAuthorize(c.handleGetAllByBuyerID, "molanobar:orders.read"))
 	router.GET("/orders-by-paiddate/:paid_date", c.auth.MustAuthorize(c.handleGetAllByPaidDate, "molanobar:orders.read"))
+	router.GET("/sumorders", c.auth.MustAuthorize(c.handleGetSumOrdersByUserID, "molanobar:orders.read"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))

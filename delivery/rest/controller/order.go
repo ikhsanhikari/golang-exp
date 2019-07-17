@@ -827,6 +827,53 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.Request) {
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+
+	sumorders, err := c.order.SelectSummaryOrdersByUserID(10, fmt.Sprintf("%v", userID))
+	if err != nil {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Sum orders not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponseOrder, 0, len(sumorders))
+	for _, sumorder := range sumorders {
+		res = append(res, view.DataResponseOrder{
+			ID:   sumorder.OrderID,
+			Type: "sum_order",
+			Attributes: view.SumOrderAttributes{
+				VenueName:         sumorder.VenueName,
+				DeviceName:        sumorder.DeviceName,
+				ProductName:       sumorder.ProductName,
+				InstallationName:  sumorder.InstallationName,
+				RoomName:          sumorder.RoomName,
+				AgingName:         sumorder.AgingName,
+				OrderStatus:       sumorder.OrderStatus,
+				OpenPaymentStatus: sumorder.OpenPaymentStatus,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Request) {
 	var (
 		_venueID     = router.GetParam(r, "venue_id")

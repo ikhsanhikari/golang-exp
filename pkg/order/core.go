@@ -27,6 +27,7 @@ type ICore interface {
 	SelectByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error)
 	SelectByVenueID(venueID int64, pid int64, uid string) (orders Orders, err error)
 	SelectByPaidDate(paidDate string, pid int64, uid string) (orders Orders, err error)
+	SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error)
 }
 
 // core contains db client
@@ -570,12 +571,63 @@ func (c *core) selectFromDBByPaidDate(paidDate string, pid int64, uid string) (o
 	return
 }
 
+func (c *core) SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:sumorders-userid:%d", redisPrefix, pid, uid)
+
+	sumorders, err = c.selectSumFromCache()
+	if err != nil {
+		sumorders, err = c.selectSumFromDBByUserID(pid, uid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(sumorders)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders SummaryOrders, err error) {
+	err = c.db.Select(&sumorders, `
+	select
+	orders.order_id as order_id,
+	venues.venue_name as venue_name,
+	devices.description as device_name,
+	product.description as product_name,
+	installation.description as installation_name,
+	room.description as room_name,
+	aging.description as aging_name,
+	orders.status as order_status,
+	orders.open_payment_status as open_payment_status
+	from 
+	v2_subscriptions.mla_orders orders   
+	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
+	left join v2_subscriptions.mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join v2_subscriptions.mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join v2_subscriptions.mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join v2_subscriptions.mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
+	where
+	project_id = ? AND
+	orders.buyer_id = ? AND
+	deleted_at IS NULL
+	;
+	`, pid, uid)
+	return
+}
+
 func (c *core) selectFromCache() (orders Orders, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET"))
 	err = json.Unmarshal(b, &orders)
+	return
+}
+
+func (c *core) selectSumFromCache() (sumorders SummaryOrders, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &sumorders)
 	return
 }
 
