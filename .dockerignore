@@ -1,0 +1,4 @@
+/.gitlab
+/Dockerfile
+/vendor
+.DS_Store
