@@ -11,6 +11,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
@@ -43,6 +44,7 @@ type Controller struct {
 	license        license.ICore
 	email          email.ICore
 	template       template.ICore
+	orderDetail    order_detail.ICore
 }
 
 // New ...
@@ -63,6 +65,7 @@ func New(
 	license license.ICore,
 	email email.ICore,
 	template template.ICore,
+	orderDetail order_detail.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -81,6 +84,7 @@ func New(
 		license:        license,
 		email:          email,
 		template:       template,
+		orderDetail:    orderDetail,
 	}
 }
 

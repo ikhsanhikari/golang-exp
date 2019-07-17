@@ -124,6 +124,14 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//insert order details
+	err = c.insertOrderDetail(insertOrder, device, product, installation, room, aging)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] failed post order details, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed post order details", http.StatusInternalServerError)
+		return
+	}
+
 	//set response
 	res := view.DataResponseOrder{
 		ID:   insertOrder.OrderID,
@@ -307,6 +315,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//validasi order
 	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())
@@ -319,6 +328,25 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//validasi order detail
+	orderDetails, err := c.orderDetail.Get(id, 10, userID.(string))
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] order details not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Order details not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Failed get order details, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get order detail", http.StatusInternalServerError)
+		return
+	}
+	if len(orderDetails) != 5 {
+		c.reporter.Errorf("[handlePatchOrder] Failed get all order details")
+		view.RenderJSONError(w, "Failed get all order details", http.StatusInternalServerError)
+		return
+	}
+
+	//validasi request body
 	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
@@ -326,6 +354,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//validasi foreign key
 	_, err = c.venue.Get(10, params.VenueID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Venue Not Found, err: %s", err.Error())
@@ -395,6 +424,14 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrder] failed update order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order", http.StatusInternalServerError)
+		return
+	}
+
+	//update order details
+	err = c.updateOrderDetail(updateOrder, device, product, installation, room, aging)
+	if err != nil {
+		c.reporter.Errorf("[handlePatchOrder] failed update order details, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed update order details", http.StatusInternalServerError)
 		return
 	}
 
@@ -656,6 +693,7 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//validasi order
 	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleDeleteOrder] order not found, err: %s", err.Error())
@@ -668,6 +706,25 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//validasi order detail
+	orderDetails, err := c.orderDetail.Get(id, 10, userID.(string))
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] order details not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Order details not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrder] Failed get order details, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get order detail", http.StatusInternalServerError)
+		return
+	}
+	if len(orderDetails) != 5 {
+		c.reporter.Errorf("[handlePatchOrder] Failed get all order details")
+		view.RenderJSONError(w, "Failed get all order details", http.StatusInternalServerError)
+		return
+	}
+
+	//delete order
 	deleteOrder := order.Order{
 		OrderID:      id,
 		ProjectID:    10,
@@ -683,6 +740,14 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteOrder] failed delete order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete order", http.StatusInternalServerError)
+		return
+	}
+
+	//delete order details
+	err = c.deleteOrderDetail(deleteOrder)
+	if err != nil {
+		c.reporter.Errorf("[handleDeleteOrder] failed delete order details, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed delete order details", http.StatusInternalServerError)
 		return
 	}
 
@@ -776,9 +841,6 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 	userID, ok := user["sub"]
 	if !ok {
 		userID = ""
-		// c.reporter.Errorf("[handleGetOrderByID] failed get userID")
-		// view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		// return
 	}
 
 	order, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
