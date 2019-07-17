@@ -587,14 +587,14 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	err = c.db.Select(&sumorders, `
 	select
 	orders.order_id as order_id,
-	venues.venue_name as venue_name,
-	devices.description as device_name,
-	product.description as product_name,
-	installation.description as installation_name,
-	room.description as room_name,
-	aging.description as aging_name,
-	orders.status as order_status,
-	orders.open_payment_status as open_payment_status
+	COALESCE(venues.venue_name,'') as venue_name,
+	COALESCE(devices.description,'') as device_name,
+	COALESCE(product.description,'') as product_name,
+	COALESCE(installation.description,'') as installation_name,
+	COALESCE(room.description,'') as room_name,
+	COALESCE(aging.description,'') as aging_name,
+	COALESCE(orders.status,0) as order_status,
+	COALESCE(orders.open_payment_status,0) as open_payment_status
 	from 
 	v2_subscriptions.mla_orders orders   
 	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
@@ -605,9 +605,9 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
 	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
 	where
-	project_id = ? AND
+	orders.project_id = ? AND
 	orders.buyer_id = ? AND
-	deleted_at IS NULL
+	orders.deleted_at IS NULL
 	;
 	`, pid, uid)
 	return
