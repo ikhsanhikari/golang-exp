@@ -14,6 +14,7 @@ import (
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	license "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	orderDetail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	payment "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
@@ -131,8 +132,8 @@ func main() {
 	coreTemplate := template.New("./file/template")
 	reporter.Infoln("/pkg/template successfully initialized")
 
-	// coreEmail := email.Init(cfg.EmailBaseURL, tokenGenerator)
-	// reporter.Infoln("/pkg/email successfully initialized")
+	coreOrderDetail := orderDetail.Init(db, redis)
+	reporter.Infoln("/pkg/order_detail successfully initialized")
 
 	var (
 		server = webserver.New(&cfg.Webserver)
@@ -153,6 +154,7 @@ func main() {
 			coreLicense,
 			coreEmail,
 			coreTemplate,
+			coreOrderDetail,
 		)
 	)
 	rest.Register(server.Router())
