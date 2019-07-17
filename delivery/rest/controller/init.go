@@ -11,6 +11,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
@@ -43,6 +44,7 @@ type Controller struct {
 	license        license.ICore
 	email          email.ICore
 	template       template.ICore
+	orderDetail    order_detail.ICore
 }
 
 // New ...
@@ -63,6 +65,7 @@ func New(
 	license license.ICore,
 	email email.ICore,
 	template template.ICore,
+	orderDetail order_detail.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -81,6 +84,7 @@ func New(
 		license:        license,
 		email:          email,
 		template:       template,
+		orderDetail:    orderDetail,
 	}
 }
 
@@ -104,6 +108,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/orders-by-buyerid/:buyer_id", c.auth.MustAuthorize(c.handleGetAllByBuyerID, "molanobar:orders.read"))
 	router.GET("/orders-by-paiddate/:paid_date", c.auth.MustAuthorize(c.handleGetAllByPaidDate, "molanobar:orders.read"))
 	router.GET("/sumorders", c.auth.MustAuthorize(c.handleGetSumOrdersByUserID, "molanobar:orders.read"))
+	router.GET("/sumorders/:id", c.auth.MustAuthorize(c.handleGetSumOrderByID, "molanobar:orders.read"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
