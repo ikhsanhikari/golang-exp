@@ -85,17 +85,14 @@ func main() {
 	}
 	reporter.Infoln("Token Generator successfully initialized")
 
-<<<<<<< HEAD
-	coreAuditTrail := auditTrail.Init(db)
-	reporter.Infoln("/pkg/audit_trail successfully initialized")
-=======
 	tokenGeneratorEmail, err := token_generator.Init(&cfg.TokenGeneratorEmail)
 	if err != nil {
 		panic(err)
 	}
 	reporter.Infoln("Token Generator Email successfully initialized")
->>>>>>> 6049250d44bd55b199d016c6a73501cbb61822f8
 
+	coreAuditTrail := auditTrail.Init(db)
+	reporter.Infoln("/pkg/audit_trail successfully initialized")
 	coreHistory := _history.Init(db, redis)
 	reporter.Infoln("/pkg/history successfully initialized")
 
@@ -138,7 +135,7 @@ func main() {
 	coreTemplate := template.New("./file/template")
 	reporter.Infoln("/pkg/template successfully initialized")
 
-	coreOrderDetail := orderDetail.Init(db, redis)
+	coreOrderDetail := orderDetail.Init(db, redis, coreAuditTrail)
 	reporter.Infoln("/pkg/order_detail successfully initialized")
 
 	var (

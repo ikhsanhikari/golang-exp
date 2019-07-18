@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"time"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -21,8 +22,9 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
@@ -31,8 +33,7 @@ func (c *core) Insert(orderDetail *OrderDetail) (err error) {
 	orderDetail.CreatedAt = time.Now()
 	orderDetail.UpdatedAt = orderDetail.CreatedAt
 	orderDetail.Status = 1
-
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_order_details(
 			order_id,
 			item_type,
@@ -47,21 +48,56 @@ func (c *core) Insert(orderDetail *OrderDetail) (err error) {
 			last_update_by,
 			project_id
 		) VALUES (
-			:order_id,
-			:item_type,
-			:item_id,
-			:description,
-			:amount,
-			:quantity,
-			:status,
-			:created_at,
-			:created_by,
-			:updated_at,
-			:last_update_by,
-			:project_id
-		)
-	`, orderDetail)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		)`
+
+	args := []interface{}{
+		orderDetail.OrderID,
+		orderDetail.ItemType,
+		orderDetail.ItemID,
+		orderDetail.Description,
+		orderDetail.Amount,
+		orderDetail.Quantity,
+		orderDetail.Status,
+		orderDetail.CreatedAt,
+		orderDetail.CreatedBy,
+		orderDetail.UpdatedAt,
+		orderDetail.LastUpdateBy,
+		orderDetail.ProjectID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
 	orderDetail.ID, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    orderDetail.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_order_details",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, orderDetail.ProjectID, orderDetail.CreatedBy, orderDetail.OrderID)
 	_ = c.deleteCache(redisKey)
@@ -71,28 +107,58 @@ func (c *core) Insert(orderDetail *OrderDetail) (err error) {
 
 func (c *core) Update(orderDetail *OrderDetail) (err error) {
 	orderDetail.UpdatedAt = time.Now()
-
-	qs := `
+	query := `
 		UPDATE
 			mla_order_details
 		SET
-			item_id = :item_id,
-			description = :description,
-			amount = :amount,
-			quantity = :quantity,
-			updated_at = :updated_at,
-			last_update_by = :last_update_by
+			item_id = ?,
+			description = ?,
+			amount = ?,
+			quantity = ?,
+			updated_at = ?,
+			last_update_by = ?
 		WHERE
-			order_id = :order_id AND
-			item_type like :item_type AND
-			project_id = :project_id AND `
-
-	if orderDetail.LastUpdateBy != "" {
-		qs += ` created_by = :created_by AND `
+			order_id = ? AND
+			item_type like ? AND
+			project_id = ? AND
+			status = 1`
+	args := []interface{}{
+		orderDetail.ItemID,
+		orderDetail.Description,
+		orderDetail.Amount,
+		orderDetail.Quantity,
+		orderDetail.UpdatedAt,
+		orderDetail.LastUpdateBy,
+		orderDetail.OrderID,
+		orderDetail.ItemType,
+		orderDetail.ProjectID,
 	}
-	qs += ` status = 1 `
+	if orderDetail.LastUpdateBy != "" {
+		query += ` AND created_by = ? `
+		args = append(args, orderDetail.CreatedBy)
+	}
 
-	_, err = c.db.NamedExec(qs, orderDetail)
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    orderDetail.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_order_details",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, orderDetail.ProjectID, orderDetail.CreatedBy, orderDetail.OrderID)
 	_ = c.deleteCache(redisKey)
@@ -102,25 +168,50 @@ func (c *core) Update(orderDetail *OrderDetail) (err error) {
 
 func (c *core) Delete(orderDetail *OrderDetail) (err error) {
 	orderDetail.DeletedAt = null.TimeFrom(time.Now())
-
-	qs := `
+	query := `
 		UPDATE
 			mla_order_details
 		SET
-			last_update_by = :last_update_by,
+			last_update_by = ?,
 			status = 0,
-			deleted_at = :deleted_at
+			deleted_at = ?
 		WHERE
-			order_id = :order_id AND
-			project_id = :project_id AND `
+			order_id = ? AND
+			project_id = ? AND 
+			status = 1 `
 
-	if orderDetail.LastUpdateBy != "" {
-		qs += ` created_by = :created_by AND `
+	args := []interface{}{
+		orderDetail.LastUpdateBy,
+		orderDetail.DeletedAt,
+		orderDetail.OrderID,
+		orderDetail.ProjectID,
 	}
-	qs += ` status = 1`
+	if orderDetail.LastUpdateBy != "" {
+		query += ` AND created_by = ? `
+		args = append(args, orderDetail.CreatedBy)
+	}
 
-	_, err = c.db.NamedExec(qs, orderDetail)
-
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    orderDetail.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_order_details",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, orderDetail.ProjectID, orderDetail.CreatedBy, orderDetail.OrderID)
 	_ = c.deleteCache(redisKey)
 
