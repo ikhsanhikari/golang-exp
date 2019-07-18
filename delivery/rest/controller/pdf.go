@@ -7,7 +7,7 @@ import (
 	"database/sql"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
-	//"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"github.com/leekchan/accounting"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 )
@@ -19,7 +19,24 @@ func (c *Controller) handlePdf(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	order, err := c.order.Get(111, 10, "uid")
+	if err != nil {
+		c.reporter.Errorf("[handleGetOrderByID] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetOrderByID] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		userID = ""
+	}
+
+	order, err := c.order.Get(111, 10, fmt.Sprintf ("%v",userID))
 	fmt.Println(order)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())

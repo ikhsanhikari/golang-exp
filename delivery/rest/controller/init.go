@@ -152,5 +152,5 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
 	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
 
-	router.GET("/pdf", c.handlePdf)
+	router.GET("/pdf", c.auth.MustAuthorize(c.handlePdf, "molanobar:orders.create"))
 }
