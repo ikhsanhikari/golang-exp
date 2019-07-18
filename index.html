@@ -2,7 +2,7 @@
 <html lang="id">
 
 <head>
-    <title>Invoice</title>
+    <title>Testing</title>
     <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
     <style>
         th,
@@ -43,7 +43,9 @@
         <img alt="mix-logo"
             src="https://lh3.googleusercontent.com/-z6Yi3PQiMoM/XS7Vk1SbzlI/AAAAAAAAAQI/LACPW_dkvp4o7wWml0RTik_-4rnEMwszQCEwYBhgL/h240/0.png"
             width="190" height="120" />
-        <p style="font-size: 18px;float: right;">Invoice</p>
+        <p style="font-size: 18px;float: right;">
+            Invoice
+        </p>
     </div>
     <div>
         <div style="font-size: 28px">PT MITRA MEDIA INTEGRASI</div>
@@ -52,17 +54,17 @@
                 <tr style="font-weight: bold">
                     <td>Date</td>
                     <td>:&nbsp;</td>
-                    <td>{{ .CreatedAt }}</td>
+                    <td>{{.CreatedAt}}</td>
                 </tr>
                 <tr>
                     <td>Invoice #</td>
                     <td>:&nbsp;</td>
-                    <td>{{ .OrderNumber }} </td>
+                    <td>{{.OrderNumber}} </td>
                 </tr>
                 <tr>
                     <td>Customer Reference</td>
                     <td>:&nbsp;</td>
-                    <td>{{ .CustomerReference }}</td>
+                    <td></td>
                 </tr>
             </table>
         </div>
@@ -73,10 +75,10 @@
                 <th>BILL TO</th>
             </tr>
             <tr>
-                <td>{{ .BuyerName }}</td>
+                <td>PT Liga Inggris</td>
             </tr>
             <tr>
-                <td>{{ .BuyerAddress }}</td>
+                <td>Jalan EPL, No.153, Surabaya 17865489</td>
             </tr>
         </table>
     </div>
@@ -88,39 +90,81 @@
                 <th>QTY</th>
                 <th>ITEM #</th>
                 <th>DESCRIPTION</th>
+                <!--<th>VENUE NAME</th>
+                    <th>DEVICE PRICE</th>
+                    <th>INSTALLATION FEE</th>
+                    <th>ROOM FEE</th>
+                    <th>QTY ROOM</th>
+                    <th>AGING PRICE</th>-->
                 <th>UNIT PRICE (Rp. )</th>
                 <th>AMOUNT (Rp. )</th>
             </tr>
-            {{ range .Items }}
             <tr>
                 <td>{{ .Quantity }}</td>
                 <td>{{ .ProductName }}</td>
-                <td>{{ .ProductDescription }}</td>
+                <td>{{ .Description }}</td>
+                <!-- <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>-->
                 <td align="right">{{ .ProductPrice }}</td>
                 <td align="right">{{ .TotalPrice }}</td>
             </tr>
-            {{ end }}
         </table>
     </div>
     <br>
     <br>
     <div>
-        <table border="0" cellpadding="0" cellspacing="0" style="margin-left:615px;width:35%;float:left">
+        <table border="0" cellpadding="0" cellspacing="0"
+            style="color:black;background-color:lightgray;width:60%;float:left">
+            <tr>
+                <td rows="2">BANK</td>
+            </tr>
+            <tr>
+                <td rows="2">&nbsp;</td>
+            </tr>
+            <tr>
+                <td>BANK NAME</td>
+                <td>:&nbsp;</td>
+                <td>Bank Central Asia</td>
+            </tr>
+            <tr>
+                <td>BANK BRANCH</td>
+                <td>:&nbsp;</td>
+                <td>Palmerah</td>
+            </tr>
+            <tr>
+                <td>BANK ACCOUNT NUMBER</td>
+                <td>:&nbsp;</td>
+                <td>2296267888</td>
+            </tr>
+            <tr>
+                <td>BANK ACCOUNT NAME</td>
+                <td>:&nbsp;</td>
+                <td>PT Mitra Media Integrasi</td>
+            </tr>
+        </table>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin-left:50px;width:35%;float:left">
             <tr>
                 <td>Subtotal</td>
-                <td align="right">{{ .Subtotal }}</td>
+                <td align="right">13.500.000,00</td>
             </tr>
             <tr>
                 <td>TOTAL</td>
-                <td align="right">{{ .Total }}</td>
+                <td align="right">13.500.000,00</td>
             </tr>
             <tfoot>
                 <tr>
                     <td>Balance Due</td>
-                    <td align="right">{{ .BalanceDue }}</td>
+                    <td align="right">13.500.000,00</td>
                 </tr>
             </tfoot>
         </table>
+    </div>
+    <div class="footer column left">
+        Sales Invoice {{ .OrderNumber}}
     </div>
 </body>
 
