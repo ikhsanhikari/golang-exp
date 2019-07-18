@@ -3,17 +3,19 @@ package controller
 import (
 	"net/http"
 
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
-
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
@@ -40,6 +42,9 @@ type Controller struct {
 	venueType      venue_type.ICore
 	payment        payment.ICore
 	license        license.ICore
+	email          email.ICore
+	template       template.ICore
+	orderDetail    order_detail.ICore
 }
 
 // New ...
@@ -58,6 +63,9 @@ func New(
 	venueType venue_type.ICore,
 	payment payment.ICore,
 	license license.ICore,
+	email email.ICore,
+	template template.ICore,
+	orderDetail order_detail.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -74,6 +82,9 @@ func New(
 		venueType:      venueType,
 		payment:        payment,
 		license:        license,
+		email:          email,
+		template:       template,
+		orderDetail:    orderDetail,
 	}
 }
 
@@ -87,13 +98,17 @@ func (c *Controller) Register(router *router.Router) {
 
 	router.POST("/orders", c.auth.MustAuthorize(c.handlePostOrder, "molanobar:orders.create"))
 	router.PATCH("/orders/:id", c.auth.MustAuthorize(c.handlePatchOrder, "molanobar:orders.update"))
-	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateStatusOrderByID, "molanobar:orders.update"))
+	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateOrderStatusByID, "molanobar:orders.update"))
+	router.PATCH("/orders-open-payment-status/:id", c.auth.MustAuthorize(c.handleUpdateOpenPaymentStatusByID, "molanobar:orders.update"))
+	router.PATCH("/orders-do-payment/:id", c.auth.MustAuthorize(c.handlePatchOrderForPayment, "molanobar:orders.update"))
 	router.DELETE("/orders/:id", c.auth.MustAuthorize(c.handleDeleteOrder, "molanobar:orders.delete"))
 	router.GET("/orders", c.auth.MustAuthorize(c.handleGetAllOrders, "molanobar:orders.read"))
 	router.GET("/orders/:id", c.auth.MustAuthorize(c.handleGetOrderByID, "molanobar:orders.read"))
 	router.GET("/orders-by-venueid/:venue_id", c.auth.MustAuthorize(c.handleGetAllByVenueID, "molanobar:orders.read"))
 	router.GET("/orders-by-buyerid/:buyer_id", c.auth.MustAuthorize(c.handleGetAllByBuyerID, "molanobar:orders.read"))
 	router.GET("/orders-by-paiddate/:paid_date", c.auth.MustAuthorize(c.handleGetAllByPaidDate, "molanobar:orders.read"))
+	router.GET("/sumorders", c.auth.MustAuthorize(c.handleGetSumOrdersByUserID, "molanobar:orders.read"))
+	router.GET("/sumorders/:id", c.auth.MustAuthorize(c.handleGetSumOrderByID, "molanobar:orders.read"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
@@ -136,4 +151,6 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/licenses/:id", c.auth.MustAuthorize(c.handlePatchLicense, "molanobar:licenses.update"))
 	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
 	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
+
+	router.GET("/pdf/:id", c.auth.MustAuthorize(c.handlePdf, "molanobar:orders.create"))
 }

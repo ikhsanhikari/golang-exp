@@ -7,11 +7,27 @@ import (
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
+
+	// "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
 
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
+
+	//Test Email Function
+	// emailReq := email.EmailRequest{
+	// 	Subject: "subject is nothing !!!",
+	// 	To:      "ikhsanhikari29@gmail.com",
+	// 	HTML:    "<h1>ISI PESAN !!!!!!!</h1>",
+	// 	From:    "no-reply@molalivearena.com",
+	// 	Text:    "Empty Text ........"}
+	// errEmail := c.email.Send(emailReq)
+	// if errEmail != nil {
+	// 	c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
+	// }
+	//End Test Email Function
+
 	devices, err := c.device.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllDevices] error get from repository, err: %s", err.Error())

@@ -48,6 +48,7 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			id,
 			venue_id,
 			venue_type,
+			venue_name,
 			address,
 			zip,
 			capacity,
@@ -98,6 +99,7 @@ func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
 			id,
 			venue_id,
 			venue_type,
+			venue_name,
 			address,
 			zip,
 			capacity,
@@ -140,6 +142,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 		INSERT INTO mla_venues (
 			venue_id,
 			venue_type,
+			venue_name,
 			address,
 			zip,
 			capacity,
@@ -182,10 +185,12 @@ func (c *core) Insert(venue *Venue) (err error) {
 			?,
 			?,
 			?,
+			?,
 			?)`
 	args := []interface{}{
 		venue.VenueId,
 		venue.VenueType,
+		venue.VenueName,
 		venue.Address,
 		venue.Zip,
 		venue.Capacity,
@@ -248,6 +253,7 @@ func (c *core) Update(venue *Venue) (err error) {
 		SET
 			venue_id = ?,
 			venue_type = ?,
+			venue_name = ?,
 			address = ?,
 			zip = ?,
 			capacity = ?,
@@ -272,6 +278,7 @@ func (c *core) Update(venue *Venue) (err error) {
 	args := []interface{}{
 		venue.VenueId,
 		venue.VenueType,
+		venue.VenueName,
 		venue.Address,
 		venue.Zip,
 		venue.Capacity,

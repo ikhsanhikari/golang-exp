@@ -5,10 +5,10 @@ import "gopkg.in/guregu/null.v3"
 
 type LicenseAttributes struct {
 	LicenseNumber string    `json:"licenseNumber"`
-	OrderID       string    `json:"orderId"`
-	LicenseStatus string    `json:"licenseStatus"`
-	ActiveDate    null.Time `json:"activeDate"`
-	ExpiredDate   null.Time `json:"expiredDate"`
+	OrderID       int64    `json:"orderId"`
+	LicenseStatus int8    `json:"licenseStatus"`
+	ActiveDate    time.Time `json:"activeDate"`
+	ExpiredDate   time.Time `json:"expiredDate"`
 	Status        int8      `json:"status"`
 	CreatedAt     time.Time `json:"createdAt"`
 	UpdatedAt     time.Time `json:"updatedAt"`
@@ -18,4 +18,3 @@ type LicenseAttributes struct {
 	LastUpdateBy  string    `json:"lastUpdateBy"`
 	BuyerID       string    `json:"buyerId"`
 }
-

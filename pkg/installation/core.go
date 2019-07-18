@@ -46,6 +46,7 @@ func (c *core) selectFromDB(pid int64) (installation Installations, err error) {
 	err = c.db.Select(&installation, `
 		SELECT
 			id,
+			name,
 			description,
 			price,
 			device_id,
@@ -82,6 +83,7 @@ func (c *core) getFromDB(id int64, pid int64) (installation Installation, err er
 	err = c.db.Get(&installation, `
 		SELECT
 			id,
+			name,
 			description,
 			price,
 			device_id,
@@ -110,6 +112,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 	installation.LastUpdateBy = installation.CreatedBy
 	query := `
 	INSERT INTO mla_installation (
+		name,
 		description,
 		price,
 		device_id,
@@ -130,9 +133,11 @@ func (c *core) Insert(installation *Installation) (err error) {
 		?,
 		?,
 		?,
+		?,
 		?
 		)`
 	args := []interface{}{
+		installation.Name,
 		installation.Description,
 		installation.Price,
 		installation.DeviceID,
@@ -183,6 +188,7 @@ func (c *core) Update(installation *Installation) (err error) {
 		UPDATE
 			mla_installation
 		SET
+			name = :name,
 			description = :description,
 			price = :price,
 			device_id = :device_id,

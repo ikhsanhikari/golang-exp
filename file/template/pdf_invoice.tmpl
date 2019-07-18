@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <title>Invoice</title>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+    <style>
+        th,
+        tfoot {
+            background-color: navy;
+            color: white;
+        }
+
+        .footer {
+            position: fixed;
+            bottom: 0;
+            width: 100%;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        .column {
+            float: left;
+            padding: 10px;
+        }
+
+        .right {
+            text-align: right;
+            width: 50%;
+        }
+
+        .left {
+            text-align: left;
+            width: 50%;
+        }
+    </style>
+</head>
+
+<body>
+    <div>
+        <img alt="mix-logo"
+            src="https://lh3.googleusercontent.com/-z6Yi3PQiMoM/XS7Vk1SbzlI/AAAAAAAAAQI/LACPW_dkvp4o7wWml0RTik_-4rnEMwszQCEwYBhgL/h240/0.png"
+            width="190" height="120" />
+        <p style="font-size: 18px;float: right;">Invoice</p>
+    </div>
+    <div>
+        <div style="font-size: 28px">PT MITRA MEDIA INTEGRASI</div>
+        <div style="font-size: 20px;">
+            <table width="500" style="margin-left:600px; font-size:12px">
+                <tr style="font-weight: bold">
+                    <td>Date</td>
+                    <td>:&nbsp;</td>
+                    <td>{{ .CreatedAt }}</td>
+                </tr>
+                <tr>
+                    <td>Invoice #</td>
+                    <td>:&nbsp;</td>
+                    <td>{{ .OrderNumber }} </td>
+                </tr>
+                <tr>
+                    <td>Customer Reference</td>
+                    <td>:&nbsp;</td>
+                    <td>{{ .CustomerReference }}</td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div>
+        <table width="400">
+            <tr>
+                <th>BILL TO</th>
+            </tr>
+            <tr>
+                <td>{{ .BuyerName }}</td>
+            </tr>
+            <tr>
+                <td>{{ .BuyerAddress }}</td>
+            </tr>
+        </table>
+    </div>
+    <br>
+    <br>
+    <div>
+        <table width="1000" border="1">
+            <tr>
+                <th>QTY</th>
+                <th>ITEM #</th>
+                <th>DESCRIPTION</th>
+                <th>UNIT PRICE (Rp. )</th>
+                <th>AMOUNT (Rp. )</th>
+            </tr>
+            {{ range .Items }}
+            <tr>
+                <td>{{ .Quantity }}</td>
+                <td>{{ .ProductName }}</td>
+                <td>{{ .ProductDescription }}</td>
+                <td align="right">{{ .ProductPrice }}</td>
+                <td align="right">{{ .TotalPrice }}</td>
+            </tr>
+            {{ end }}
+        </table>
+    </div>
+    <br>
+    <br>
+    <div>
+        <table border="0" cellpadding="0" cellspacing="0" style="margin-left:615px;width:35%;float:left">
+            <tr>
+                <td>Subtotal</td>
+                <td align="right">{{ .Subtotal }}</td>
+            </tr>
+            <tr>
+                <td>TOTAL</td>
+                <td align="right">{{ .Total }}</td>
+            </tr>
+            <tfoot>
+                <tr>
+                    <td>Balance Due</td>
+                    <td align="right">{{ .BalanceDue }}</td>
+                </tr>
+            </tfoot>
+        </table>
+    </div>
+</body>
+
+</html>

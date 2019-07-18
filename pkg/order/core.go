@@ -10,14 +10,15 @@ import (
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
-	"gopkg.in/guregu/null.v3"
+	null "gopkg.in/guregu/null.v3"
 )
 
 // ICore is the interface
 type ICore interface {
 	Insert(order *Order) (err error)
 	Update(order *Order) (err error)
-	UpdateStatus(order *Order) (err error)
+	UpdateOrderStatus(order *Order) (err error)
+	UpdateOpenPaymentStatus(order *Order) (err error)
 	Delete(order *Order) (err error)
 
 	Get(id int64, pid int64, uid string) (order Order, err error)
@@ -27,6 +28,8 @@ type ICore interface {
 	SelectByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error)
 	SelectByVenueID(venueID int64, pid int64, uid string) (orders Orders, err error)
 	SelectByPaidDate(paidDate string, pid int64, uid string) (orders Orders, err error)
+	SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error)
+	SelectSummaryOrderByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error)
 }
 
 // core contains db client
@@ -44,8 +47,9 @@ func (c *core) Insert(order *Order) (err error) {
 	order.UpdatedAt = order.CreatedAt
 	order.Status = 0
 	order.PaymentMethodID = c.paymentMethodID
+	order.OpenPaymentStatus = 0
 	query := `
-	INSERT INTO orders (
+	INSERT INTO mla_orders (
 		order_number,
 		buyer_id,
 		venue_id,
@@ -65,7 +69,8 @@ func (c *core) Insert(order *Order) (err error) {
 		updated_at,
 		last_update_by,
 		project_id,
-		email
+		email,
+		open_payment_status
 	) VALUES (
 		?,
 		?,
@@ -86,7 +91,10 @@ func (c *core) Insert(order *Order) (err error) {
 		?,
 		?,
 		?,
-		?)`
+		?,
+		?
+	)`
+
 	args := []interface{}{
 		order.OrderNumber,
 		order.BuyerID,
@@ -105,36 +113,33 @@ func (c *core) Insert(order *Order) (err error) {
 		order.CreatedAt,
 		order.CreatedBy,
 		order.UpdatedAt,
-		order.BuyerID,
+		order.LastUpdateBy,
 		order.ProjectID,
 		order.Email,
+		order.OpenPaymentStatus,
 	}
-
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	res, err := tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
 	order.OrderID, err = res.LastInsertId()
 	if err != nil {
 		return err
 	}
 	//Add Logs
 	data_audit := auditTrail.AuditTrail{
-		UserID:    order.LastUpdateBy,
-		Query:     query_trail,
-		TableName: "orders",
+		UserID:    order.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_orders",
 	}
-	err = c.auditTrail.Insert(tx, &data_audit)
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
 	if err != nil {
 		return err
 	}
-	err = tx.Commit()
 
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
@@ -149,42 +154,30 @@ func (c *core) Insert(order *Order) (err error) {
 func (c *core) Update(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
 	order.PaymentMethodID = c.paymentMethodID
-
-	if order.Status == 1 {
-		order.PendingAt = null.TimeFrom(time.Now())
-	} else if order.Status == 2 {
-		order.PaidAt = null.TimeFrom(time.Now())
-	} else if order.Status == 3 {
-		order.FailedAt = null.TimeFrom(time.Now())
-	}
-
 	query := `
-	UPDATE
-		orders
-	SET
-		venue_id = ?,
-		device_id = ?,
-		product_id = ?,
-		installation_id = ?,
-		quantity = ?,
-		aging_id = ?,
-		room_id = ?,
-		room_quantity = ?,
-		total_price = ?,
-		payment_method_id = ?,
-		payment_fee = ?,
-		status = ?,
-		updated_at = ?,
-		last_update_by = ?,
-		pending_at = ?,
-		paid_at = ?,
-		failed_at = ?,
-		email = ?
-	WHERE
-		order_id = :order_id AND
-		project_id = :project_id AND 
-		created_by = :created_by AND
-		deleted_at IS NULL`
+		UPDATE
+			mla_orders
+		SET
+			venue_id = ?,
+			device_id = ?,
+			product_id = ?,
+			installation_id = ?,
+			quantity = ?,
+			aging_id = ?,
+			room_id = ?,
+			room_quantity = ?,
+			total_price = ?,
+			payment_method_id = ?,
+			payment_fee = ?,
+			status = ?,
+			updated_at = ?,
+			last_update_by = ?,
+			email = ?
+		WHERE
+			order_id = ? AND
+			project_id = ? AND 
+			created_by = ? AND
+			deleted_at IS NULL`
 
 	args := []interface{}{
 		order.VenueID,
@@ -199,32 +192,113 @@ func (c *core) Update(order *Order) (err error) {
 		order.PaymentMethodID,
 		order.PaymentFee,
 		order.Status,
+		order.UpdatedAt,
 		order.LastUpdateBy,
-		order.PendingAt,
-		order.PaidAt,
-		order.FailedAt,
 		order.Email,
 		order.OrderID,
 		order.ProjectID,
 		order.CreatedBy,
 	}
-
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	_, err = tx.Exec(query, args...)
-
+	if err != nil {
+		return err
+	}
 	//Add Logs
 	data_audit := auditTrail.AuditTrail{
-		UserID:    order.LastUpdateBy,
-		Query:     query_trail,
-		TableName: "orders",
+		UserID:    order.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_orders",
 	}
 	c.auditTrail.Insert(tx, &data_audit)
 	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
+	_ = c.deleteCache(redisKey)
+
+	if order.Status == 2 {
+		paidDate := order.PaidAt.Time.String()
+		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
+		_ = c.deleteCache(redisKey)
+	}
+
+	return
+}
+
+func (c *core) UpdateOrderStatus(order *Order) (err error) {
+	order.UpdatedAt = time.Now()
+
+	if order.Status == 1 {
+		order.PendingAt = null.TimeFrom(time.Now())
+	} else if order.Status == 2 {
+		order.PaidAt = null.TimeFrom(time.Now())
+	} else if order.Status == 3 {
+		order.FailedAt = null.TimeFrom(time.Now())
+	}
+
+	query := `
+		UPDATE
+			mla_orders
+		SET
+			status = ?,
+			updated_at = ?,
+			last_update_by = ?,
+			pending_at = ?,
+			paid_at = ?,
+			failed_at = ?
+		WHERE
+			order_id = ? AND
+			project_id = ? AND`
+
+	if order.LastUpdateBy != "" {
+		query += ` created_by = ? AND `
+	}
+	args := []interface{}{
+		order.Status,
+		order.UpdatedAt,
+		order.LastUpdateBy,
+		order.PendingAt,
+		order.PaidAt,
+		order.FailedAt,
+		order.OrderID,
+		order.ProjectID,
+		order.CreatedBy,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    order.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_orders",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
@@ -245,62 +319,50 @@ func (c *core) Update(order *Order) (err error) {
 	return
 }
 
-func (c *core) UpdateStatus(order *Order) (err error) {
+func (c *core) UpdateOpenPaymentStatus(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
-
-	if order.Status == 1 {
-		order.PendingAt = null.TimeFrom(time.Now())
-	} else if order.Status == 2 {
-		order.PaidAt = null.TimeFrom(time.Now())
-	} else if order.Status == 3 {
-		order.FailedAt = null.TimeFrom(time.Now())
-	}
-
 	query := `
-	UPDATE
-		orders
-	SET
-		status = ?,
-		updated_at = ?,
-		last_update_by = ?,
-		pending_at = ?,
-		paid_at = ?,
-		failed_at = ?
-	WHERE
-		order_id = ? AND
-		project_id = ? AND 
-		created_by = ? AND
-		deleted_at IS NULL`
+		UPDATE
+			mla_orders
+		SET
+			open_payment_status = ?,
+			updated_at = ?,
+			last_update_by = :?
+		WHERE
+			order_id = ? AND
+			project_id = ? AND 
+			created_by = ? AND
+			deleted_at IS NULL`
+
 	args := []interface{}{
-		order.Status,
+		order.OpenPaymentStatus,
 		order.UpdatedAt,
 		order.LastUpdateBy,
-		order.PendingAt,
-		order.PaidAt,
-		order.FailedAt,
 		order.OrderID,
 		order.ProjectID,
-		order.TotalPrice,
 		order.CreatedBy,
 	}
-
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	_, err = tx.Exec(query, args...)
-
+	if err != nil {
+		return err
+	}
 	//Add Logs
 	data_audit := auditTrail.AuditTrail{
 		UserID:    order.LastUpdateBy,
-		Query:     query_trail,
-		TableName: "orders",
+		Query:     queryTrail,
+		TableName: "mla_orders",
 	}
 	c.auditTrail.Insert(tx, &data_audit)
 	err = tx.Commit()
-
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
@@ -323,16 +385,16 @@ func (c *core) UpdateStatus(order *Order) (err error) {
 func (c *core) Delete(order *Order) (err error) {
 	now := time.Now()
 	query := `
-	UPDATE
-		orders
-	SET
-		last_update_by = ?,
-		deleted_at = ?
-	WHERE
-		order_id = ? AND
-		project_id = ? AND
-		created_by = ? AND
-		deleted_at IS NULL`
+		UPDATE
+			mla_orders
+		SET
+			last_update_by = ?,
+			deleted_at = ?
+		WHERE
+			order_id = ? AND
+			project_id = ? AND
+			created_by = ? AND
+			deleted_at IS NULL`
 
 	args := []interface{}{
 		order.LastUpdateBy,
@@ -341,24 +403,27 @@ func (c *core) Delete(order *Order) (err error) {
 		order.ProductID,
 		order.CreatedBy,
 	}
-
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
 		return err
 	}
 	defer tx.Rollback()
 	_, err = tx.Exec(query, args...)
-
+	if err != nil {
+		return err
+	}
 	//Add Logs
 	data_audit := auditTrail.AuditTrail{
 		UserID:    order.LastUpdateBy,
-		Query:     query_trail,
-		TableName: "orders",
+		Query:     queryTrail,
+		TableName: "mla_orders",
 	}
 	c.auditTrail.Insert(tx, &data_audit)
 	err = tx.Commit()
-
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
@@ -393,9 +458,7 @@ func (c *core) Get(id int64, pid int64, uid string) (order Order, err error) {
 }
 
 func (c *core) getFromDB(id int64, pid int64, uid string) (order Order, err error) {
-	err = c.db.Get(&order, `
-		SELECT
-			order_id,
+	qs := `SELECT order_id,
 			order_number,
 			buyer_id,
 			device_id,
@@ -419,15 +482,24 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (order Order, err erro
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			order_id = ? AND
-			project_id = ? AND 
-			created_by = ? AND
-			deleted_at IS NULL 
-	`, id, pid, uid)
+			project_id = ? AND `
+	if uid != "" {
+		qs += ` created_by = ? AND `
+	}
+	qs += `deleted_at IS NULL `
+
+	if uid != "" {
+		err = c.db.Get(&order, qs, id, pid, uid)
+	} else {
+		err = c.db.Get(&order, qs, id, pid)
+	}
+
 	return
 }
 
@@ -437,7 +509,7 @@ func (c *core) GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error)
 			SUBSTRING(order_number, 3, 6) AS date,
 			CAST(SUBSTRING(order_number, 9, 7) AS SIGNED) AS number
 		FROM
-			orders
+			mla_orders
 		ORDER BY order_id DESC
 		LIMIT 1
 	`)
@@ -483,9 +555,10 @@ func (c *core) selectFromDB(pid int64, uid string) (orders Orders, err error) {
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			project_id = ? AND 
 			created_by = ? AND
@@ -536,9 +609,10 @@ func (c *core) selectFromDBByVenueID(venueID int64, pid int64, uid string) (orde
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment,status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			venue_id = ? AND
 			project_id = ? AND
@@ -591,9 +665,10 @@ func (c *core) selectFromDBByBuyerID(buyerID string, pid int64, uid string) (ord
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 		FROM
-			orders
+			mla_orders
 		WHERE
 			buyer_id = ? AND
 			project_id = ? AND
@@ -649,9 +724,10 @@ func (c *core) selectFromDBByPaidDate(paidDate string, pid int64, uid string) (o
 			paid_at,
 			failed_at,
 			project_id,
-			email
+			email,
+			open_payment_status
 	 	FROM
-	 		orders
+	 		mla_orders
 	 	WHERE
 			paid_at like ? AND
 			project_id = ? AND 
@@ -663,12 +739,152 @@ func (c *core) selectFromDBByPaidDate(paidDate string, pid int64, uid string) (o
 	return
 }
 
+func (c *core) SelectSummaryOrderByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:sumorder-id:%d", redisPrefix, pid, uid, orderID)
+
+	sumorder, err = c.selectSumFromCache1()
+	if err != nil {
+		sumorder, err = c.selectSumFromDBByID(orderID, pid, uid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(sumorder)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error) {
+	err = c.db.Get(&sumorder, `
+	select
+	orders.order_id as order_id,
+	COALESCE(orders.order_number,'') as order_number,
+    COALESCE(orders.total_price,0) as order_total_price,
+    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
+    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
+    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    COALESCE(orders.email,'') as order_email,
+	COALESCE(venues.venue_name,'') as venue_name,
+    COALESCE(venues.venue_type,0) as venue_type,
+    COALESCE(venues.address,'') as venue_address,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip,
+    COALESCE(venues.capacity,0) as venue_capacity,
+    COALESCE(venues.longitude,0) as venue_longitude,
+    COALESCE(venues.latitude,0) as venue_latitude,
+    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(devices.description,'') as device_name,
+	COALESCE(product.description,'') as product_name,
+	COALESCE(installation.description,'') as installation_name,
+	COALESCE(room.description,'') as room_name,
+    COALESCE(room.quantity,0) as room_qty,
+	COALESCE(aging.description,'') as aging_name,
+	COALESCE(orders.status,0) as order_status,
+	COALESCE(orders.open_payment_status,0) as open_payment_status,
+    COALESCE(license.license_number,'') as license_number,
+    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
+    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+	from 
+	v2_subscriptions.mla_orders orders   
+	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
+	left join v2_subscriptions.mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join v2_subscriptions.mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join v2_subscriptions.mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join v2_subscriptions.mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
+	where
+	orders.order_id = ? AND
+	orders.project_id = ? AND
+	orders.buyer_id = ? AND
+	orders.deleted_at IS NULL
+	LIMIT 1
+	;
+	`, orderID, pid, uid)
+	return
+}
+
+func (c *core) SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:sumorders-userid", redisPrefix, pid, uid)
+
+	sumorders, err = c.selectSumFromCache()
+	if err != nil {
+		sumorders, err = c.selectSumFromDBByUserID(pid, uid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(sumorders)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders SummaryOrders, err error) {
+	err = c.db.Select(&sumorders, `
+	select
+	orders.order_id as order_id,
+	COALESCE(orders.order_number,'') as order_number,
+    COALESCE(orders.total_price,0) as order_total_price,
+    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
+    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
+    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    COALESCE(orders.email,'') as order_email,
+	COALESCE(venues.venue_name,'') as venue_name,
+    COALESCE(venues.venue_type,0) as venue_type,
+    COALESCE(venues.address,'') as venue_address,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip,
+    COALESCE(venues.capacity,0) as venue_capacity,
+    COALESCE(venues.longitude,0) as venue_longitude,
+    COALESCE(venues.latitude,0) as venue_latitude,
+    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(devices.description,'') as device_name,
+	COALESCE(product.description,'') as product_name,
+	COALESCE(installation.description,'') as installation_name,
+	COALESCE(room.description,'') as room_name,
+    COALESCE(room.quantity,0) as room_qty,
+	COALESCE(aging.description,'') as aging_name,
+	COALESCE(orders.status,0) as order_status,
+	COALESCE(orders.open_payment_status,0) as open_payment_status,
+    COALESCE(license.license_number,'') as license_number,
+    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
+    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+	from 
+	v2_subscriptions.mla_orders orders   
+	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
+	left join v2_subscriptions.mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join v2_subscriptions.mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join v2_subscriptions.mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join v2_subscriptions.mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
+	where
+	orders.project_id = ? AND
+	orders.buyer_id = ? AND
+	orders.deleted_at IS NULL
+	;
+	`, pid, uid)
+	return
+}
+
 func (c *core) selectFromCache() (orders Orders, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET"))
 	err = json.Unmarshal(b, &orders)
+	return
+}
+
+func (c *core) selectSumFromCache1() (sumorder SummaryOrder, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &sumorder)
+	return
+}
+
+func (c *core) selectSumFromCache() (sumorders SummaryOrders, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &sumorders)
 	return
 }
 
