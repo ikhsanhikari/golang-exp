@@ -3,6 +3,7 @@ package payment
 import (
 	"bytes"
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 )
@@ -38,6 +39,7 @@ func (c *core) Pay(id string, paymentMethodID int64) (payment *Payment, err erro
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
+		fmt.Println("error ini:", err)
 		return nil, err
 	}
 	request.Header.Add("Content-Type", "application/json")
