@@ -15,8 +15,8 @@ type VenueAttributes struct {
 	Zip        						string    `json:"zip"`
 	Capacity   						int64     `json:"capacity"`
 	Facilities 						string    `json:"facilities"`
-	Longitude  						int64     `json:"longitude"`
-	Latitude   						int64     `json:"latitude"`
+	Longitude  						float64   `json:"longitude"`
+	Latitude   						float64   `json:"latitude"`
 	People     						int64     `json:"people"`
 	CreatedAt  						time.Time `json:"createdAt"`
 	UpdatedAt  						time.Time `json:"updatedAt"`

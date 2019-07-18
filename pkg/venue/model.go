@@ -15,8 +15,8 @@ type Venue struct {
 	Zip        						string    `db:"zip"`
 	Capacity   						int64     `db:"capacity"`
 	Facilities 						string    `db:"facilities"`
-	Longitude  						int64     `db:"longitude"`
-	Latitude   						int64     `db:"latitude"`
+	Longitude  						float64   `db:"longitude"`
+	Latitude   						float64   `db:"latitude"`
 	People     						int64     `db:"people"`
 	CreatedAt  						time.Time `db:"created_at"`
 	UpdatedAt  						time.Time `db:"updated_at"`

@@ -28,6 +28,7 @@ func (c *Controller) handleGetAllInstallations(w http.ResponseWriter, r *http.Re
 			ID:   installation.ID,
 			Attributes: view.InstallationAttributes{
 				ID				:  installation.ID,
+				Name			:  installation.Name,
 				Description		:  installation.Description,
 				Price			:  installation.Price,
 				DeviceID		:  installation.DeviceID,
@@ -86,6 +87,7 @@ func (c *Controller) handlePostInstallation(w http.ResponseWriter, r *http.Reque
 	
 	installation := installation.Installation{
 		ID				:  params.ID,
+		Name			:  params.Name,
 		Description		:  params.Description,
 		Price			:  params.Price,
 		DeviceID		:  params.DeviceID,
@@ -132,6 +134,7 @@ func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Requ
 	}
 	installation := installation.Installation{
 		ID				:  id,
+		Name			:  params.Name,
 		Description		:  params.Description,
 		Price			:  params.Price,
 		DeviceID		:  params.DeviceID,
