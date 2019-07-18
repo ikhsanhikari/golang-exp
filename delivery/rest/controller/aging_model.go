@@ -3,13 +3,13 @@ package controller
 type reqInsertAging struct {
 	Name        string  `json:"name" validate:"required"`
 	Description string  `json:"description"`
-	Price       float64 `json:"price" validate:"required"`
-	CreatedBy   string  `json:"createdBy" validate:"required"`
+	Price       float64 `json:"price"`
+	CreatedBy   string  `json:"createdBy"`
 }
 
 type reqUpdateAging struct {
 	Name         string  `json:"name" validate:"required"`
 	Description  string  `json:"description"`
-	Price        float64 `json:"price" validate:"required"`
-	LastUpdateBy string  `json:"lastUpdateBy" validate:"required"`
+	Price        float64 `json:"price"`
+	LastUpdateBy string  `json:"lastUpdateBy"`
 }

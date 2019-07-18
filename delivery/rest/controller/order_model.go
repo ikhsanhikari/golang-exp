@@ -5,16 +5,16 @@ type reqOrder struct {
 	DeviceID       int64   `json:"deviceID" validate:"required"`
 	ProductID      int64   `json:"productID" validate:"required"`
 	InstallationID int64   `json:"installationID" validate:"required"`
-	Quantity       int64   `json:"quantity" validate:"required"`
+	Quantity       int64   `json:"quantity"`
 	AgingID        int64   `json:"agingID" validate:"required"`
-	RoomID         int64   `json:"roomID" validate:"required"`
-	RoomQuantity   int64   `json:"roomQuantity" validate:"required"`
-	PaymentFee     float64 `json:"paymentFee" validate:"required"`
+	RoomID         int64   `json:"roomID"`
+	RoomQuantity   int64   `json:"roomQuantity"`
+	PaymentFee     float64 `json:"paymentFee"`
 	Email          string  `json:"email" validate:"required"`
 }
 
 type reqUpdateOrderStatus struct {
-	Status int16 `json:"status" validate:"required"`
+	Status int16 `json:"status"`
 }
 
 type reqUpdateOpenPaymentStatus struct {
