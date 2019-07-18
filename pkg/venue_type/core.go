@@ -7,6 +7,7 @@ import (
 
 	"encoding/json"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -24,8 +25,9 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
@@ -156,37 +158,70 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 	venueType.ProjectID = 10
 	venueType.LastUpdateBy = venueType.CreatedBy
 
-	res, err := c.db.NamedExec(`
-		INSERT INTO mla_venue_types (
-			name,
-			description,
-			capacity,
-			pricing_group_id,
-			commercial_type_id,
-			created_at,
-			updated_at,
-			status,
-			project_id,
-			created_by,
-			last_update_by
-		) VALUES (
-			:name,
-			:description,
-			:capacity,
-			:pricing_group_id,
-			:commercial_type_id,
-			:created_at,
-			:updated_at,
-			:status,
-			:project_id,
-			:created_by,
-			:last_update_by
-		)
-	`, venueType)
-
-	//fmt.Println(res)
+	query := `
+	INSERT INTO mla_venue_types (
+		name,
+		description,
+		capacity,
+		pricing_group_id,
+		commercial_type_id,
+		created_at,
+		updated_at,
+		status,
+		project_id,
+		created_by,
+		last_update_by
+	) VALUES (
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?
+	)`
+	args := []interface{}{
+		venueType.Name,
+		venueType.Description,
+		venueType.Capacity,
+		venueType.PricingGroupID,
+		venueType.CommercialTypeID,
+		venueType.CreatedAt,
+		venueType.UpdatedAt,
+		venueType.Status,
+		venueType.ProjectID,
+		venueType.CreatedBy,
+		venueType.LastUpdateBy,
+	}
+	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	venueType.Id, err = res.LastInsertId()
-
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    venueType.CreatedBy,
+		Query:     query_trail,
+		TableName: "mla_venue_types",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:venueType", redisPrefix, venueType.ProjectID)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, venueType.ProjectID, venueType.CommercialTypeID)
@@ -198,22 +233,51 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 func (c *core) Update(venueType *VenueType, comId int64) (err error) {
 	venueType.UpdatedAt = time.Now()
 	venueType.ProjectID = 10
-
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_venue_types
 		SET
-			name = :name,
-			description = :description,
-			capacity = :capacity,
-			pricing_group_id = :pricing_group_id,
-			commercial_type_id = :commercial_type_id,
-			updated_at = :updated_at,
-			last_update_by = :last_update_by 
+			name = ?,
+			description = ?,
+			capacity = ?,
+			pricing_group_id = ?,
+			commercial_type_id = ?,
+			updated_at = ?,
+			last_update_by = ? 
 		WHERE
-			id = :id AND status = 1 AND project_id = 10
-	`, venueType)
+			id = ? AND status = 1 AND project_id = 10`
 
+	args := []interface{}{
+		venueType.Name,
+		venueType.Description,
+		venueType.Capacity,
+		venueType.PricingGroupID,
+		venueType.CommercialTypeID,
+		venueType.UpdatedAt,
+		venueType.LastUpdateBy,
+		venueType.Id,
+	}
+	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    venueType.LastUpdateBy,
+		Query:     query_trail,
+		TableName: "mla_venue_types",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:venueType:%d", redisPrefix, venueType.ProjectID, venueType.Id)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, venueType.ProjectID)
@@ -228,8 +292,7 @@ func (c *core) Update(venueType *VenueType, comId int64) (err error) {
 
 func (c *core) Delete(pid int64, id int64, comId int64) (err error) {
 	now := time.Now()
-
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
 			mla_venue_types
 		SET
@@ -238,9 +301,38 @@ func (c *core) Delete(pid int64, id int64, comId int64) (err error) {
 		WHERE
 			id = ? AND
 			status = 1 AND 
-			project_id = 10
-	`, now, id)
-	fmt.Println(comId)
+			project_id = 10`
+	args := []interface{}{
+		now, id,
+	}
+
+	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     query_trail,
+		TableName: "mla_venue_types",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
+
 	redisKey := fmt.Sprintf("%s:%d:venueType:%d", redisPrefix, 10, id)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, 10)

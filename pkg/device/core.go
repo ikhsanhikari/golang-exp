@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -21,8 +22,9 @@ type ICore interface {
 }
 
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
@@ -130,8 +132,7 @@ func (c *core) Insert(device *Device) (err error) {
 	device.UpdatedAt = device.CreatedAt
 	device.Status = 1
 	device.LastUpdateBy = device.CreatedBy
-
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_devices (
 			name,
 			info,
@@ -144,19 +145,54 @@ func (c *core) Insert(device *Device) (err error) {
 			created_by,
 			last_update_by
 		) VALUES (
-			:name,
-			:info,
-			:price,
-			:status,
-			:created_at,
-			:updated_at,
-			:deleted_at,
-			:project_id,
-			:created_by,
-			:last_update_by
-		)
-	`, device)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		)`
+	args := []interface{}{
+		device.Name,
+		device.Info,
+		device.Price,
+		device.Status,
+		device.CreatedAt,
+		device.UpdatedAt,
+		device.DeletedAt,
+		device.ProjectID,
+		device.CreatedBy,
+		device.LastUpdateBy,
+	}
+	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	device.ID, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    device.CreatedBy,
+		Query:     query_trail,
+		TableName: "mla_devices",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:devices", redisPrefix)
 	_ = c.deleteCache(redisKey)
@@ -168,22 +204,50 @@ func (c *core) Update(device *Device) (err error) {
 	device.UpdatedAt = time.Now()
 	device.Status = 1
 
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_devices
 		SET
-			name = 		:name,
-			info = 		:info,
-			price = 	:price,
-			updated_at=	:updated_at,
-			project_id=	:project_id,
-			last_update_by= :last_update_by
+			name = 		?,
+			info = 		?,
+			price = 	?,
+			updated_at=	?,
+			project_id=	?,
+			last_update_by= ?
 		WHERE
-			id = 		:id AND
-			project_id =:project_id AND 
-			status = 	1
-	`, device)
-
+			id = 		? AND
+			project_id = ? AND 
+			status = 	1`
+	args := []interface{}{
+		device.Name,
+		device.Info,
+		device.UpdatedAt,
+		device.ProjectID,
+		device.LastUpdateBy,
+		device.ID,
+		device.ProjectID,
+	}
+	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    device.LastUpdateBy,
+		Query:     query_trail,
+		TableName: "mla_devices",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
 	_ = c.deleteCache(redisKey)
 
@@ -196,7 +260,7 @@ func (c *core) Update(device *Device) (err error) {
 func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
 
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
 			mla_devices
 		SET
@@ -205,14 +269,44 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 		WHERE
 			id = ? AND
 			status = 1 AND 
-			project_id = ?
-	`, now, id, pid)
+			project_id = ?`
+	args := []interface{}{
+		now, id, pid,
+	}
+
+	query_trail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     query_trail,
+		TableName: "mla_devices",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 
 	redisKey = fmt.Sprintf("%s:devices", redisPrefix)
 	_ = c.deleteCache(redisKey)
+
 	return
 }
 
