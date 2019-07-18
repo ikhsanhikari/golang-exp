@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -23,9 +22,8 @@ type ICore interface {
 }
 
 type core struct {
-	db         *sqlx.DB
-	redis      *redis.Pool
-	auditTrail auditTrail.ICore
+	db    *sqlx.DB
+	redis *redis.Pool
 }
 
 const redisPrefix = "molanobar-v1"
@@ -179,7 +177,8 @@ func (c *core) Insert(license *License) (err error) {
 	license.UpdatedAt = license.CreatedAt
 	license.Status = 1
 	license.LastUpdateBy = license.CreatedBy
-	query := `
+
+	res, err := c.db.NamedExec(`
 		INSERT INTO mla_license (
 			license_number,
 			order_id,
@@ -195,60 +194,23 @@ func (c *core) Insert(license *License) (err error) {
 			last_update_by,
 			buyer_id
 		) VALUES (
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?
-		)`
-	args := []interface{}{
-		license.LicenseNumber,
-		license.OrderID,
-		license.LicenseStatus,
-		license.ActiveDate,
-		license.ExpiredDate,
-		license.Status,
-		license.CreatedAt,
-		license.UpdatedAt,
-		license.DeletedAt,
-		license.ProjectID,
-		license.CreatedBy,
-		license.LastUpdateBy,
-		license.BuyerID,
-	}
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	res, err := tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
+			:license_number,
+			:order_id,
+			:license_status,
+			:active_date,
+			:expired_date,
+			:status,
+			:created_at,
+			:updated_at,
+			:deleted_at,
+			:project_id,
+			:created_by,
+			:last_update_by,
+			:buyer_id
+		)
+	`, license)
 	license.ID, err = res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    license.CreatedBy,
-		Query:     queryTrail,
-		TableName: "mla_license",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
+
 	redisKey := fmt.Sprintf("%s:licenses", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
@@ -261,56 +223,25 @@ func (c *core) Insert(license *License) (err error) {
 func (c *core) Update(license *License, buyerID string) (err error) {
 	license.UpdatedAt = time.Now()
 	license.Status = 1
-	query := `
+
+	_, err = c.db.NamedExec(`
 		UPDATE
 			mla_license
 		SET
-			order_id= ?,
-			license_status = ?,
-			active_date= ?,
-			expired_date= ?,
-			updated_at=	?,
-			project_id=	?,
-			last_update_by= ?,
-			buyer_id = ?
+			order_id= :order_id,
+			license_status = :license_status,
+			active_date= :active_date,
+			expired_date= :expired_date,
+			updated_at=	:updated_at,
+			project_id=	:project_id,
+			last_update_by= :last_update_by,
+			buyer_id = :buyer_id
 		WHERE
-			id = 		? AND
-			project_id =? AND 
-			status = 	1`
+			id = 		:id AND
+			project_id =:project_id AND 
+			status = 	1
+	`, license)
 
-	args := []interface{}{
-		license.OrderID,
-		license.LicenseStatus,
-		license.ActiveDate,
-		license.ExpiredDate,
-		license.UpdatedAt,
-		license.ProjectID,
-		license.LastUpdateBy,
-		license.BuyerID,
-		license.ID,
-		license.ProjectID,
-	}
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    license.LastUpdateBy,
-		Query:     queryTrail,
-		TableName: "mla_license",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, license.ProjectID, license.ID)
 	_ = c.deleteCache(redisKey)
 
@@ -325,46 +256,19 @@ func (c *core) Update(license *License, buyerID string) (err error) {
 
 func (c *core) Delete(pid int64, id int64, buyerID string) (err error) {
 	now := time.Now()
-	query := `
+
+	_, err = c.db.Exec(`
 		UPDATE
-		mla_license
-	SET
-		deleted_at = ?,
-		status = 0
-	WHERE
-		id = ? AND
-		status = 1 AND 
-		project_id = ?`
-	args := []interface{}{
-		now, id, pid,
-	}
+			mla_license
+		SET
+			deleted_at = ?,
+			status = 0
+		WHERE
+			id = ? AND
+			status = 1 AND 
+			project_id = ?
+	`, now, id, pid)
 
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-
-	if err != nil {
-		return err
-	}
-
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    "uid",
-		Query:     queryTrail,
-		TableName: "mla_license",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-
-	if err != nil {
-		return err
-	}
 	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 

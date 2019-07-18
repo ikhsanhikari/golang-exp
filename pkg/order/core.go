@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -36,7 +35,6 @@ type ICore interface {
 type core struct {
 	db              *sqlx.DB
 	redis           *redis.Pool
-	auditTrail      auditTrail.ICore
 	paymentMethodID int64
 }
 
@@ -48,98 +46,55 @@ func (c *core) Insert(order *Order) (err error) {
 	order.Status = 0
 	order.PaymentMethodID = c.paymentMethodID
 	order.OpenPaymentStatus = 0
-	query := `
-	INSERT INTO mla_orders (
-		order_number,
-		buyer_id,
-		venue_id,
-		device_id,
-		product_id,
-		installation_id,
-		quantity,
-		aging_id,
-		room_id,
-		room_quantity,
-		total_price,
-		payment_method_id,
-		payment_fee,
-		status,
-		created_at,
-		created_by,
-		updated_at,
-		last_update_by,
-		project_id,
-		email,
-		open_payment_status
-	) VALUES (
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?,
-		?
-	)`
 
-	args := []interface{}{
-		order.OrderNumber,
-		order.BuyerID,
-		order.VenueID,
-		order.DeviceID,
-		order.ProductID,
-		order.InstallationID,
-		order.Quantity,
-		order.AgingID,
-		order.RoomID,
-		order.RoomQuantity,
-		order.TotalPrice,
-		order.PaymentMethodID,
-		order.PaymentFee,
-		order.Status,
-		order.CreatedAt,
-		order.CreatedBy,
-		order.UpdatedAt,
-		order.LastUpdateBy,
-		order.ProjectID,
-		order.Email,
-		order.OpenPaymentStatus,
-	}
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	res, err := tx.Exec(query, args...)
+	res, err := c.db.NamedExec(`
+	 	INSERT INTO mla_orders (
+			order_number,
+			buyer_id,
+			venue_id,
+			device_id,
+			product_id,
+			installation_id,
+			quantity,
+			aging_id,
+			room_id,
+			room_quantity,
+			total_price,
+			payment_method_id,
+			payment_fee,
+			status,
+			created_at,
+			created_by,
+			updated_at,
+			last_update_by,
+			project_id,
+			email,
+			open_payment_status
+		) VALUES (
+			:order_number,
+			:buyer_id,
+			:venue_id,
+			:device_id,
+			:product_id,
+			:installation_id,
+			:quantity,
+			:aging_id,
+			:room_id,
+			:room_quantity,
+			:total_price,
+			:payment_method_id,
+			:payment_fee,
+			:status,
+			:created_at,
+			:created_by,
+			:updated_at,
+			:last_update_by,
+			:project_id,
+			:email,
+			:open_payment_status
+		)
+	`, order)
 	order.OrderID, err = res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    order.CreatedBy,
-		Query:     queryTrail,
-		TableName: "mla_orders",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
@@ -154,72 +109,33 @@ func (c *core) Insert(order *Order) (err error) {
 func (c *core) Update(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
 	order.PaymentMethodID = c.paymentMethodID
-	query := `
+
+	_, err = c.db.NamedExec(`
 		UPDATE
 			mla_orders
 		SET
-			venue_id = ?,
-			device_id = ?,
-			product_id = ?,
-			installation_id = ?,
-			quantity = ?,
-			aging_id = ?,
-			room_id = ?,
-			room_quantity = ?,
-			total_price = ?,
-			payment_method_id = ?,
-			payment_fee = ?,
-			status = ?,
-			updated_at = ?,
-			last_update_by = ?,
-			email = ?
+			venue_id = :venue_id,
+			device_id = :device_id,
+			product_id = :product_id,
+			installation_id = :installation_id,
+			quantity = :quantity,
+			aging_id = :aging_id,
+			room_id = :room_id,
+			room_quantity = :room_quantity,
+			total_price = :total_price,
+			payment_method_id = :payment_method_id,
+			payment_fee = :payment_fee,
+			status = :status,
+			updated_at = :updated_at,
+			last_update_by = :last_update_by,
+			email = :email
 		WHERE
-			order_id = ? AND
-			project_id = ? AND 
-			created_by = ? AND
-			deleted_at IS NULL`
+			order_id = :order_id AND
+			project_id = :project_id AND 
+			created_by = :created_by AND
+			deleted_at IS NULL
+	`, order)
 
-	args := []interface{}{
-		order.VenueID,
-		order.DeviceID,
-		order.ProductID,
-		order.InstallationID,
-		order.Quantity,
-		order.AgingID,
-		order.RoomID,
-		order.RoomQuantity,
-		order.TotalPrice,
-		order.PaymentMethodID,
-		order.PaymentFee,
-		order.Status,
-		order.UpdatedAt,
-		order.LastUpdateBy,
-		order.Email,
-		order.OrderID,
-		order.ProjectID,
-		order.CreatedBy,
-	}
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    order.CreatedBy,
-		Query:     queryTrail,
-		TableName: "mla_orders",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
@@ -250,58 +166,25 @@ func (c *core) UpdateOrderStatus(order *Order) (err error) {
 		order.FailedAt = null.TimeFrom(time.Now())
 	}
 
-	query := `
-		UPDATE
-			mla_orders
-		SET
-			status = ?,
-			updated_at = ?,
-			last_update_by = ?,
-			pending_at = ?,
-			paid_at = ?,
-			failed_at = ?
-		WHERE
-			order_id = ? AND
-			project_id = ? AND
-			deleted_at IS NULL`
-
-	args := []interface{}{
-		order.Status,
-		order.UpdatedAt,
-		order.LastUpdateBy,
-		order.PendingAt,
-		order.PaidAt,
-		order.FailedAt,
-		order.OrderID,
-		order.ProjectID,
-	}
+	qs := `UPDATE
+				mla_orders
+			SET
+				status = :status,
+				updated_at = :updated_at,
+				last_update_by = :last_update_by,
+				pending_at = :pending_at,
+				paid_at = :paid_at,
+				failed_at = :failed_at
+			WHERE
+				order_id = :order_id AND
+				project_id = :project_id AND `
 
 	if order.LastUpdateBy != "" {
-		query += ` AND created_by = ?`
-		args = append(args, order.CreatedBy)
+		qs += ` created_by = :created_by AND `
 	}
+	qs += `deleted_at IS NULL `
 
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    order.LastUpdateBy,
-		Query:     queryTrail,
-		TableName: "mla_orders",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
+	_, err = c.db.NamedExec(qs, order)
 
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
@@ -324,48 +207,21 @@ func (c *core) UpdateOrderStatus(order *Order) (err error) {
 
 func (c *core) UpdateOpenPaymentStatus(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
-	query := `
+
+	_, err = c.db.NamedExec(`
 		UPDATE
 			mla_orders
 		SET
-			open_payment_status = ?,
-			updated_at = ?,
-			last_update_by = :?
+			open_payment_status = :open_payment_status,
+			updated_at = :updated_at,
+			last_update_by = :last_update_by
 		WHERE
-			order_id = ? AND
-			project_id = ? AND 
-			created_by = ? AND
-			deleted_at IS NULL`
+			order_id = :order_id AND
+			project_id = :project_id AND 
+			created_by = :created_by AND
+			deleted_at IS NULL
+	`, order)
 
-	args := []interface{}{
-		order.OpenPaymentStatus,
-		order.UpdatedAt,
-		order.LastUpdateBy,
-		order.OrderID,
-		order.ProjectID,
-		order.CreatedBy,
-	}
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    order.LastUpdateBy,
-		Query:     queryTrail,
-		TableName: "mla_orders",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
@@ -387,7 +243,8 @@ func (c *core) UpdateOpenPaymentStatus(order *Order) (err error) {
 
 func (c *core) Delete(order *Order) (err error) {
 	now := time.Now()
-	query := `
+
+	_, err = c.db.Exec(`
 		UPDATE
 			mla_orders
 		SET
@@ -397,36 +254,9 @@ func (c *core) Delete(order *Order) (err error) {
 			order_id = ? AND
 			project_id = ? AND
 			created_by = ? AND
-			deleted_at IS NULL`
+			deleted_at IS NULL
+	`, order.LastUpdateBy, now, order.OrderID, order.ProjectID, order.CreatedBy)
 
-	args := []interface{}{
-		order.LastUpdateBy,
-		now,
-		order.OrderID,
-		order.ProductID,
-		order.CreatedBy,
-	}
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    order.LastUpdateBy,
-		Query:     queryTrail,
-		TableName: "mla_orders",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
