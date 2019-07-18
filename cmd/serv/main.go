@@ -7,7 +7,6 @@ import (
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
-	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
@@ -91,39 +90,37 @@ func main() {
 	}
 	reporter.Infoln("Token Generator Email successfully initialized")
 
-	coreAuditTrail := auditTrail.Init(db)
-	reporter.Infoln("/pkg/audit_trail successfully initialized")
 	coreHistory := _history.Init(db, redis)
 	reporter.Infoln("/pkg/history successfully initialized")
 
-	coreProduct := _products.Init(db, redis, coreAuditTrail)
+	coreProduct := _products.Init(db, redis)
 	reporter.Infoln("/pkg/products successfully initialized")
 
-	coreOrder := order.Init(db, redis, cfg.PaymentMethodID, coreAuditTrail)
+	coreOrder := order.Init(db, redis, cfg.PaymentMethodID)
 	reporter.Infoln("/pkg/order successfully initialized")
 
-	coreVenue := venue.Init(db, redis, coreAuditTrail)
+	coreVenue := venue.Init(db, redis)
 	reporter.Infoln("/pkg/venue successfully initialized")
 
-	coreInstallation := installation.Init(db, redis, coreAuditTrail)
+	coreInstallation := installation.Init(db, redis)
 	reporter.Infoln("/pkg/installation successfully initialized")
 
-	coreDevice := device.Init(db, redis, coreAuditTrail)
+	coreDevice := device.Init(db, redis)
 	reporter.Infoln("/pkg/device successfully initialized")
 
-	coreCommercialType := commercialType.Init(db, redis, coreAuditTrail)
+	coreCommercialType := commercialType.Init(db, redis)
 	reporter.Infoln("/pkg/commercialType successfully initialized")
 
-	coreRoom := room.Init(db, redis, coreAuditTrail)
+	coreRoom := room.Init(db, redis)
 	reporter.Infoln("/pkg/room successfully initialized")
 
-	coreAging := aging.Init(db, redis, coreAuditTrail)
+	coreAging := aging.Init(db, redis)
 	reporter.Infoln("/pkg/aging successfully initialized")
 
-	coreVenueType := venueType.Init(db, redis, coreAuditTrail)
+	coreVenueType := venueType.Init(db, redis)
 	reporter.Infoln("/pkg/venue_type successfully initialized")
 
-	coreLicense := license.Init(db, redis, coreAuditTrail)
+	coreLicense := license.Init(db, redis)
 	reporter.Infoln("/pkg/license successfully initialized")
 
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
@@ -135,7 +132,7 @@ func main() {
 	coreTemplate := template.New("./file/template")
 	reporter.Infoln("/pkg/template successfully initialized")
 
-	coreOrderDetail := orderDetail.Init(db, redis, coreAuditTrail)
+	coreOrderDetail := orderDetail.Init(db, redis)
 	reporter.Infoln("/pkg/order_detail successfully initialized")
 
 	var (

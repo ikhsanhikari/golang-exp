@@ -9,7 +9,7 @@ build:
 	@echo "😁 Success 😁"
 
 run:
-	@go run cmd/serv/main.go cmd/serv/config.go
+	@go run cmd/serv/main.go
 
 install:
 	@go mod tidy

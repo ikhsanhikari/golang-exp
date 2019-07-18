@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -24,9 +23,8 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db         *sqlx.DB
-	redis      *redis.Pool
-	auditTrail auditTrail.ICore
+	db    *sqlx.DB
+	redis *redis.Pool
 }
 
 const redisPrefix = "molanobar-v1"
@@ -136,7 +134,8 @@ func (c *core) Insert(room *Room) (err error) {
 	room.UpdatedAt = room.CreatedAt
 	room.Status = 1
 	room.LastUpdateBy = room.CreatedBy
-	query := `
+
+	res, err := c.db.NamedExec(`
 		INSERT INTO mla_room (
 			name,
 			description,
@@ -149,54 +148,20 @@ func (c *core) Insert(room *Room) (err error) {
 			created_by,
 			last_update_by
 		) VALUES (
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?
-		)`
-	args := []interface{}{
-		room.Name,
-		room.Description,
-		room.Price,
-		room.CreatedAt,
-		room.UpdatedAt,
-		room.DeletedAt,
-		room.ProjectID,
-		room.Status,
-		room.CreatedBy,
-		room.LastUpdateBy,
-	}
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	res, err := tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
+			:name,
+			:description,
+			:price,
+			:created_at,
+			:updated_at,
+			:deleted_at,
+			:project_id,
+			:status,
+			:created_by,
+			:last_update_by
+		)
+	`, room)
 	room.ID, err = res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    room.CreatedBy,
-		Query:     query_trail,
-		TableName: "mla_room",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
+
 	redisKey := fmt.Sprintf("%s:rooms", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
@@ -206,52 +171,23 @@ func (c *core) Insert(room *Room) (err error) {
 func (c *core) Update(room *Room) (err error) {
 	room.UpdatedAt = time.Now()
 	room.Status = 1
-	query := `
+
+	_, err = c.db.NamedExec(`
 		UPDATE
 			mla_room
 		SET
-			name = ?,
-			description = ?,
-			price = ?,
-			updated_at = ?,
-			project_id = ?,
-			last_update_by = ?
+			name = :name,
+			description = :description,
+			price = :price,
+			updated_at = :updated_at,
+			project_id = :project_id,
+			last_update_by = :last_update_by
 		WHERE
-			id = ? AND
-			project_id = ? AND 
-			status = 1`
+			id = :id AND
+			project_id = :project_id AND 
+			status = 1
+	`, room)
 
-	args := []interface{}{
-		room.Name,
-		room.Description,
-		room.Price,
-		room.UpdatedAt,
-		room.ProjectID,
-		room.LastUpdateBy,
-		room.ID,
-		room.ProjectID,
-	}
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    room.LastUpdateBy,
-		Query:     query_trail,
-		TableName: "mla_room",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
 	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, room.ProjectID, room.ID)
 	_ = c.deleteCache(redisKey)
 
@@ -263,7 +199,8 @@ func (c *core) Update(room *Room) (err error) {
 
 func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
-	query := `
+
+	_, err = c.db.Exec(`
 		UPDATE
 			mla_room
 		SET
@@ -272,37 +209,8 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 		WHERE
 			id = ? AND
 			status = 1 AND 
-			project_id = ?`
-	args := []interface{}{
-		now, id, pid,
-	}
-
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-
-	if err != nil {
-		return err
-	}
-
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-
-	if err != nil {
-		return err
-	}
-
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    "uid",
-		Query:     query_trail,
-		TableName: "mla_room",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-
-	if err != nil {
-		return err
-	}
+			project_id = ?
+	`, now, id, pid)
 
 	redisKey := fmt.Sprintf("%s:%d:rooms:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"time"
 
-	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -26,9 +25,8 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db         *sqlx.DB
-	redis      *redis.Pool
-	auditTrail auditTrail.ICore
+	db    *sqlx.DB
+	redis *redis.Pool
 }
 
 const redisPrefix = "molanobar-v1"
@@ -37,8 +35,9 @@ func (c *core) Insert(aging *Aging) (err error) {
 	aging.CreatedAt = time.Now()
 	aging.UpdatedAt = null.TimeFrom(aging.CreatedAt)
 	aging.Status = 1
-	query := `
-		INSERT INTO mla_aging(
+
+	res, err := c.db.NamedExec(`
+	 	INSERT INTO mla_aging(
 			name,
 			description,
 			price,
@@ -49,51 +48,19 @@ func (c *core) Insert(aging *Aging) (err error) {
 			last_update_by,
 			project_id
 		) VALUES (
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?)`
-	args := []interface{}{
-		aging.Name,
-		aging.Description,
-		aging.Price,
-		aging.Status,
-		aging.CreatedAt,
-		aging.CreatedBy,
-		aging.UpdatedAt,
-		aging.LastUpdateBy,
-		aging.ProjectID,
-	}
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	res, err := tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
+			:name,
+			:description,
+			:price,
+			:status,
+			:created_at,
+			:created_by,
+			:updated_at,
+			:last_update_by,
+			:project_id
+		)
+	`, aging)
 	aging.ID, err = res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    aging.CreatedBy,
-		Query:     query_trail,
-		TableName: "mla_aging",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
+
 	redisKey := fmt.Sprintf("%s:%d:aging", redisPrefix, aging.ProjectID)
 	_ = c.deleteCache(redisKey)
 
@@ -102,49 +69,21 @@ func (c *core) Insert(aging *Aging) (err error) {
 
 func (c *core) Update(aging *Aging) (err error) {
 	aging.UpdatedAt = null.TimeFrom(time.Now())
-	query := `
+
+	_, err = c.db.NamedExec(`
 		UPDATE
 			mla_aging
 		SET
-			name = ?,
-			description = ?,
-			price = ?,
-			updated_at = ?,
-			last_update_by = ?
+			name = :name,
+			description = :description,
+			price = :price,
+			updated_at = :updated_at,
+			last_update_by = :last_update_by
 		WHERE
-			id = ? AND
-			project_id = ? AND 
-			status = 1`
-	args := []interface{}{
-		aging.Name,
-		aging.Description,
-		aging.Price,
-		aging.UpdatedAt,
-		aging.LastUpdateBy,
-		aging.ID,
-		aging.ProjectID,
-	}
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    aging.LastUpdateBy,
-		Query:     query_trail,
-		TableName: "mla_aging",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
+			id = :id AND
+			project_id = :project_id AND 
+			status = 1
+	`, aging)
 
 	redisKey := fmt.Sprintf("%s:%d:aging", redisPrefix, aging.ProjectID)
 	_ = c.deleteCache(redisKey)
@@ -156,7 +95,8 @@ func (c *core) Update(aging *Aging) (err error) {
 
 func (c *core) Delete(id int64, pid int64) (err error) {
 	now := time.Now()
-	query := `
+
+	_, err = c.db.Exec(`
 		UPDATE
 			mla_aging
 		SET
@@ -165,33 +105,8 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 		WHERE
 			id = ? AND
 			project_id = ? AND
-			status = 1`
-	args := []interface{}{
-		now,
-		id,
-		pid,
-	}
-	query_trail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	_, err = tx.Exec(query, args...)
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	data_audit := auditTrail.AuditTrail{
-		UserID:    "uid",
-		Query:     query_trail,
-		TableName: "mla_aging",
-	}
-	c.auditTrail.Insert(tx, &data_audit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
+			status = 1
+	`, now, id, pid)
 
 	redisKey := fmt.Sprintf("%s:%d:aging", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)

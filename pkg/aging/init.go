@@ -5,18 +5,16 @@ import (
 	"log"
 	"time"
 
-	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 )
 
 // Init is used to initialize aging package
-func Init(db *sqlx.DB, redis *redis.Pool, auditTrail auditTrail.ICore) ICore {
+func Init(db *sqlx.DB, redis *redis.Pool) ICore {
 	examineDBHealth(db)
 	return &core{
-		db:         db,
-		redis:      redis,
-		auditTrail: auditTrail,
+		db:    db,
+		redis: redis,
 	}
 }
 
