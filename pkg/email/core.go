@@ -15,7 +15,7 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	apiBaseURL     string
+	apiBaseURL          string
 	tokenGeneratorEmail TokenGeneratorEmail
 }
 
@@ -25,7 +25,7 @@ var httpClient = http.Client{
 
 // this is the example to create http request
 func (c *core) Send(emailRequest EmailRequest) (err error) {
-	
+
 	accessToken, err := c.tokenGeneratorEmail.GetAccessToken(5)
 	if err != nil {
 		return err
@@ -33,10 +33,10 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 
 	body, err := json.Marshal(EmailRequest{
 		Subject: emailRequest.Subject,
-		To:     emailRequest.To,
-		HTML:     emailRequest.HTML,
-		From: 	emailRequest.From,
-		Text:     emailRequest.Text,
+		To:      emailRequest.To,
+		HTML:    emailRequest.HTML,
+		From:    emailRequest.From,
+		Text:    emailRequest.Text,
 	})
 
 	var url = c.apiBaseURL + "/v1/email/send"
@@ -57,6 +57,6 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 	if response.StatusCode != 200 {
 		return err
 	}
-	fmt.Printf("Email Sent To : %s",emailRequest.To)
+	fmt.Printf("Email Sent To : %s", emailRequest.To)
 	return
 }

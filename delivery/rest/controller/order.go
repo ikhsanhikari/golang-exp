@@ -8,12 +8,13 @@ import (
 	"strings"
 	"time"
 
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/lib/go/gojunkyard.git/util"
 )
 
 func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
@@ -533,6 +534,33 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 		view.RenderJSONError(w, "Failed update order status", http.StatusInternalServerError)
 		return
 	}
+
+	//insert license start
+	licenseNumberUUID := util.GenerateUUID()
+	layout := "2006-01-02T15:04:05.000Z"
+	str := "1999-01-01T11:45:26.371Z"
+	defaultTime, err := time.Parse(layout, str)
+	if err != nil {
+		fmt.Println(err)
+	}
+	license := license.License{
+		LicenseNumber: licenseNumberUUID,
+		OrderID:       updateStatus.OrderID,
+		LicenseStatus: 1,
+		ActiveDate:    defaultTime,
+		ExpiredDate:   defaultTime,
+		ProjectID:     10,
+		CreatedBy:     getOrder.CreatedBy,
+		BuyerID:       getOrder.BuyerID,
+	}
+
+	err = c.license.Insert(&license)
+	if err != nil {
+		c.reporter.Infof("[handlePostLicense] error insert license repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed post license", http.StatusInternalServerError)
+		return
+	}
+	//insert license end
 
 	//set response
 	res := view.DataResponseOrder{
