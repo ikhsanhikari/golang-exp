@@ -262,11 +262,9 @@ func (c *core) UpdateOrderStatus(order *Order) (err error) {
 			failed_at = ?
 		WHERE
 			order_id = ? AND
-			project_id = ? AND`
+			project_id = ? AND
+			deleted_at IS NULL`
 
-	if order.LastUpdateBy != "" {
-		query += ` created_by = ? AND `
-	}
 	args := []interface{}{
 		order.Status,
 		order.UpdatedAt,
@@ -276,8 +274,13 @@ func (c *core) UpdateOrderStatus(order *Order) (err error) {
 		order.FailedAt,
 		order.OrderID,
 		order.ProjectID,
-		order.CreatedBy,
 	}
+
+	if order.LastUpdateBy != "" {
+		query += ` AND created_by = ?`
+		args = append(args, order.CreatedBy)
+	}
+
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
