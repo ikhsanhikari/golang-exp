@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -18,14 +19,15 @@ type ICore interface {
 	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
 	Get(pid int64, id int64) (product Product, err error)
 	Insert(product *Product) (err error)
-	Update(product *Product,venueTypeID int64) (err error)
-	Delete(pid int64, id int64,venueTypeID int64) (err error)
+	Update(product *Product, venueTypeID int64) (err error)
+	Delete(pid int64, id int64, venueTypeID int64) (err error)
 }
 
 // core contains db client
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
@@ -34,7 +36,7 @@ func (c *core) SelectByVenueType(pid int64, venue_type int64) (products Products
 	if venue_type == 0 {
 		return nil, nil
 	}
-	redisKey := fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,venue_type)
+	redisKey := fmt.Sprintf("%s:products-venuetype:%d", redisPrefix, venue_type)
 	products, err = c.getFromCacheByVenue(redisKey)
 	if err != nil {
 		products, err = c.selectByVenueTypeFromDB(pid, venue_type)
@@ -197,8 +199,7 @@ func (c *core) Insert(product *Product) (err error) {
 	product.UpdatedAt = product.CreatedAt
 	product.Status = 1
 	product.LastUpdateBy = product.CreatedBy
-
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_productlist (
 			product_name,
 			description,
@@ -216,29 +217,68 @@ func (c *core) Insert(product *Product) (err error) {
 			created_by,
 			last_update_by
 		) VALUES (
-			:product_name,
-			:description,
-			:venue_type_id,
-			:price,
-			:uom,
-			:currency,
-			:display_order,
-			:icon,
-			:created_at,
-			:updated_at,
-			:deleted_at,
-			:project_id,
-			:status,
-			:created_by,
-			:last_update_by
-		)
-	`, product)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		)`
+	args := []interface{}{
+		product.ProductName,
+		product.Description,
+		product.VenueTypeID,
+		product.Price,
+		product.Uom,
+		product.Currency,
+		product.DisplayOrder,
+		product.Icon,
+		product.CreatedAt,
+		product.UpdatedAt,
+		product.DeletedAt,
+		product.ProjectID,
+		product.Status,
+		product.CreatedBy,
+		product.LastUpdateBy,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	product.ProductID, err = res.LastInsertId()
-
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    product.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_productlist",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:products", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,product.VenueTypeID)
+	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix, product.VenueTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -247,44 +287,77 @@ func (c *core) Insert(product *Product) (err error) {
 func (c *core) Update(product *Product, venueTypeID int64) (err error) {
 	product.UpdatedAt = time.Now()
 	product.Status = 1
-
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_productlist
 		SET
-			product_name = :product_name,
-			description = :description,
-			venue_type_id = :venue_type_id,
-			price = :price,
-			uom = :uom,
-			currency = :currency,
-			display_order = :display_order,
-			icon = :icon,
-			updated_at = :updated_at,
-			project_id = :project_id,
-			last_update_by = :last_update_by
+			product_name = ?,
+			description = ?,
+			venue_type_id = ?,
+			price = ?,
+			uom = ?,
+			currency = ?,
+			display_order = ?,
+			icon = ?,
+			updated_at = ?,
+			project_id = ?,
+			last_update_by = ?
 		WHERE
-			product_id = :product_id AND
-			project_id = :project_id AND 
-			status = 1
-	`, product)
+			product_id = ? AND
+			project_id = ? AND 
+			status = 1`
 
+	args := []interface{}{
+		product.ProductName,
+		product.Description,
+		product.VenueTypeID,
+		product.Price,
+		product.Uom,
+		product.Currency,
+		product.DisplayOrder,
+		product.Icon,
+		product.UpdatedAt,
+		product.ProjectID,
+		product.LastUpdateBy,
+		product.ProductID,
+		product.ProjectID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    product.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_productlist",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, product.ProjectID, product.ProductID)
 	_ = c.deleteCache(redisKey)
 
 	redisKey = fmt.Sprintf("%s:products", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,venueTypeID)
+	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix, venueTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(pid int64, id int64,venueTypeID int64) (err error) {
+func (c *core) Delete(pid int64, id int64, venueTypeID int64) (err error) {
 	now := time.Now()
-
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
 			mla_productlist
 		SET
@@ -293,16 +366,44 @@ func (c *core) Delete(pid int64, id int64,venueTypeID int64) (err error) {
 		WHERE
 			product_id = ? AND
 			status = 1 AND 
-			project_id = ?
-	`, now, id, pid)
+			project_id = ?`
+	args := []interface{}{
+		now, id, pid,
+	}
 
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     queryTrail,
+		TableName: "mla_productlist",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:products:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 
 	redisKey = fmt.Sprintf("%s:products", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix,venueTypeID)
+	redisKey = fmt.Sprintf("%s:products-venuetype:%d", redisPrefix, venueTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return

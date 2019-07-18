@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"time"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -16,14 +17,15 @@ type ICore interface {
 	SelectByIDs(ids []int64, pid int64, limit int) (license License, err error)
 	Get(pid int64, id int64) (license License, err error)
 	Insert(license *License) (err error)
-	Update(license *License,buyerID string) (err error)
-	Delete(pid int64, id int64,buyerID string) (err error)
+	Update(license *License, buyerID string) (err error)
+	Delete(pid int64, id int64, buyerID string) (err error)
 	GetByBuyerId(pid int64, id string) (licenses Licenses, err error)
 }
 
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
@@ -91,7 +93,7 @@ func (c *core) selectFromDB(pid int64) (license Licenses, err error) {
 }
 
 func (c *core) Get(pid int64, id int64) (license License, err error) {
-	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, pid,id)
+	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, pid, id)
 
 	license, err = c.getFromCache(redisKey)
 	if err != nil {
@@ -133,7 +135,7 @@ func (c *core) getFromDB(pid int64, id int64) (license License, err error) {
 }
 
 func (c *core) GetByBuyerId(pid int64, id string) (licenses Licenses, err error) {
-	redisKey := fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,id)
+	redisKey := fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, id)
 	licenses, err = c.selectFromCache(redisKey)
 
 	if err != nil {
@@ -177,8 +179,7 @@ func (c *core) Insert(license *License) (err error) {
 	license.UpdatedAt = license.CreatedAt
 	license.Status = 1
 	license.LastUpdateBy = license.CreatedBy
-
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_license (
 			license_number,
 			order_id,
@@ -194,88 +195,183 @@ func (c *core) Insert(license *License) (err error) {
 			last_update_by,
 			buyer_id
 		) VALUES (
-			:license_number,
-			:order_id,
-			:license_status,
-			:active_date,
-			:expired_date,
-			:status,
-			:created_at,
-			:updated_at,
-			:deleted_at,
-			:project_id,
-			:created_by,
-			:last_update_by,
-			:buyer_id
-		)
-	`, license)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		)`
+	args := []interface{}{
+		license.LicenseNumber,
+		license.OrderID,
+		license.LicenseStatus,
+		license.ActiveDate,
+		license.ExpiredDate,
+		license.Status,
+		license.CreatedAt,
+		license.UpdatedAt,
+		license.DeletedAt,
+		license.ProjectID,
+		license.CreatedBy,
+		license.LastUpdateBy,
+		license.BuyerID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	license.ID, err = res.LastInsertId()
-
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    license.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_license",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:licenses", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,license.BuyerID)
+	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, license.BuyerID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Update(license *License,buyerID string) (err error) {
+func (c *core) Update(license *License, buyerID string) (err error) {
 	license.UpdatedAt = time.Now()
 	license.Status = 1
-
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_license
 		SET
-			order_id= :order_id,
-			license_status = :license_status,
-			active_date= :active_date,
-			expired_date= :expired_date,
-			updated_at=	:updated_at,
-			project_id=	:project_id,
-			last_update_by= :last_update_by,
-			buyer_id = :buyer_id
+			order_id= ?,
+			license_status = ?,
+			active_date= ?,
+			expired_date= ?,
+			updated_at=	?,
+			project_id=	?,
+			last_update_by= ?,
+			buyer_id = ?
 		WHERE
-			id = 		:id AND
-			project_id =:project_id AND 
-			status = 	1
-	`, license)
+			id = 		? AND
+			project_id =? AND 
+			status = 	1`
 
+	args := []interface{}{
+		license.OrderID,
+		license.LicenseStatus,
+		license.ActiveDate,
+		license.ExpiredDate,
+		license.UpdatedAt,
+		license.ProjectID,
+		license.LastUpdateBy,
+		license.BuyerID,
+		license.ID,
+		license.ProjectID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    license.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_license",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, license.ProjectID, license.ID)
 	_ = c.deleteCache(redisKey)
 
 	redisKey = fmt.Sprintf("%s:licenses", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,buyerID)
+	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(pid int64, id int64,buyerID string) (err error) {
+func (c *core) Delete(pid int64, id int64, buyerID string) (err error) {
 	now := time.Now()
-
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
-			mla_license
-		SET
-			deleted_at = ?,
-			status = 0
-		WHERE
-			id = ? AND
-			status = 1 AND 
-			project_id = ?
-	`, now, id, pid)
+		mla_license
+	SET
+		deleted_at = ?,
+		status = 0
+	WHERE
+		id = ? AND
+		status = 1 AND 
+		project_id = ?`
+	args := []interface{}{
+		now, id, pid,
+	}
 
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	//Add Logs
+	data_audit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     queryTrail,
+		TableName: "mla_license",
+	}
+	c.auditTrail.Insert(tx, &data_audit)
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:license:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 
 	redisKey = fmt.Sprintf("%s:licenses", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix,buyerID)
+	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
 	_ = c.deleteCache(redisKey)
 
 	return
