@@ -8,13 +8,12 @@ import (
 	"strings"
 	"time"
 
-	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
-	"git.sstv.io/lib/go/gojunkyard.git/form"
-	"git.sstv.io/lib/go/gojunkyard.git/router"
-
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
+	"git.sstv.io/lib/go/gojunkyard.git/form"
+	"git.sstv.io/lib/go/gojunkyard.git/router"
 	"git.sstv.io/lib/go/gojunkyard.git/util"
 )
 
@@ -562,7 +561,6 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 		return
 	}
 	//insert license end
-
 
 	//set response
 	res := view.DataResponseOrder{
