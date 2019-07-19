@@ -26,10 +26,10 @@ var httpClient = http.Client{
 // this is the example to create http request
 func (c *core) Send(emailRequest EmailRequest) (err error) {
 
-	accessToken, err := c.tokenGeneratorEmail.GetAccessToken(5)
-	if err != nil {
-		return err
-	}
+	// accessToken, err := c.tokenGeneratorEmail.GetAccessToken(5)
+	// if err != nil {
+	// 	return err
+	// }
 
 	body, err := json.Marshal(EmailRequest{
 		Subject: emailRequest.Subject,
@@ -39,14 +39,16 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 		Text:    emailRequest.Text,
 	})
 
-	var url = c.apiBaseURL + "/v1/email/send"
+	// var url = c.apiBaseURL + "/v1/email/send"
+
+	var url = "http://10.220.0.50/send"
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
 		return err
 	}
 	request.Header.Add("Content-Type", "application/json")
-	request.Header.Add("Authorization", "Bearer "+accessToken)
+	// request.Header.Add("Authorization", "Bearer "+accessToken)
 
 	response, err := httpClient.Do(request)
 	if err != nil {

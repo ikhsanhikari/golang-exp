@@ -8,7 +8,9 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 
-	// "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
+	"fmt"
+
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -16,16 +18,30 @@ import (
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
 
 	//Test Email Function
-	// emailReq := email.EmailRequest{
-	// 	Subject: "subject is nothing !!!",
-	// 	To:      "ikhsanhikari29@gmail.com",
-	// 	HTML:    "<h1>ISI PESAN !!!!!!!</h1>",
-	// 	From:    "no-reply@molalivearena.com",
-	// 	Text:    "Empty Text ........"}
-	// errEmail := c.email.Send(emailReq)
-	// if errEmail != nil {
-	// 	c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
-	// }
+
+	content := c.handleBasePdf(153, "RxHeyqVsEndVAUo2EBA4VBQWp207OO")
+	fmt.Print("==========", content)
+	AttachmentReq := []email.Attachment{
+		{
+			Content:     "",
+			Filename:    "bebas",
+			Type:        "pdf",
+			Disposition: "bebas",
+			ContentID:   "1",
+		},
+	}
+	emailReq := email.EmailRequest{
+		Subject:     "subject is nothing !!!",
+		To:          "ikhsanhikari29@gmail.com",
+		HTML:        "<h1>ISI PESAN !!!!!!!</h1>",
+		From:        "no-reply@molalivearena.com",
+		Text:        "Empty Text ........",
+		Attachments: AttachmentReq,
+	}
+	errEmail := c.email.Send(emailReq)
+	if errEmail != nil {
+		c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
+	}
 	//End Test Email Function
 
 	devices, err := c.device.Select(10)
