@@ -11,13 +11,17 @@ import (
 )
 
 func (c *Controller) insertOrderDetail(order order.Order, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging) (err error) {
-
 	var details = []map[string]interface{}{
 		{"itemType": "device", "itemID": device.ID, "description": device.Name, "amount": device.Price, "quantity": int64(1)},
 		{"itemType": "product", "itemID": product.ProductID, "description": product.ProductName, "amount": product.Price, "quantity": int64(1)},
 		{"itemType": "installation", "itemID": installation.ID, "description": installation.Description, "amount": installation.Price, "quantity": int64(1)},
-		{"itemType": "room", "itemID": room.ID, "description": room.Name, "amount": room.Price, "quantity": order.RoomQuantity},
 		{"itemType": "aging", "itemID": aging.ID, "description": aging.Name, "amount": aging.Price, "quantity": int64(1)},
+	}
+
+	if room.ID != 0 {
+		details = append(details, map[string]interface{}{
+			"itemType": "room", "itemID": room.ID, "description": room.Name, "amount": room.Price, "quantity": order.RoomQuantity,
+		})
 	}
 
 	for _, detail := range details {
@@ -47,8 +51,13 @@ func (c *Controller) updateOrderDetail(order order.Order, device device.Device, 
 		{"itemType": "device", "itemID": device.ID, "description": device.Name, "amount": device.Price, "quantity": int64(1)},
 		{"itemType": "product", "itemID": product.ProductID, "description": product.ProductName, "amount": product.Price, "quantity": int64(1)},
 		{"itemType": "installation", "itemID": installation.ID, "description": installation.Description, "amount": installation.Price, "quantity": int64(1)},
-		{"itemType": "room", "itemID": room.ID, "description": room.Name, "amount": room.Price, "quantity": order.RoomQuantity},
 		{"itemType": "aging", "itemID": aging.ID, "description": aging.Name, "amount": aging.Price, "quantity": int64(1)},
+	}
+
+	if room.ID != 0 {
+		details = append(details, map[string]interface{}{
+			"itemType": "room", "itemID": room.ID, "description": room.Name, "amount": room.Price, "quantity": order.RoomQuantity,
+		})
 	}
 
 	for _, detail := range details {
