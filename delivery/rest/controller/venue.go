@@ -18,13 +18,13 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get user")
+		c.reporter.Errorf("[handleGetAllVenues] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		c.reporter.Errorf("[handleGetAllVenues] failed get userID")
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}
@@ -73,17 +73,77 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
-// Handle delete
-func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) handleGetByVenueID(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+	if err != nil {
+		c.reporter.Warningf("[handleGetByVenueID] id must be integer, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get user")
+		c.reporter.Errorf("[handleGetByVenueID] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		c.reporter.Errorf("[handleGetByVenueID] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+
+	venue, err := c.venue.Get(10, id, fmt.Sprintf("%v", userID))
+	if err != nil {
+		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
+		return
+	}
+	res := view.DataResponse{
+		ID:   id,
+		Type: "venues",
+		Attributes: view.VenueAttributes{
+			Id:                           venue.Id,
+			VenueId:                      venue.VenueId,
+			VenueType:                    venue.VenueType,
+			VenueName:                    venue.VenueName,
+			Address:                      venue.Address,
+			City:                         venue.City,
+			Province:                     venue.Province,
+			Zip:                          venue.Zip,
+			Capacity:                     venue.Capacity,
+			Facilities:                   venue.Facilities,
+			Longitude:                    venue.Longitude,
+			Latitude:                     venue.Latitude,
+			People:                       venue.People,
+			PtID:                         venue.PtID,
+			CreatedAt:                    venue.CreatedAt,
+			UpdatedAt:                    venue.UpdatedAt,
+			Status:                       venue.Status,
+			VenueCategory:                venue.VenueCategory,
+			PicName:                      venue.PicName,
+			PicContactNumber:             venue.PicContactNumber,
+			VenueTechnicianName:          venue.VenueTechnicianName,
+			VenueTechnicianContactNumber: venue.VenueTechnicianContactNumber,
+			VenuePhone:                   venue.VenuePhone,
+			CreatedBy:                    venue.CreatedBy,
+			LastUpdateBy:                 venue.LastUpdateBy,
+		},
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+// Handle delete
+func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleDeleteVenue] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handleDeleteVenue] failed get userID")
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}
@@ -121,13 +181,13 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get user")
+		c.reporter.Errorf("[handlePostVenue] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		c.reporter.Errorf("[handlePostVenue] failed get userID")
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}
@@ -183,13 +243,13 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get user")
+		c.reporter.Errorf("[handlePatchVenue] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		c.reporter.Errorf("[handlePatchVenue] failed get userID")
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}

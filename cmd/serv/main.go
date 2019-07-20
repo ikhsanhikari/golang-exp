@@ -137,8 +137,6 @@ func main() {
 	coreTemplate := template.New("./file/template")
 	reporter.Infoln("/pkg/template successfully initialized")
 
-	reporter.Infoln("/pkg/template successfully initialized")
-
 	coreOrderDetail := orderDetail.Init(db, redis, coreAuditTrail)
 	reporter.Infoln("/pkg/order_detail successfully initialized")
 
