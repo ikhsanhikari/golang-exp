@@ -746,3 +746,26 @@ func (c *core) deleteCache(key string) error {
 	_, err := conn.Do("DEL", key)
 	return err
 }
+
+func (c *core) clearRedis(projectID int64, userID string, orderID int64, venueID int64, orderStatus int8, paidDate string) {
+	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, projectID, userID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, projectID, userID, orderID)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, projectID, userID, userID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, projectID, userID, venueID)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:sumorders-userid", redisPrefix, projectID, userID)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:%s:sumorder-id:%d", redisPrefix, projectID, userID, orderID)
+	_ = c.deleteCache(redisKey)
+
+	if orderStatus == 2 {
+		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, projectID, userID, paidDate[:10])
+		_ = c.deleteCache(redisKey)
+	}
+}
