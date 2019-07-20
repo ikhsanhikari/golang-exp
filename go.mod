@@ -11,6 +11,7 @@ require (
 	github.com/json-iterator/go v1.1.6
 	github.com/kelseyhightower/envconfig v1.4.0 // indirect
 	github.com/leekchan/accounting v0.0.0-20190702062627-a09595581342
+	github.com/skip2/go-qrcode v0.0.0-20190110000554-dc11ecdae0a9
 	github.com/stretchr/testify v1.3.0 // indirect
 	gopkg.in/guregu/null.v3 v3.4.0
 )
