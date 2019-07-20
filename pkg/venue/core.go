@@ -194,6 +194,8 @@ func (c *core) Insert(venue *Venue) (err error) {
 			?,
 			?,
 			?,
+			?,
+			?,
 			?)`
 	args := []interface{}{
 		venue.VenueId,
@@ -219,6 +221,8 @@ func (c *core) Insert(venue *Venue) (err error) {
 		venue.CreatedBy,
 		venue.LastUpdateBy,
 		venue.Province,
+		venue.City,
+		venue.PtID,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
@@ -277,7 +281,9 @@ func (c *core) Update(venue *Venue) (err error) {
 			venue_technician_contact_number = ?,
 			venue_phone = ?,
 			last_update_by = ?,
-			province= ?
+			province= ?,
+			city= ?,
+			pt_id = ?
 		WHERE
 			id = ? AND
 			project_id = 10 AND
@@ -303,6 +309,8 @@ func (c *core) Update(venue *Venue) (err error) {
 		venue.VenuePhone,
 		venue.LastUpdateBy,
 		venue.Province,
+		venue.City,
+		venue.PtID,
 		venue.Id,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
