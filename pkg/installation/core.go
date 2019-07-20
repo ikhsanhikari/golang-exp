@@ -7,6 +7,7 @@ import (
 
 	"encoding/json"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -23,8 +24,9 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
@@ -109,35 +111,70 @@ func (c *core) Insert(installation *Installation) (err error) {
 	installation.Status = 1
 	installation.LastUpdateBy = installation.CreatedBy
 
-	res, err := c.db.NamedExec(`
-		INSERT INTO mla_installation (
-			name,
-			description,
-			price,
-			device_id,
-			created_at,
-			updated_at,
-			deleted_at,
-			project_id,
-			status,
-			created_by,
-			last_update_by
-		) VALUES (
-			:name,
-			:description,
-			:price,
-			:device_id,
-			:created_at,
-			:updated_at,
-			:deleted_at,
-			:project_id,
-			:status,
-			:created_by,
-			:last_update_by
-		)
-	`, installation)
-	//fmt.Println(res)
+	query := `
+	INSERT INTO mla_installation (
+		name,
+		description,
+		price,
+		device_id,
+		created_at,
+		updated_at,
+		deleted_at,
+		project_id,
+		status,
+		created_by,
+		last_update_by
+	) VALUES (
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?,
+		?
+		)`
+	args := []interface{}{
+		installation.Name,
+		installation.Description,
+		installation.Price,
+		installation.DeviceID,
+		installation.CreatedAt,
+		installation.UpdatedAt,
+		installation.DeletedAt,
+		installation.ProjectID,
+		installation.Status,
+		installation.CreatedBy,
+		installation.LastUpdateBy,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	installation.ID, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    installation.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_installation",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:installation", redisPrefix, installation.ProjectID)
 	_ = c.deleteCache(redisKey)
@@ -149,21 +186,51 @@ func (c *core) Update(installation *Installation) (err error) {
 	installation.UpdatedAt = time.Now()
 	installation.ProjectID = 10
 
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_installation
 		SET
-			name = :name,
-			description = :description,
-			price = :price,
-			device_id = :device_id,
-			updated_at = :updated_at,
-			last_update_by = :last_update_by
+			name = ?,
+			description = ?,
+			price = ?,
+			device_id = ?,
+			updated_at = ?,
+			last_update_by = ?
 		WHERE
-			id = :id AND 
+			id = ? AND 
 			project_id = 10 AND 
-			status = 	1
-	`, installation)
+			status = 	1`
+
+	args := []interface{}{
+		installation.Name,
+		installation.Description,
+		installation.Price,
+		installation.DeviceID,
+		installation.UpdatedAt,
+		installation.LastUpdateBy,
+		installation.ID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    installation.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_installation",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:installation:%d", redisPrefix, installation.ProjectID, installation.ID)
 	_ = c.deleteCache(redisKey)
@@ -176,7 +243,7 @@ func (c *core) Update(installation *Installation) (err error) {
 func (c *core) Delete(id int64, pid int64) (err error) {
 	now := time.Now()
 
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
 			mla_installation
 		SET
@@ -184,8 +251,37 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 			status = 0
 		WHERE
 			id = ? AND 
-			project_id = ?
-	`, now, id, pid)
+			project_id = ?`
+	args := []interface{}{
+		now, id, pid,
+	}
+
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     queryTrail,
+		TableName: "mla_installation",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:installation:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
