@@ -198,7 +198,7 @@ func (c *core) Update(order *Order) (err error) {
 	}
 	//Add Logs
 	dataAudit := auditTrail.AuditTrail{
-		UserID:    order.CreatedBy,
+		UserID:    order.LastUpdateBy,
 		Query:     queryTrail,
 		TableName: "mla_orders",
 	}
@@ -700,7 +700,8 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
     COALESCE(orders.email,'') as order_email,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
-    COALESCE(venues.address,'') as venue_address,
+	COALESCE(venues.address,'') as venue_address,
+	COALESCE(venues.city,'') as venue_city,
     COALESCE(venues.province,'') as venue_province,
     COALESCE(venues.zip,'') as venue_zip,
     COALESCE(venues.capacity,0) as venue_capacity,
@@ -762,8 +763,9 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
     COALESCE(orders.email,'') as order_email,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
-    COALESCE(venues.address,'') as venue_address,
-    COALESCE(venues.province,'') as venue_province,
+	COALESCE(venues.address,'') as venue_address,
+	COALESCE(venues.city,'') as venue_city,
+	COALESCE(venues.province,'') as venue_province,
     COALESCE(venues.zip,'') as venue_zip,
     COALESCE(venues.capacity,0) as venue_capacity,
     COALESCE(venues.longitude,0) as venue_longitude,

@@ -67,20 +67,18 @@
         <br> 
         <div>
             <p align = "center" class="h" style="font-size: 26px;">DOKUMEN INI ADALAH SERTIFIKAT KEANGGOTAAN DARI PROGRAM KERJASAMA MOLA LIVE ARENA.</p>
-            <p align = "center" class="h" style="font-size: 26px;"> KERJASAMA YANG MENGIJINKAN PENGGUNAAN KONTEN MOLA - PREMIER LEAGUE DI AREA </p>
+            <p align = "center" class="h" style="font-size: 26px;"> KERJASAMA YANG MENGIJINKAN PENGGUNAAN KONTEN <i>MOLA - PREMIER LEAGUE </i> DI AREA </p>
             <p align = "center" class="h" style="font-size: 26px;">KOMERSIAL</p>
             <br>
             <p align = "center" class="h" style="font-size: 26px;">SERTIFIKAT HANYA BERLAKU DI LOKASI</p>
         </div>
         <div class="row">
             <div class="columns" >
-                <img src="https://www.qrstuff.com/images/sample.png" width="160px" height="160px" align="right">
+               <img src="data:image/png;base64, {{.QrBase64}}"/>
+            </div>
             </div>
             <div class="columns" >
-              <p class="h" style="font-size: 22px;">{{ .VenueName }}</p>
-              <p class="h" style="font-size: 22px;">{{ .Address }}</p>
-              <p class="h" style="font-size: 22px;">{{ .Zip }}</p>
-              <p class="h" style="font-size: 22px;">{{ .City }} </p> 
+              <p class="h" style="font-size: 18px;"><br>{{ .VenueName }} <br>{{ .Address }}<br>{{ .Zip }}<br>{{ .City }}</p>
             </div>
         </div>
         <div class="footer">

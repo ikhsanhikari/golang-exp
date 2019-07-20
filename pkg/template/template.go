@@ -1,20 +1,26 @@
 package template
 
 import (
+	"encoding/base64"
 	"errors"
+	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"text/template"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 type ICore interface {
 	Get(name string) (*template.Template, error)
+	GetBase64Png(licenseNum string) string
 }
 
 type core struct {
-	t   map[string]*template.Template
-	mux sync.RWMutex
+	t         map[string]*template.Template
+	mux       sync.RWMutex
+	urlQrCode string
 }
 
 // ErrTemplateNotFound ...
@@ -68,4 +74,18 @@ func (c *core) Get(name string) (*template.Template, error) {
 
 func isTemplate(path string) bool {
 	return filepath.Ext(path) == ".tmpl"
+}
+
+func (c *core) GetBase64Png(licenseNum string) string {
+	fmt.Println(c.urlQrCode)
+	fmt.Println(licenseNum)
+	qrCode := c.urlQrCode + licenseNum
+	fmt.Println(qrCode)
+	var png []byte
+	png, _ = qrcode.Encode(qrCode, qrcode.Medium, 256)
+	fmt.Println(png)
+	b64Png := base64.StdEncoding.EncodeToString(png)
+	fmt.Println(b64Png)
+
+	return b64Png
 }

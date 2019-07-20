@@ -96,26 +96,24 @@ func (c *Controller) handleBaseSertificatePdf(w http.ResponseWriter, r *http.Req
 	if err != nil {
 		return 
 	}
-	var lid int64 = 26
-	venues, err := c.venue.SelectVenueByLisenceID(10, lid )
-	if err == sql.ErrNoRows {
-		c.reporter.Warningf("[handlePdf] Venue not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
-		return 
+	sumorder, err := c.order.SelectSummaryOrderByID(153, 10, "RxHeyqVsEndVAUo2EBA4VBQWp207OO")//fmt.Sprintf("%v", userID))
+    if err != nil {
+        c.reporter.Errorf("[handleGetSumOrderByID] sum order not found, err: %s", err.Error())
+        view.RenderJSONError(w, "Sum Order not found", http.StatusNotFound)
+        return
 	}
-	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePdf] Failed get Venue, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get Venue", http.StatusNotFound)
-		return 
+	
+	b64Png := c.template.GetBase64Png(sumorder.LicenseNumber)
+	fmt.Println(b64Png)
+	templateData := map[string]interface{}{
+		"VenueName"		:   sumorder.VenueName,
+		"Address"		:   sumorder.VenueAddress,
+		"Zip"			:   sumorder.VenueZip,
+		"City"			:   sumorder.VenueCity,
+		"Province"		:   sumorder.VenueProvince,
+		"QrBase64"		:	b64Png,
 	}
 
-	templateData := map[string]interface{}{
-		"VenueName"		:   venues.VenueName,
-		"Address"		:   venues.Address,
-		"Zip"			:   venues.Zip,
-		"City"			:   venues.City,
-		"Province"		:   venues.Province,
-	}
 
 	buff := bytes.NewBuffer([]byte{})
 	err = t.Execute(buff, templateData)
@@ -137,11 +135,12 @@ func (c *Controller) handleBaseSertificatePdf(w http.ResponseWriter, r *http.Req
 	w.Header().Set("Content-Disposition", "attachment; filename=\"sertificate.pdf\"")
 	gen.Create()
 
-	// b := pdfBuffer.Bytes()
-	// b64Pdf := base64.StdEncoding.EncodeToString(b)
-
-	// return b64Pdf
 }
+
+func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
+	view.RenderJSONData(w, c.handleBasePdf(153,"RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
+}
+
 
 
 

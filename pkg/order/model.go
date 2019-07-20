@@ -56,6 +56,7 @@ type SummaryOrder struct {
 	VenueName          string    `db:"venue_name"`
 	VenueType          int64     `db:"venue_type"`
 	VenueAddress       string    `db:"venue_address"`
+	VenueCity          string    `db:"venue_city"`
 	VenueProvince      string    `db:"venue_province"`
 	VenueZip           string    `db:"venue_zip"`
 	VenueCapacity      int64     `db:"venue_capacity"`
