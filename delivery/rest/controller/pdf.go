@@ -28,17 +28,17 @@ func (c *Controller) handleBasePdf(id int64, userID string) string {
 
 	order, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
-		c.reporter.Warningf("[handlePdf] order not found, err: %s", err.Error())
+		c.reporter.Warningf("[handlePatchPDF] order not found, err: %s", err.Error())
 		return "0"
 	}
 	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePdf] Failed get order, err: %s", err.Error())
+		c.reporter.Errorf("[handlePatchPDF] Failed get order, err: %s", err.Error())
 		return "0"
 	}
 
 	orderDetail, err := c.orderDetail.Get(id, 10, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
-		c.reporter.Warningf("[handlePdf] orderDetail not found, err: %s", err.Error())
+		c.reporter.Warningf("[handlePatchPDF] orderDetail not found, err: %s", err.Error())
 		return "0"
 	}
 
@@ -71,14 +71,14 @@ func (c *Controller) handleBasePdf(id int64, userID string) string {
 	buff := bytes.NewBuffer([]byte{})
 	err = t.Execute(buff, templateData)
 	if err != nil {
-		c.reporter.Warningf("[handlePdf] execute Pdf: %s", err.Error())
+		c.reporter.Errorf("[handlePDF] Failed execute pdf, err: %s", err.Error())
 		return "1"
 	}
 
 	pdfBuffer := bytes.NewBuffer([]byte{})
 	gen, err := wkhtmltopdf.NewPDFGenerator()
 	if err != nil {
-		c.reporter.Warningf("[handlePdf] execute gen Pdf: %s", err.Error())
+		c.reporter.Errorf("[handlePDF] Failed generate pdf, err: %s", err.Error())
 		return "1"
 	}
 	gen.SetOutput(pdfBuffer)
