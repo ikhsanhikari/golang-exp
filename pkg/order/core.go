@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 	"strings"
 	"time"
 
@@ -894,7 +893,6 @@ func (c *core) clearRedis(projectID int64, uidUser, uidAdmin string, orderID, ve
 	}
 
 	for _, redisKey := range redisKeys {
-		log.Println(redisKey)
 		_ = c.deleteCache(redisKey)
 	}
 }
