@@ -21,6 +21,7 @@ import (
 	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	venueType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
+	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	token_generator "git.sstv.io/lib/go/go-auth-api.git/gettoken"
 	conn "git.sstv.io/lib/go/gojunkyard.git/conn"
@@ -135,6 +136,9 @@ func main() {
 	coreOrderDetail := orderDetail.Init(db, redis)
 	reporter.Infoln("/pkg/order_detail successfully initialized")
 
+	coreCompany := company.Init(db, redis)
+	reporter.Infoln("/pkg/company successfully initialized")
+
 	var (
 		server = webserver.New(&cfg.Webserver)
 		rest   = rest.New(
@@ -155,6 +159,7 @@ func main() {
 			coreEmail,
 			coreTemplate,
 			coreOrderDetail,
+			coreCompany,
 		)
 	)
 	rest.Register(server.Router())
