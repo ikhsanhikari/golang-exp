@@ -3,9 +3,12 @@ package controller
 import (
 	"bytes"
 	"database/sql"
+	"net/http"
 	"encoding/base64"
 	"fmt"
 
+
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
 )
@@ -87,3 +90,58 @@ func (c *Controller) handleBasePdf(id int64, userID string) string {
 
 	return b64Pdf
 }
+
+func (c *Controller) handleBaseSertificatePdf(w http.ResponseWriter, r *http.Request){
+	t, err := c.template.Get("pdf_sertificate.tmpl")
+	if err != nil {
+		return 
+	}
+	var lid int64 = 26
+	venues, err := c.venue.SelectVenueByLisenceID(10, lid )
+	if err == sql.ErrNoRows {
+		c.reporter.Warningf("[handlePdf] Venue not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
+		return 
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePdf] Failed get Venue, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get Venue", http.StatusNotFound)
+		return 
+	}
+
+	templateData := map[string]interface{}{
+		"VenueName"		:   venues.VenueName,
+		"Address"		:   venues.Address,
+		"Zip"			:   venues.Zip,
+		"City"			:   venues.City,
+		"Province"		:   venues.Province,
+	}
+
+	buff := bytes.NewBuffer([]byte{})
+	err = t.Execute(buff, templateData)
+	if err != nil {
+		view.RenderJSONError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	gen, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		view.RenderJSONError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	gen.SetOutput(w)
+	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
+	gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"sertificate.pdf\"")
+	gen.Create()
+
+	// b := pdfBuffer.Bytes()
+	// b64Pdf := base64.StdEncoding.EncodeToString(b)
+
+	// return b64Pdf
+}
+
+
+
