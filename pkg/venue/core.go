@@ -15,11 +15,11 @@ import (
 
 // ICore is the interface
 type ICore interface {
-	Select(pid int64) (venues Venues, err error)
-	Get(pid int64, id int64) (venue Venue, err error)
+	Select(pid int64, uid string) (venues Venues, err error)
+	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
 	Update(venue *Venue) (err error)
-	Delete(pid int64, id int64) (err error)
+	Delete(pid int64, id int64, uid string) (err error)
 	SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error)
 }
 
@@ -32,18 +32,18 @@ type core struct {
 
 const redisPrefix = "molanobar-v1"
 
-func (c *core) Select(pid int64) (venues Venues, err error) {
-	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, pid)
+func (c *core) Select(pid int64, uid string) (venues Venues, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, pid,uid)
 	venues, err = c.selectFromCache(redisKey)
 	if err != nil {
-		venues, err = c.selectFromDB(pid)
+		venues, err = c.selectFromDB(pid, uid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(venues)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
+func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 	err = c.db.Select(&venue, `
 		SELECT
 			id,
@@ -77,18 +77,19 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			mla_venues
 		WHERE
 			stats = 1 AND
-			project_id = ?
-	`, pid)
+			project_id = ? AND 
+			created_by = ? 
+	`, pid, uid)
 
 	return
 }
 
-func (c *core) Get(pid int64, id int64) (venue Venue, err error) {
+func (c *core) Get(pid int64, id int64, uid string) (venue Venue, err error) {
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, pid, id)
 
 	venue, err = c.getFromCache(redisKey)
 	if err != nil {
-		venue, err = c.getFromDB(id, pid)
+		venue, err = c.getFromDB(id, pid, uid)
 		if err != sql.ErrNoRows {
 			byt, _ := jsoniter.ConfigFastest.Marshal(venue)
 			_ = c.setToCache(redisKey, 300, byt)
@@ -96,8 +97,8 @@ func (c *core) Get(pid int64, id int64) (venue Venue, err error) {
 	}
 	return
 }
-func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
-	err = c.db.Get(&venue, `
+func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err error) {
+	qs := `
 		SELECT
 			id,
 			venue_id,
@@ -130,9 +131,11 @@ func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
 			mla_venues
 		WHERE
 			id = ? AND
-			stats = 1 AND
-			project_id = ?
-	`, id, pid)
+			project_id = ? AND 
+	 		created_by = ? AND 
+			deleted_at IS NULL `
+
+		err = c.db.Get(&venue, qs, id, pid, uid)
 
 	return
 }
@@ -250,7 +253,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, venue.ProjectID)
+	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID,venue.CreatedBy)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -337,13 +340,13 @@ func (c *core) Update(venue *Venue) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, venue.ProjectID, venue.Id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venue", redisPrefix, venue.ProjectID)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.LastUpdateBy)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(pid int64, id int64) (err error) {
+func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 	now := time.Now()
 
 	query := `
@@ -355,11 +358,13 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 		WHERE
 			id = ? AND
 			stats = 1 AND 
+			last_updated_by = ? AND 
 			project_id = 10
 	`
 	args := []interface{}{
 		now,
 		id,
+		uid,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
@@ -385,7 +390,7 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, 10, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venue", redisPrefix, 10)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, 10, uid)
 	_ = c.deleteCache(redisKey)
 	return
 }

@@ -42,12 +42,12 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// venue, err := c.venue.Get(projectID, params.VenueID)
-	// if err == sql.ErrNoRows {
-	// 	c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
-	// 	view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
-	// 	return
-	// }
+	venue, err := c.venue.Get(projectID, params.VenueID,fmt.Sprintf("%v",userID))
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
+		return
+	}
 
 	device, err := c.device.Get(projectID, params.DeviceID)
 	if err == sql.ErrNoRows {
@@ -87,13 +87,13 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
-	// if !valid {
-	// 	c.reporter.Errorf("[handlePostOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
-	// 		venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
-	// 	view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
-	// 	return
-	// }
+	valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+	if !valid {
+		c.reporter.Errorf("[handlePostOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
+			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
+		return
+	}
 
 	//generate order number
 	lastOrderNumber, err := c.order.GetLastOrderNumber()
@@ -353,7 +353,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//validasi foreign key
-	venue, err := c.venue.Get(projectID, params.VenueID)
+	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v",userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
