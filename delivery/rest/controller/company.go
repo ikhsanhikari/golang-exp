@@ -180,13 +180,12 @@ func (c *Controller) handlePostCompany(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
+
 	userID, ok := user["sub"]
 	if !ok {
-		userID = ""
-	}
-
-	if userID != "" {
-		params.CreatedBy = fmt.Sprintf("%v", userID)
+		c.reporter.Errorf("[handlePostCompany] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
 	}
 
 	company := company.Company{
@@ -198,7 +197,7 @@ func (c *Controller) handlePostCompany(w http.ResponseWriter, r *http.Request) {
 		Zip:       params.Zip,
 		Email:     params.Email,
 		Npwp:      params.Npwp,
-		CreatedBy: params.CreatedBy,
+		CreatedBy: fmt.Sprintf("%v", userID),
 	}
 
 	err = c.company.Insert(&company)
@@ -261,7 +260,7 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		Zip:          params.Zip,
 		Email:        params.Email,
 		Npwp:         params.Npwp,
-		LastUpdateBy: params.LastUpdateBy,
+		LastUpdateBy: fmt.Sprintf("%v", userID),
 	}
 	err = c.company.Update(&company)
 	if err != nil {
