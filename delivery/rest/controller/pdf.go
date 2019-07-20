@@ -1,134 +1,121 @@
 package controller
 
 import (
-	"strconv"
 	"bytes"
-	"net/http"
 	"database/sql"
+	"net/http"
+	"encoding/base64"
 	"fmt"
 
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
-	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
-	"git.sstv.io/lib/go/gojunkyard.git/router"
-	"github.com/leekchan/accounting"
 
-	//"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+	"github.com/leekchan/accounting"
 )
 
-func (c *Controller) handlePdf(w http.ResponseWriter, r *http.Request) {
+/*
+return 0 to failed get Data
+return 1 to failed get template
+*/
 
-	var (
-		_id     = router.GetParam(r, "id")
-		id, err = strconv.ParseInt(_id, 10, 64)
-	)
-	if err != nil {
-		c.reporter.Errorf("[handleGetOrderByID] invalid parameter, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
+func (c *Controller) handleBasePdf(id int64, userID string) string {
+	var totPrice int64
 
 	t, err := c.template.Get("pdf_invoice.tmpl")
 	if err != nil {
-		view.RenderJSONError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleGetOrderByID] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		userID = ""
+		return "1"
 	}
 
-	fmt.Println("userID :",userID)
-	fmt.Println("id :",id)
-
-	order, err := c.order.Get(id, 10, fmt.Sprintf("%v",userID))
+	order, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
-		c.reporter.Warningf("[handlePatchOrder] order not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
-		return
+		c.reporter.Warningf("[handlePatchPDF] order not found, err: %s", err.Error())
+		return "0"
 	}
 	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePatchOrder] Failed get order, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get order", http.StatusInternalServerError)
-		return
+		c.reporter.Errorf("[handlePatchPDF] Failed get order, err: %s", err.Error())
+		return "0"
 	}
 
-	orderDetail, err := c.orderDetail.Get(order.OrderID, 10, fmt.Sprintf(" %v ",userID))
-	fmt.Println(orderDetail)
+	orderDetail, err := c.orderDetail.Get(id, 10, fmt.Sprintf("%v", userID))
+	if err == sql.ErrNoRows {
+		c.reporter.Warningf("[handlePatchPDF] orderDetail not found, err: %s", err.Error())
+		return "0"
+	}
+
+	ac := accounting.Accounting{Precision: 2, Thousand: ".", Decimal: ","}
+
+	items := make([]map[string]interface{}, 0, len(orderDetail))
+	for _, v := range orderDetail {
+		typePrice := v.Quantity * int64(v.Amount)
+		items = append(items, map[string]interface{}{
+			"Quantity":     v.Quantity,
+			"ProductName":  v.Description,
+			"ProductPrice": ac.FormatMoney(v.Amount),
+			"TotalPrice":   ac.FormatMoney(typePrice),
+		})
+		totPrice = totPrice + typePrice
+	}
 
 	templateData := map[string]interface{}{
-		"CreatedAt":         order.CreatedAt.Format("2006-10-10"),
+		"CreatedAt":         order.CreatedAt.Format("2006-01-02"),
 		"OrderNumber":       order.OrderID,
 		"CustomerReference": "",
 		"BuyerName":         "PT Liga Inggris",
 		"BuyerAddress":      "Jalan EPL, No.153, Surabaya 17865489",
-		"Items": []map[string]interface{}{
-			{
-				"Quantity":           2,
-				"ProductName":        "Product One",
-				"ProductDescription": "ProductDescription",
-				"ProductPrice":       "100.000",
-				"TotalPrice":         "200.000",
-			},
-			{
-				"Quantity":           1,
-				"ProductName":        "Product Two",
-				"ProductDescription": "Product Description Two",
-				"ProductPrice":       "100.000",
-				"TotalPrice":         "100.000",
-			},
-		},
-		"Subtotal":   "300.000",
-		"Total":      "300.000",
-		"BalanceDue": "300.000",
+		"Items":             items,
+		"Subtotal":          ac.FormatMoney(totPrice),
+		"Total":             ac.FormatMoney(totPrice),
+		"BalanceDue":        ac.FormatMoney(totPrice),
 	}
 
-	_ = accounting.DefaultAccounting
+	buff := bytes.NewBuffer([]byte{})
+	err = t.Execute(buff, templateData)
+	if err != nil {
+		c.reporter.Errorf("[handlePDF] Failed execute pdf, err: %s", err.Error())
+		return "1"
+	}
 
-	// now := order.CreatedAt
-	// ac := accounting.Accounting{Precision: 2, Thousand: ".", Decimal: ","}
-	// totPrice := ac.FormatMoney(order.TotalPrice)
-	// //if len(data) > 0 {
-	// // var oDatas orderDatass
-	// // for _, order := range data {
-	// var orderDatas orderData
-	// productParam, err := c.product.Get(10, order.ProductID)
-	// fmt.Println(productParam)
-	// uPrice := ac.FormatMoney(productParam.Price)
-	// orderDatas.OrderNumber = order.OrderNumber
-	// orderDatas.BuyerID = order.OrderNumber
-	// orderDatas.VenueID = order.VenueID
-	// orderDatas.DeviceID = order.DeviceID
-	// orderDatas.ProductID = order.ProductID
-	// orderDatas.InstallationID = order.InstallationID
-	// orderDatas.Quantity = order.Quantity
-	// orderDatas.AgingID = order.AgingID
-	// orderDatas.RoomID = order.RoomID
-	// orderDatas.RoomQuantity = order.RoomQuantity
-	// orderDatas.TotalPrice = totPrice
-	// orderDatas.PaymentMethodID = order.PaymentMethodID
-	// orderDatas.PaymentFee = order.PaymentFee
-	// orderDatas.Status = order.Status
-	// orderDatas.CreatedAt = now.Format("2006-01-02")
-	// orderDatas.LastUpdateBy = order.LastUpdateBy
-	// orderDatas.DeletedAt = order.DeletedAt
-	// orderDatas.Email = order.Email
-	// orderDatas.ProductName = productParam.ProductName
-	// orderDatas.ProductPrice = uPrice
-	// orderDatas.Description = productParam.Description
-	// orderDatas.DeviceName = ""       //order.DeviceName
-	// orderDatas.InstallationName = "" //order.InstallationName
-	// orderDatas.AgingName = ""        //order.AgingName
-	// orderDatas.RoomName = ""         //order.RoomName
-	// // 	oDatas = append(oDatas,orderDatas)
-	// // }
-	// //}
+	pdfBuffer := bytes.NewBuffer([]byte{})
+	gen, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		c.reporter.Errorf("[handlePDF] Failed generate pdf, err: %s", err.Error())
+		return "1"
+	}
+	gen.SetOutput(pdfBuffer)
+	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
+	gen.Create()
+
+	b := pdfBuffer.Bytes()
+	b64Pdf := base64.StdEncoding.EncodeToString(b)
+
+	return b64Pdf
+}
+
+func (c *Controller) handleBaseSertificatePdf(w http.ResponseWriter, r *http.Request){
+	t, err := c.template.Get("pdf_sertificate.tmpl")
+	if err != nil {
+		return 
+	}
+	var lid int64 = 26
+	venues, err := c.venue.SelectVenueByLisenceID(10, lid )
+	if err == sql.ErrNoRows {
+		c.reporter.Warningf("[handlePdf] Venue not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
+		return 
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePdf] Failed get Venue, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get Venue", http.StatusNotFound)
+		return 
+	}
+
+	templateData := map[string]interface{}{
+		"VenueName"		:   venues.VenueName,
+		"Address"		:   venues.Address,
+		"Zip"			:   venues.Zip,
+		"City"			:   venues.City,
+		"Province"		:   venues.Province,
+	}
 
 	buff := bytes.NewBuffer([]byte{})
 	err = t.Execute(buff, templateData)
@@ -144,8 +131,17 @@ func (c *Controller) handlePdf(w http.ResponseWriter, r *http.Request) {
 	}
 	gen.SetOutput(w)
 	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
+	gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
 
 	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "filename=\"invoice.pdf\"")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"sertificate.pdf\"")
 	gen.Create()
+
+	// b := pdfBuffer.Bytes()
+	// b64Pdf := base64.StdEncoding.EncodeToString(b)
+
+	// return b64Pdf
 }
+
+
+
