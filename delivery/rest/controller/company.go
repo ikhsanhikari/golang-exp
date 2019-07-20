@@ -33,6 +33,7 @@ func (c *Controller) handleGetAllCompanies(w http.ResponseWriter, r *http.Reques
 				City			:  company.City,
 				Province		:  company.Province,
 				Zip				:  company.Zip,
+				Email			:  company.Email,
 				Npwp			:  company.Npwp,
 				CreatedAt		:  company.CreatedAt,
 				UpdatedAt		:  company.UpdatedAt,
@@ -94,6 +95,7 @@ func (c *Controller) handlePostCompany(w http.ResponseWriter, r *http.Request) {
 		City			:  params.City,
 		Province		:  params.Province,
 		Zip				:  params.Zip,
+		Email			:  params.Email,
 		Npwp			:  params.Npwp,
 		CreatedBy		:  params.CreatedBy,
 	}
@@ -143,6 +145,7 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		City			:  params.City,
 		Province		:  params.Province,
 		Zip				:  params.Zip,
+		Email			:  params.Email,
 		Npwp			:  params.Npwp,
 		LastUpdateBy	:  params.LastUpdateBy,
 	}
