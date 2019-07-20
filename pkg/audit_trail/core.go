@@ -25,8 +25,8 @@ const redisPrefix = "molanobar-v1"
 func (c *core) Insert(tx *sqlx.Tx, data_audit *AuditTrail) (err error) {
 	data_audit.ProjectID = 10
 	data_audit.Timestamp = time.Now()
-	query := `INSERT INTO mla_logs(user_id, query_executed, table_name, project_id) VALUES (?,?,?,?)`
-	_, err = tx.Exec(query, data_audit.UserID, data_audit.Query, data_audit.TableName, data_audit.ProjectID)
+	query := `INSERT INTO mla_logs(user_id, query_executed, table_name, project_id,timestamp) VALUES (?,?,?,?,?)`
+	_, err = tx.Exec(query, data_audit.UserID, data_audit.Query, data_audit.TableName, data_audit.ProjectID, data_audit.Timestamp)
 	if err != nil {
 		return err
 	}

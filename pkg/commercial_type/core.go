@@ -7,6 +7,7 @@ import (
 
 	"encoding/json"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -23,8 +24,9 @@ type ICore interface {
 
 // core contains db client
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
@@ -104,8 +106,7 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 	commercialType.ProjectID = 10
 	commercialType.Status = 1
 	commercialType.LastUpdateBy = commercialType.CreatedBy
-
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_commercial_type (
 			name,
 			description,
@@ -116,18 +117,50 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 			created_by,
 			last_update_by
 		) VALUES (
-			:name,
-			:description,
-			:created_at,
-			:updated_at,
-			:project_id,
-			:status,
-			:created_by,
-			:last_update_by
-		)
-	`, commercialType)
-	//fmt.Println(res)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		)`
+	args := []interface{}{
+		commercialType.Name,
+		commercialType.Description,
+		commercialType.CreatedAt,
+		commercialType.UpdatedAt,
+		commercialType.ProjectID,
+		commercialType.Status,
+		commercialType.CreatedBy,
+		commercialType.LastUpdateBy,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	commercialType.ID, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    commercialType.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_commercial_type",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:commercial_type", redisPrefix, commercialType.ProjectID)
 	_ = c.deleteCache(redisKey)
@@ -138,19 +171,46 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 func (c *core) Update(commercialType *CommercialType) (err error) {
 	commercialType.UpdatedAt = time.Now()
 	commercialType.ProjectID = 10
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_commercial_type
 		SET
-			description = :description,
-			name = :name,
-			updated_at = :updated_at,
-			last_update_by = :last_update_by
+			description = ?,
+			name = ?,
+			updated_at = ?,
+			last_update_by = ?
 		WHERE
-			id = :id AND
+			id = ? AND
 			project_id = 10 AND 
-			status = 1
-	`, commercialType)
+			status = 1`
+	args := []interface{}{
+		commercialType.Description,
+		commercialType.Name,
+		commercialType.UpdatedAt,
+		commercialType.LastUpdateBy,
+		commercialType.ID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    commercialType.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_commercial_type",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:commercial_type:%d", redisPrefix, commercialType.ProjectID, commercialType.ID)
 	_ = c.deleteCache(redisKey)
@@ -163,7 +223,7 @@ func (c *core) Update(commercialType *CommercialType) (err error) {
 func (c *core) Delete(id int64, pid int64) (err error) {
 	now := time.Now()
 
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
 			mla_commercial_type
 		SET
@@ -171,8 +231,31 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 			status = 0
 		WHERE
 			id = ? AND 
-			project_id = ?
-	`, now, id, pid)
+			project_id = ?`
+	args := []interface{}{
+		now, id, pid,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     queryTrail,
+		TableName: "mla_commercial_type",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:commercial_type:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
