@@ -7,6 +7,7 @@ import (
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
@@ -90,13 +91,16 @@ func main() {
 	}
 	reporter.Infoln("Token Generator Email successfully initialized")
 
+	coreAuditTrail := auditTrail.Init(db)
+	reporter.Infoln("/pkg/audit_trail successfully initialized")
+
 	coreHistory := _history.Init(db, redis)
 	reporter.Infoln("/pkg/history successfully initialized")
 
 	coreProduct := _products.Init(db, redis)
 	reporter.Infoln("/pkg/products successfully initialized")
 
-	coreOrder := order.Init(db, redis, cfg.PaymentMethodID)
+	coreOrder := order.Init(db, redis, cfg.PaymentMethodID, coreAuditTrail)
 	reporter.Infoln("/pkg/order successfully initialized")
 
 	coreVenue := venue.Init(db, redis)
