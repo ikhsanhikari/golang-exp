@@ -46,6 +46,9 @@ func (c *core) selectFromDB(pid int64) (companies Companies, err error) {
 			id,
 			name,
 			address,
+			city,
+			province,
+			zip,
 			npwp,
 			created_at,
 			updated_at,
@@ -82,6 +85,9 @@ func (c *core) getFromDB(id int64, pid int64) (company Company, err error) {
 			id,
 			name,
 			address,
+			city,
+			province,
+			zip,
 			npwp,
 			created_at,
 			updated_at,
@@ -106,11 +112,14 @@ func (c *core) Insert(company *Company) (err error) {
 	company.ProjectID = 10
 	company.Status = 1
 	company.LastUpdateBy = company.CreatedBy
-	fmt.Println("ceeeeeeeek")
+
 	res, err := c.db.NamedExec(`
 		INSERT INTO mla_company (
 			name,
 			address,
+			city,
+			province,
+			zip,
 			npwp,
 			created_at,
 			updated_at,
@@ -122,6 +131,9 @@ func (c *core) Insert(company *Company) (err error) {
 		) VALUES (
 			:name,
 			:address,
+			:city,
+			:province,
+			:zip,
 			:npwp,
 			:created_at,
 			:updated_at,
@@ -151,6 +163,9 @@ func (c *core) Update(company *Company) (err error) {
 		SET
 			name = :name,
 			address = :address,
+			city = :city,
+			province = :province,
+			zip = :zip,
 			npwp = :npwp,
 			updated_at = :updated_at,
 			last_update_by = :last_update_by

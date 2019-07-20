@@ -10,6 +10,9 @@ type Company struct {
 	ID           int64     `db:"id"`
 	Name         string    `db:"name"`
 	Address      string    `db:"address"`
+	City         string    `db:"city"`
+	Province     string    `db:"province"`
+	Zip          string    `db:"zip"`
 	Npwp         string    `db:"npwp"`
 	CreatedAt    time.Time `db:"created_at"`
 	UpdatedAt    time.Time `db:"updated_at"`
