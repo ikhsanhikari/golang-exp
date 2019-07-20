@@ -74,7 +74,8 @@
         </div>
         <div class="row">
             <div class="columns" >
-                <img src="https://www.qrstuff.com/images/sample.png" width="160px" height="160px" align="right">
+               <img src="data:image/png;base64, {{.QrBase64}}"/>
+            </div>
             </div>
             <div class="columns" >
               <p class="h" style="font-size: 18px;"><br>{{ .VenueName }} <br>{{ .Address }}<br>{{ .Zip }}<br>{{ .City }}</p>
