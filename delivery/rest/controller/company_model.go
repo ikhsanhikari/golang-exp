@@ -7,6 +7,7 @@ type reqCompany struct {
 	City		  	string    `json:"city"`
 	Province		string    `json:"province"`
 	Zip  			string    `json:"zip"`
+	Email		  	string    `json:"email"`
 	Npwp  			string    `json:"npwp"`
 	CreatedBy  		string    `json:"createdBy"`
 	LastUpdateBy	string    `json:"lastUpdateBy"`
