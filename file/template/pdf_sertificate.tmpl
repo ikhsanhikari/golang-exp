@@ -1,0 +1,90 @@
+<html>
+    <head>
+        <base href="http://www.example.com/">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+        <style>
+            .footer {
+                position: fixed;
+                bottom: 0;
+                width: 100%;
+            }
+            .header {
+                position: fixed;
+                top: 200;
+                width: 100%;
+            }
+            * {
+                box-sizing: border-box;
+            }
+            .column {
+                float: left;
+                padding: 10px;
+            }
+            .center {
+                display: block;
+                margin-left: auto;
+                margin-right: auto;
+                width: 40%;
+            }
+            hr.blue {
+                border: 2px solid steelblue;
+            }
+
+            hr.boldblue {
+                border: 4px solid steelblue;
+            }
+            h {
+                font-family: "Palatino Linotype", "Book Antiqua", Palatino, serif;
+                color: black
+            }
+            .columns {
+                float: left;
+                width: 50%;
+                padding: 5px;
+            }
+            .row::after {
+                content: "";
+                clear: both;
+                display: table;
+            }
+
+        </style>
+    </head>
+    <body>
+       <div class="center">
+            <div>
+                <img src="https://1.bp.blogspot.com/-wUrmgXukp1g/XTH1fvNQGTI/AAAAAAAAARY/2Nz23i6JXM0emM0njz29Y27-oo6Ns6okACLcBGAs/s1600/Screen%2BShot%2B2019-07-19%2Bat%2B23.42.53.png" width="550px" height="200px"/>
+            </div>
+        </div>
+        <hr class="blue">
+        <hr class="boldblue">
+        <br>
+        <div style="width:100%" class="center">
+            <p class="h" style="font-size: 30px" align="center">A PROUD OF MEMBER</p>
+            <p class="h" style="font-size: 48px; font-weight: 800" align="center">MOLA LIVE ARENA</p>
+        </div>
+        <br>
+        <br> 
+        <div>
+            <p align = "center" class="h" style="font-size: 26px;">DOKUMEN INI ADALAH SERTIFIKAT KEANGGOTAAN DARI PROGRAM KERJASAMA MOLA LIVE ARENA.</p>
+            <p align = "center" class="h" style="font-size: 26px;"> KERJASAMA YANG MENGIJINKAN PENGGUNAAN KONTEN MOLA - PREMIER LEAGUE DI AREA </p>
+            <p align = "center" class="h" style="font-size: 26px;">KOMERSIAL</p>
+            <br>
+            <p align = "center" class="h" style="font-size: 26px;">SERTIFIKAT HANYA BERLAKU DI LOKASI</p>
+        </div>
+        <div class="row">
+            <div class="columns" >
+                <img src="https://www.qrstuff.com/images/sample.png" width="160px" height="160px" align="right">
+            </div>
+            <div class="columns" >
+              <p class="h" style="font-size: 22px;">{{ .VenueName }}</p>
+              <p class="h" style="font-size: 22px;">{{ .Address }}</p>
+              <p class="h" style="font-size: 22px;">{{ .Zip }}</p>
+              <p class="h" style="font-size: 22px;">{{ .City }} </p> 
+            </div>
+        </div>
+        <div class="footer">
+            <p align = "center" class="h" style="font-size: 22px;">[SERTIFIKAT INI TIDAK DAPAT DIALIHKAN]</p>
+        </div>
+    </body>
+</html> 

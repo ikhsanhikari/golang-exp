@@ -20,6 +20,7 @@ type ICore interface {
 	Insert(venue *Venue) (err error)
 	Update(venue *Venue) (err error)
 	Delete(pid int64, id int64) (err error)
+	SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error)
 }
 
 // core contains db client
@@ -69,7 +70,9 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			project_id,
 			created_by,
 			last_update_by,
-			province
+			province,
+			city,
+			pt_id
 		FROM
 			mla_venues
 		WHERE
@@ -120,7 +123,9 @@ func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
 			project_id,
 			created_by,
 			last_update_by,
-			province
+			province,
+			city,
+			pt_id
 		FROM
 			mla_venues
 		WHERE
@@ -163,7 +168,9 @@ func (c *core) Insert(venue *Venue) (err error) {
 			project_id,
 			created_by,
 			last_update_by,
-			province
+			province,
+			city,
+			pt_id
 		) VALUES (
 			?,
 			?,
@@ -374,6 +381,27 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 	_ = c.deleteCache(redisKey)
 	return
 }
+
+func (c *core) SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error) {
+	err = c.db.Get(&venueAddress, `
+	select
+	COALESCE(venues.venue_name,'') as venue_name,
+	COALESCE(venues.address,'') as venue_address,
+	COALESCE(venues.city,'') as venue_city,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip
+	from 
+	v2_subscriptions.mla_license licenses   
+	left join v2_subscriptions.mla_orders orders on licenses.order_id = orders.order_id
+	left join v2_subscriptions.mla_venues venues on venues.id = orders.venue_id 
+	where
+	licenses.project_id = ? AND
+	licenses.id = ? AND
+	orders.deleted_at IS NULL
+	`, pid, lid)
+	return
+}
+
 
 func (c *core) selectFromCache(redisKey string) (venues Venues, err error) {
 	conn := c.redis.Get()
