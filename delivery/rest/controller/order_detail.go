@@ -1,6 +1,8 @@
 package controller
 
 import (
+	"math"
+
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
@@ -11,27 +13,16 @@ import (
 )
 
 func (c *Controller) insertOrderDetail(order order.Order, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging) (err error) {
-	var details = []map[string]interface{}{
-		{"itemType": "device", "itemID": device.ID, "description": device.Name, "amount": device.Price, "quantity": int64(1)},
-		{"itemType": "product", "itemID": product.ProductID, "description": product.ProductName, "amount": product.Price, "quantity": int64(1)},
-		{"itemType": "installation", "itemID": installation.ID, "description": installation.Description, "amount": installation.Price, "quantity": int64(1)},
-		{"itemType": "aging", "itemID": aging.ID, "description": aging.Name, "amount": aging.Price, "quantity": int64(1)},
-	}
-
-	if room.ID != 0 {
-		details = append(details, map[string]interface{}{
-			"itemType": "room", "itemID": room.ID, "description": room.Name, "amount": room.Price, "quantity": order.RoomQuantity,
-		})
-	}
+	var details = c.mappingDetailOrder(order.RoomQuantity, device, product, installation, room, aging)
 
 	for _, detail := range details {
 		insertDetail := order_detail.OrderDetail{
 			OrderID:      order.OrderID,
-			ItemType:     detail["itemType"].(string),
-			ItemID:       detail["itemID"].(int64),
-			Description:  detail["description"].(string),
-			Amount:       detail["amount"].(float64),
-			Quantity:     detail["quantity"].(int64),
+			ItemType:     detail.ItemType,
+			ItemID:       detail.ItemID,
+			Description:  detail.Description,
+			Amount:       detail.Amount,
+			Quantity:     detail.Quantity,
 			CreatedBy:    order.CreatedBy,
 			LastUpdateBy: order.LastUpdateBy,
 			ProjectID:    order.ProjectID,
@@ -47,27 +38,16 @@ func (c *Controller) insertOrderDetail(order order.Order, device device.Device, 
 }
 
 func (c *Controller) updateOrderDetail(order order.Order, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging) (err error) {
-	var details = []map[string]interface{}{
-		{"itemType": "device", "itemID": device.ID, "description": device.Name, "amount": device.Price, "quantity": int64(1)},
-		{"itemType": "product", "itemID": product.ProductID, "description": product.ProductName, "amount": product.Price, "quantity": int64(1)},
-		{"itemType": "installation", "itemID": installation.ID, "description": installation.Description, "amount": installation.Price, "quantity": int64(1)},
-		{"itemType": "aging", "itemID": aging.ID, "description": aging.Name, "amount": aging.Price, "quantity": int64(1)},
-	}
-
-	if room.ID != 0 {
-		details = append(details, map[string]interface{}{
-			"itemType": "room", "itemID": room.ID, "description": room.Name, "amount": room.Price, "quantity": order.RoomQuantity,
-		})
-	}
+	var details = c.mappingDetailOrder(order.RoomQuantity, device, product, installation, room, aging)
 
 	for _, detail := range details {
 		updateDetail := order_detail.OrderDetail{
 			OrderID:      order.OrderID,
-			ItemType:     detail["itemType"].(string),
-			ItemID:       detail["itemID"].(int64),
-			Description:  detail["description"].(string),
-			Amount:       detail["amount"].(float64),
-			Quantity:     detail["quantity"].(int64),
+			ItemType:     detail.ItemType,
+			ItemID:       detail.ItemID,
+			Description:  detail.Description,
+			Amount:       detail.Amount,
+			Quantity:     detail.Quantity,
 			CreatedBy:    order.CreatedBy,
 			LastUpdateBy: order.LastUpdateBy,
 			ProjectID:    order.ProjectID,
@@ -97,4 +77,23 @@ func (c *Controller) deleteOrderDetail(order order.Order) (err error) {
 	}
 
 	return
+}
+
+func (c *Controller) mappingDetailOrder(roomQuantity int64, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging) order_detail.Details {
+	quantity := int64(1)
+
+	details := order_detail.Details{
+		{ItemType: "device", ItemID: device.ID, Description: device.Name, Amount: device.Price, Quantity: quantity},
+		{ItemType: "product", ItemID: product.ProductID, Description: product.ProductName, Amount: product.Price, Quantity: quantity},
+		{ItemType: "installation", ItemID: installation.ID, Description: installation.Name, Amount: installation.Price, Quantity: quantity},
+		{ItemType: "aging", ItemID: aging.ID, Description: aging.Name, Amount: aging.Price, Quantity: quantity},
+	}
+
+	if room.ID != 0 {
+		details = append(details, order_detail.Detail{
+			ItemType: "room", ItemID: room.ID, Description: room.Name, Amount: (math.Ceil(float64(roomQuantity)*0.3) * room.Price), Quantity: roomQuantity,
+		})
+	}
+
+	return details
 }

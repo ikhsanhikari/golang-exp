@@ -81,3 +81,8 @@ type SumOrderAttributes struct {
 type PaymentAttributes struct {
 	URL string `json:"url"`
 }
+
+type CalculatePriceAttributes struct {
+	TotalPrice float64     `json:"total_price"`
+	Details    interface{} `json:"details"`
+}

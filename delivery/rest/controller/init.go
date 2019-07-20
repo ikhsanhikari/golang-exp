@@ -5,6 +5,7 @@ import (
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
@@ -18,7 +19,6 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -46,7 +46,7 @@ type Controller struct {
 	email          email.ICore
 	template       template.ICore
 	orderDetail    order_detail.ICore
-	company    	   company.ICore
+	company        company.ICore
 }
 
 // New ...
@@ -88,7 +88,7 @@ func New(
 		email:          email,
 		template:       template,
 		orderDetail:    orderDetail,
-		company:		company,
+		company:        company,
 	}
 }
 
@@ -113,6 +113,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/orders-by-paiddate/:paid_date", c.auth.MustAuthorize(c.handleGetAllByPaidDate, "molanobar:orders.read"))
 	router.GET("/sumorders", c.auth.MustAuthorize(c.handleGetSumOrdersByUserID, "molanobar:orders.read"))
 	router.GET("/sumorders/:id", c.auth.MustAuthorize(c.handleGetSumOrderByID, "molanobar:orders.read"))
+	router.POST("/calculate-order", c.auth.MustAuthorize(c.handleCalculateOrderPrice, "molanobar:orders.create"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
@@ -162,5 +163,5 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
 
 	router.GET("/pdf", c.handleBaseSertificatePdf)
-	
+
 }

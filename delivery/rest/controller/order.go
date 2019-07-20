@@ -3,6 +3,7 @@ package controller
 import (
 	"database/sql"
 	"fmt"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -42,12 +43,12 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// venue, err := c.venue.Get(projectID, params.VenueID)
-	// if err == sql.ErrNoRows {
-	// 	c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
-	// 	view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
-	// 	return
-	// }
+	venue, err := c.venue.Get(projectID, params.VenueID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
+		return
+	}
 
 	device, err := c.device.Get(projectID, params.DeviceID)
 	if err == sql.ErrNoRows {
@@ -87,13 +88,13 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
-	// if !valid {
-	// 	c.reporter.Errorf("[handlePostOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
-	// 		venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
-	// 	view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
-	// 	return
-	// }
+	valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+	if !valid {
+		c.reporter.Errorf("[handlePostOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
+			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
+		return
+	}
 
 	//generate order number
 	lastOrderNumber, err := c.order.GetLastOrderNumber()
@@ -110,7 +111,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
 	//calculate total price
-	totalPrice := c.calculateTotalPrice(product.Price, installation.Price, room.Price, params.RoomQuantity)
+	totalPrice := c.calculateTotalPrice(venue.VenueType, product.Price, installation.Price, room.Price, float64(params.RoomQuantity))
 
 	//insert order
 	insertOrder := order.Order{
@@ -425,7 +426,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//calculate total price
-	totalPrice := c.calculateTotalPrice(product.Price, installation.Price, room.Price, params.RoomQuantity)
+	totalPrice := c.calculateTotalPrice(venue.VenueType, product.Price, installation.Price, room.Price, float64(params.RoomQuantity))
 
 	//update order
 	updateOrder := order.Order{
@@ -1291,6 +1292,86 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Request) {
+	var (
+		projectID = int64(10)
+		params    reqCalculateOrderPrice
+	)
+
+	err := form.Bind(&params, r)
+	if err != nil {
+		c.reporter.Errorf("[handleCalculateOrderPrice] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	venue, err := c.venue.Get(projectID, params.VenueID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handleCalculateOrderPrice] Venue Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
+		return
+	}
+
+	device, err := c.device.Get(projectID, params.DeviceID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handleCalculateOrderPrice] Device Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
+		return
+	}
+
+	product, err := c.product.Get(projectID, params.ProductID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handleCalculateOrderPrice] Product Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
+		return
+	}
+
+	installation, err := c.installation.Get(params.InstallationID, projectID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handleCalculateOrderPrice] Installation Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
+		return
+	}
+
+	var room room.Room
+	if params.RoomID != 0 && params.RoomQuantity != 0 {
+		room, err = c.room.Get(projectID, params.RoomID)
+		if err == sql.ErrNoRows {
+			c.reporter.Errorf("[handleCalculateOrderPrice] Room Not Found, err: %s", err.Error())
+			view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
+			return
+		}
+	}
+
+	aging, err := c.aging.Get(params.AgingID, projectID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handleCalculateOrderPrice] Aging Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
+		return
+	}
+
+	valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+	if !valid {
+		c.reporter.Errorf("[handleCalculateOrderPrice] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
+			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
+		return
+	}
+
+	//calculate total price
+	totalPrice := c.calculateTotalPrice(venue.VenueType, product.Price, installation.Price, room.Price, float64(params.RoomQuantity))
+
+	//set response
+	details := c.mappingDetailOrder(params.RoomQuantity, device, product, installation, room, aging)
+
+	res := view.CalculatePriceAttributes{
+		TotalPrice: totalPrice,
+		Details:    details,
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func leftPadLen(s string, padStr string, overallLen int) string {
 	var padCountInt int
 	padCountInt = 1 + ((overallLen - len(padStr)) / len(padStr))
@@ -1298,23 +1379,9 @@ func leftPadLen(s string, padStr string, overallLen int) string {
 	return retStr[(len(retStr) - overallLen):]
 }
 
-func venueTypeInSlice(id int64, list []int64) bool {
-	for _, v := range list {
-		if v == id {
-			return true
-		}
-	}
-	return false
-}
-
 func isValid(venueType, venueCapacity, agingID, deviceID, productID, installationID, roomID int64) bool {
-	venueTypeList1 := []int64{1, 2, 3, 4}
-	venueTypeList2 := []int64{5, 6}
-	venueTypeList3 := []int64{7, 8, 9, 10, 11}
-	venueTypeList4 := []int64{12, 13, 14}
-	venueTypeList5 := []int64{15, 16, 17, 18}
 
-	if venueTypeInSlice(venueType, venueTypeList1) && roomID == 0 {
+	if venueType > 0 && venueType <= 4 && roomID == 0 {
 		if venueCapacity == 1 {
 			if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
 				return true
@@ -1338,7 +1405,7 @@ func isValid(venueType, venueCapacity, agingID, deviceID, productID, installatio
 		} else {
 			return false
 		}
-	} else if venueTypeInSlice(venueType, venueTypeList2) && roomID == 0 {
+	} else if (venueType == 5 || venueType == 6) && roomID == 0 {
 		if venueCapacity == 1 {
 			if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
 				return true
@@ -1354,7 +1421,7 @@ func isValid(venueType, venueCapacity, agingID, deviceID, productID, installatio
 		} else {
 			return false
 		}
-	} else if venueTypeInSlice(venueType, venueTypeList3) && roomID == 0 {
+	} else if venueType >= 7 && venueType <= 11 && roomID == 0 {
 		if venueCapacity == 2 {
 			if agingID == 1 && deviceID == 1 && productID == 5 && installationID == 5 {
 				return true
@@ -1366,16 +1433,23 @@ func isValid(venueType, venueCapacity, agingID, deviceID, productID, installatio
 		} else {
 			return false
 		}
-	} else if venueTypeInSlice(venueType, venueTypeList4) && venueCapacity == 0 && agingID == 1 && deviceID == 1 && productID == 7 && installationID == 7 && roomID == 1 {
+	} else if venueType >= 12 && venueType <= 14 && venueCapacity == 0 && agingID == 1 && deviceID == 1 && productID == 7 && installationID == 7 && roomID == 1 {
 		return true
-	} else if venueTypeInSlice(venueType, venueTypeList5) && venueCapacity == 0 && agingID == 1 && deviceID == 1 && productID == 8 && installationID == 8 && roomID == 2 {
+	} else if venueType >= 15 && venueType <= 18 && venueCapacity == 0 && agingID == 1 && deviceID == 1 && productID == 8 && installationID == 8 && roomID == 2 {
 		return true
 	} else {
 		return false
 	}
 }
 
-func (c *Controller) calculateTotalPrice(productPrice, installationPrice, roomPrice float64, roomQuantity int64) float64 {
+func (c *Controller) calculateTotalPrice(venueType int64, productPrice, installationPrice, roomPrice, roomQuantity float64) float64 {
+	var totalPrice float64
+	if venueType > 0 && venueType <= 11 {
+		totalPrice = (productPrice + installationPrice)
+	} else if venueType > 11 && venueType <= 18 {
+		totalPrice = (installationPrice + (math.Ceil(roomQuantity*0.3) * roomPrice))
+	}
 
-	return (productPrice + installationPrice + (roomPrice * float64(roomQuantity)))
+	return totalPrice
+
 }
