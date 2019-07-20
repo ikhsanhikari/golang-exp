@@ -6,6 +6,7 @@ type reqVenue struct {
 	VenueType   					int64     `json:"venueType"`
 	VenueName  						string    `json:"venueName"`
 	Address  						string    `json:"address"`
+	City                         	string    `json:"city"`
 	Province    					string    `json:"province"`
 	Zip         					string    `json:"zip"`
 	Capacity    					int64     `json:"capacity"`
@@ -13,6 +14,7 @@ type reqVenue struct {
 	Longitude   					float64   `json:"longitude"`
 	Latitude    					float64   `json:"latitude"`
 	People      					int64     `json:"people"`
+	PtID                         	int64     `json:"ptID"`
 	VenueCategory					string	  `json:"venueCategory"`
 	PicName	   						string	  `json:"picName"`
 	PicContactNumber				string	  `json:"picContactNumber"`
