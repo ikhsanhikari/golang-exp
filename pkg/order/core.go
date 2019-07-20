@@ -190,7 +190,7 @@ func (c *core) Update(order *Order) (err error) {
 	}
 	//Add Logs
 	dataAudit := auditTrail.AuditTrail{
-		UserID:    order.CreatedBy,
+		UserID:    order.LastUpdateBy,
 		Query:     queryTrail,
 		TableName: "mla_orders",
 	}
