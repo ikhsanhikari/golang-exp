@@ -16,7 +16,7 @@ func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content := c.handleBasePdf(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	content := c.handleBasePdf(params.OrderID, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
 	emailReq := email.EmailRequest{
 		Subject: "subject is nothing !!!",
 		To:      params.To,
