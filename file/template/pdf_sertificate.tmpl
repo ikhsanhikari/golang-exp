@@ -8,17 +8,8 @@
                 bottom: 0;
                 width: 100%;
             }
-            .header {
-                position: fixed;
-                top: 200;
-                width: 100%;
-            }
             * {
                 box-sizing: border-box;
-            }
-            .column {
-                float: left;
-                padding: 10px;
             }
             .center {
                 display: block;
@@ -47,13 +38,13 @@
                 clear: both;
                 display: table;
             }
-
         </style>
     </head>
     <body>
-       <div class="center">
+        <!--<p style="float:right;font-size:20px;font-weight:bold" >NOMOR ANGGOTA: MLA - CATEGORY - NUMBER</p>-->
+        <div class="center">
             <div>
-                <img src="https://1.bp.blogspot.com/-wUrmgXukp1g/XTH1fvNQGTI/AAAAAAAAARY/2Nz23i6JXM0emM0njz29Y27-oo6Ns6okACLcBGAs/s1600/Screen%2BShot%2B2019-07-19%2Bat%2B23.42.53.png" width="550px" height="200px"/>
+                <img src="https://1.bp.blogspot.com/-Tw-KrQzAnqQ/XTP3d0wXzhI/AAAAAAAAARs/nH4mVePdByc4Ydd7zI0yJCZnFu5q5JDJACLcBGAs/s1600/Screen%2BShot%2B2019-07-21%2Bat%2B12.25.54.png" width="530px" height="230px"/>
             </div>
         </div>
         <hr class="blue">
@@ -64,25 +55,24 @@
             <p class="h" style="font-size: 48px; font-weight: 800" align="center">MOLA LIVE ARENA</p>
         </div>
         <br>
-        <br> 
+        <br>
         <div>
             <p align = "center" class="h" style="font-size: 26px;">DOKUMEN INI ADALAH SERTIFIKAT KEANGGOTAAN DARI PROGRAM KERJASAMA MOLA LIVE ARENA.</p>
-            <p align = "center" class="h" style="font-size: 26px;"> KERJASAMA YANG MENGIJINKAN PENGGUNAAN KONTEN <i>MOLA - PREMIER LEAGUE </i> DI AREA </p>
+            <p align = "center" class="h" style="font-size: 26px;"> KERJASAMA YANG MENGIJINKAN PENGGUNAAN KONTEN <i>MOLA - PREMIER LEAGUE</i> DI AREA </p>
             <p align = "center" class="h" style="font-size: 26px;">KOMERSIAL</p>
             <br>
             <p align = "center" class="h" style="font-size: 26px;">SERTIFIKAT HANYA BERLAKU DI LOKASI</p>
         </div>
         <div class="row">
             <div class="columns" >
-               <img src="data:image/png;base64, {{.QrBase64}}"/>
-            </div>
-            </div>
+                <img src="data:image/png;base64,{{ .QrBase64 }}" width="120px" height="120px" align ="right"/>
+             </div>
             <div class="columns" >
-              <p class="h" style="font-size: 18px;"><br>{{ .VenueName }} <br>{{ .Address }}<br>{{ .Zip }}<br>{{ .City }}</p>
-            </div>
+            <p class="h" style="font-size: 20px;">{{ .VenueName }}<br>{{ .Address }}<br>{{ .Zip }}<br>{{ .City }}&nbsp{{ .Province }}</p>
         </div>
-        <div class="footer">
-            <p align = "center" class="h" style="font-size: 22px;">[SERTIFIKAT INI TIDAK DAPAT DIALIHKAN]</p>
-        </div>
-    </body>
-</html> 
+    </div>
+    <div class="footer">
+        <p align = "center" cl ass="h" style="font-size: 22px;">[SERTIFIKAT INI TIDAK DAPAT DIALIHKAN]</p>
+    </div>
+</body>
+</html>

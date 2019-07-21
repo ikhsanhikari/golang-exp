@@ -2,19 +2,24 @@ package email
 
 import (
 	"bytes"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"time"
+
+	qrcode "github.com/skip2/go-qrcode"
 )
 
 // ICore is the interface
 type ICore interface {
 	Send(emailRequest EmailRequest) (err error)
+	GetBase64Png(licenseNum string) string
 }
 
 // core contains db client
 type core struct {
+	urlQrCode           string
 	apiBaseURL          string
 	tokenGeneratorEmail TokenGeneratorEmail
 }
@@ -61,4 +66,14 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 	}
 	fmt.Printf("Email Sent To : %s", emailRequest.To)
 	return
+}
+
+func (c *core) GetBase64Png(licenseNum string) string {
+	var png []byte
+	qrCode := c.urlQrCode + licenseNum
+
+	png, _ = qrcode.Encode(qrCode, qrcode.Medium, 256)
+	b64Png := base64.StdEncoding.EncodeToString(png)
+
+	return b64Png
 }
