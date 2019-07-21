@@ -262,7 +262,7 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		Npwp:         params.Npwp,
 		LastUpdateBy: fmt.Sprintf("%v", userID),
 	}
-	err = c.company.Update(&company)
+	err = c.company.Update(&company, fmt.Sprintf("%v", userID))
 	if err != nil {
 		c.reporter.Errorf("[handlePatchCompany] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update Company", http.StatusInternalServerError)

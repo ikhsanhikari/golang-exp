@@ -9,7 +9,7 @@ import (
 
 func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
 	var params reqEmail
-	content := c.handleBasePdf(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
 	emailReq := email.EmailRequest{
 		Subject: "subject is nothing !!!",
 		To:      params.To,
