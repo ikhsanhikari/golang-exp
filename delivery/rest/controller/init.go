@@ -101,6 +101,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/products/:venue_type", c.auth.MustAuthorize(c.handleGetAllByVenueType, "molanobar:products.read"))
 
 	router.POST("/orders", c.auth.MustAuthorize(c.handlePostOrder, "molanobar:orders.create"))
+	router.POST("/ordersbyagents", c.auth.MustAuthorize(c.handlePostOrderByAgent, "molanobar:orders.create"))
 	router.PATCH("/orders/:id", c.auth.MustAuthorize(c.handlePatchOrder, "molanobar:orders.update"))
 	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateOrderStatusByID, "molanobar:orders.update"))
 	router.PATCH("/orders-open-payment-status/:id", c.auth.MustAuthorize(c.handleUpdateOpenPaymentStatusByID, "molanobar:orders.update"))
