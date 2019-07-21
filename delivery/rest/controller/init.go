@@ -180,4 +180,6 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
 
+	//router.GET("/pdf", c.handleGetPdf1) //,"molanobar:email.ecert"))
+
 }
