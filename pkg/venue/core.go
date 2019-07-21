@@ -18,9 +18,8 @@ type ICore interface {
 	Select(pid int64, uid string) (venues Venues, err error)
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
-	Update(venue *Venue) (err error)
+	Update(venue *Venue, uid string) (err error)
 	Delete(pid int64, id int64, uid string) (err error)
-	SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error)
 }
 
 // core contains db client
@@ -259,7 +258,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	return
 }
 
-func (c *core) Update(venue *Venue) (err error) {
+func (c *core) Update(venue *Venue, uid string) (err error) {
 	venue.UpdatedAt = time.Now()
 	venue.ProjectID = 10
 	query := `
@@ -340,7 +339,7 @@ func (c *core) Update(venue *Venue) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, venue.ProjectID, venue.Id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.LastUpdateBy)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, uid)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -358,7 +357,7 @@ func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 		WHERE
 			id = ? AND
 			stats = 1 AND 
-			last_updated_by = ? AND 
+			last_update_by = ? AND 
 			project_id = 10
 	`
 	args := []interface{}{
@@ -392,26 +391,6 @@ func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, 10, uid)
 	_ = c.deleteCache(redisKey)
-	return
-}
-
-func (c *core) SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error) {
-	err = c.db.Get(&venueAddress, `
-	select
-	COALESCE(venues.venue_name,'') as venue_name,
-	COALESCE(venues.address,'') as venue_address,
-	COALESCE(venues.city,'') as venue_city,
-    COALESCE(venues.province,'') as venue_province,
-    COALESCE(venues.zip,'') as venue_zip
-	from 
-	v2_subscriptions.mla_license licenses   
-	left join v2_subscriptions.mla_orders orders on licenses.order_id = orders.order_id
-	left join v2_subscriptions.mla_venues venues on venues.id = orders.venue_id 
-	where
-	licenses.project_id = ? AND
-	licenses.id = ? AND
-	orders.deleted_at IS NULL
-	`, pid, lid)
 	return
 }
 
