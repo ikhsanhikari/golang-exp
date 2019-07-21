@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
@@ -45,6 +46,7 @@ type Controller struct {
 	email          email.ICore
 	template       template.ICore
 	orderDetail    order_detail.ICore
+	admin          admin.ICore
 }
 
 // New ...
@@ -66,6 +68,7 @@ func New(
 	email email.ICore,
 	template template.ICore,
 	orderDetail order_detail.ICore,
+	admin admin.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -85,6 +88,7 @@ func New(
 		email:          email,
 		template:       template,
 		orderDetail:    orderDetail,
+		admin:          admin,
 	}
 }
 
@@ -152,4 +156,11 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
 	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
 
+	router.GET("/admins", c.auth.MustAuthorize(c.handleGetAllAdmins, "molanobar:admins.read"))
+	router.POST("/admins", c.auth.MustAuthorize(c.handlePostAdmin, "molanobar:admins.create"))
+	router.PATCH("/admins/:id", c.auth.MustAuthorize(c.handlePatchAdmin, "molanobar:admins.update"))
+	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
+	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
+
+	router.POST("/email/send", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.send"))
 }

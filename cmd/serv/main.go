@@ -6,6 +6,7 @@ import (
 	"syscall"
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
+	admin "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
@@ -135,6 +136,9 @@ func main() {
 	coreOrderDetail := orderDetail.Init(db, redis)
 	reporter.Infoln("/pkg/order_detail successfully initialized")
 
+	coreAdmin := admin.Init(db, redis)
+	reporter.Infoln("/pkg/admin successfully initialized")
+
 	var (
 		server = webserver.New(&cfg.Webserver)
 		rest   = rest.New(
@@ -155,6 +159,7 @@ func main() {
 			coreEmail,
 			coreTemplate,
 			coreOrderDetail,
+			coreAdmin,
 		)
 	)
 	rest.Register(server.Router())
