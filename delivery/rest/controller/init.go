@@ -6,6 +6,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
@@ -47,6 +48,7 @@ type Controller struct {
 	template       template.ICore
 	orderDetail    order_detail.ICore
 	admin          admin.ICore
+	company        company.ICore
 }
 
 // New ...
@@ -69,6 +71,7 @@ func New(
 	template template.ICore,
 	orderDetail order_detail.ICore,
 	admin admin.ICore,
+	company company.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -89,6 +92,7 @@ func New(
 		template:       template,
 		orderDetail:    orderDetail,
 		admin:          admin,
+		company:        company,
 	}
 }
 
@@ -115,6 +119,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/sumorders/:id", c.auth.MustAuthorize(c.handleGetSumOrderByID, "molanobar:orders.read"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
+	router.GET("/venue/:id", c.auth.MustAuthorize(c.handleGetByVenueID, "molanobar:venues.read"))
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
 	router.PATCH("/venue/:id", c.auth.MustAuthorize(c.handlePatchVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
@@ -163,4 +168,12 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 
 	router.POST("/email/send", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.send"))
+	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
+	router.GET("/companies/:id", c.auth.MustAuthorize(c.handleGetCompanyByID, "molanobar:companies.read"))
+	router.POST("/companies", c.auth.MustAuthorize(c.handlePostCompany, "molanobar:companies.create"))
+	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
+	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
+
+	router.GET("/pdf", c.handleBaseSertificatePdf)
+
 }

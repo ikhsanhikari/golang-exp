@@ -7,6 +7,7 @@ import (
 
 	"encoding/json"
 
+	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
 	jsoniter "github.com/json-iterator/go"
@@ -14,33 +15,35 @@ import (
 
 // ICore is the interface
 type ICore interface {
-	Select(pid int64) (venues Venues, err error)
-	Get(pid int64, id int64) (venue Venue, err error)
+	Select(pid int64, uid string) (venues Venues, err error)
+	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
 	Update(venue *Venue) (err error)
-	Delete(pid int64, id int64) (err error)
+	Delete(pid int64, id int64, uid string) (err error)
+	SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error)
 }
 
 // core contains db client
 type core struct {
-	db    *sqlx.DB
-	redis *redis.Pool
+	db         *sqlx.DB
+	redis      *redis.Pool
+	auditTrail auditTrail.ICore
 }
 
 const redisPrefix = "molanobar-v1"
 
-func (c *core) Select(pid int64) (venues Venues, err error) {
-	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, pid)
+func (c *core) Select(pid int64, uid string) (venues Venues, err error) {
+	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, pid,uid)
 	venues, err = c.selectFromCache(redisKey)
 	if err != nil {
-		venues, err = c.selectFromDB(pid)
+		venues, err = c.selectFromDB(pid, uid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(venues)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
+func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 	err = c.db.Select(&venue, `
 		SELECT
 			id,
@@ -67,23 +70,26 @@ func (c *core) selectFromDB(pid int64) (venue Venues, err error) {
 			project_id,
 			created_by,
 			last_update_by,
-			province
+			province,
+			city,
+			pt_id
 		FROM
 			mla_venues
 		WHERE
 			stats = 1 AND
-			project_id = ?
-	`, pid)
+			project_id = ? AND 
+			created_by = ? 
+	`, pid, uid)
 
 	return
 }
 
-func (c *core) Get(pid int64, id int64) (venue Venue, err error) {
+func (c *core) Get(pid int64, id int64, uid string) (venue Venue, err error) {
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, pid, id)
 
 	venue, err = c.getFromCache(redisKey)
 	if err != nil {
-		venue, err = c.getFromDB(id, pid)
+		venue, err = c.getFromDB(id, pid, uid)
 		if err != sql.ErrNoRows {
 			byt, _ := jsoniter.ConfigFastest.Marshal(venue)
 			_ = c.setToCache(redisKey, 300, byt)
@@ -91,8 +97,8 @@ func (c *core) Get(pid int64, id int64) (venue Venue, err error) {
 	}
 	return
 }
-func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
-	err = c.db.Get(&venue, `
+func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err error) {
+	qs := `
 		SELECT
 			id,
 			venue_id,
@@ -118,14 +124,18 @@ func (c *core) getFromDB(id int64, pid int64) (venue Venue, err error) {
 			project_id,
 			created_by,
 			last_update_by,
-			province
+			province,
+			city,
+			pt_id
 		FROM
 			mla_venues
 		WHERE
 			id = ? AND
-			stats = 1 AND
-			project_id = ?
-	`, id, pid)
+			project_id = ? AND 
+	 		created_by = ? AND 
+			deleted_at IS NULL `
+
+		err = c.db.Get(&venue, qs, id, pid, uid)
 
 	return
 }
@@ -137,7 +147,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	venue.ProjectID = 10
 	venue.LastUpdateBy = venue.CreatedBy
 
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_venues (
 			venue_id,
 			venue_type,
@@ -161,38 +171,89 @@ func (c *core) Insert(venue *Venue) (err error) {
 			project_id,
 			created_by,
 			last_update_by,
-			province
+			province,
+			city,
+			pt_id
 		) VALUES (
-			:venue_id,
-			:venue_type,
-			:venue_name,
-			:address,
-			:zip,
-			:capacity,
-			:facilities,
-			:longitude,
-			:latitude,
-			:people,
-			:created_at,
-			:updated_at,
-			:stats,
-			:venue_category,
-			:pic_name,
-			:pic_contact_number,
-			:venue_technician_name,
-			:venue_technician_contact_number,
-			:venue_phone,
-			:project_id,
-			:created_by,
-			:last_update_by,
-			:province
-		)
-	`, venue)
-
-	//fmt.Println(res)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?)`
+	args := []interface{}{
+		venue.VenueId,
+		venue.VenueType,
+		venue.VenueName,
+		venue.Address,
+		venue.Zip,
+		venue.Capacity,
+		venue.Facilities,
+		venue.Longitude,
+		venue.Latitude,
+		venue.People,
+		venue.CreatedAt,
+		venue.UpdatedAt,
+		venue.Status,
+		venue.VenueCategory,
+		venue.PicName,
+		venue.PicContactNumber,
+		venue.VenueTechnicianName,
+		venue.VenueTechnicianContactNumber,
+		venue.VenuePhone,
+		venue.ProjectID,
+		venue.CreatedBy,
+		venue.LastUpdateBy,
+		venue.Province,
+		venue.City,
+		venue.PtID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	venue.Id, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataTrail := auditTrail.AuditTrail{
+		UserID:    venue.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_venue",
+	}
+	c.auditTrail.Insert(tx, &dataTrail)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
-	redisKey := fmt.Sprintf("%s:%d:venue", redisPrefix, venue.ProjectID)
+	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID,venue.CreatedBy)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -201,47 +262,94 @@ func (c *core) Insert(venue *Venue) (err error) {
 func (c *core) Update(venue *Venue) (err error) {
 	venue.UpdatedAt = time.Now()
 	venue.ProjectID = 10
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_venues
 		SET
-			venue_id = :venue_id,
-			venue_type = :venue_type,
-			venue_name = :venue_name,
-			address = :address,
-			zip = :zip,
-			capacity = :capacity,
-			facilities = :facilities,
-			longitude = :longitude,
-			latitude = :latitude,
-			people = :people,
-			updated_at = :updated_at,
-			venue_category = :venue_category,
-			pic_name = :pic_name,
-			pic_contact_number = :pic_contact_number,
-			venue_technician_name = :venue_technician_name,
-			venue_technician_contact_number = :venue_technician_contact_number,
-			venue_phone = :venue_phone,
-			last_update_by = :last_update_by,
-			province= :province
+			venue_id = ?,
+			venue_type = ?,
+			venue_name = ?,
+			address = ?,
+			zip = ?,
+			capacity = ?,
+			facilities = ?,
+			longitude = ?,
+			latitude = ?,
+			people = ?,
+			updated_at = ?,
+			venue_category = ?,
+			pic_name = ?,
+			pic_contact_number = ?,
+			venue_technician_name = ?,
+			venue_technician_contact_number = ?,
+			venue_phone = ?,
+			last_update_by = ?,
+			province= ?,
+			city= ?,
+			pt_id = ?
 		WHERE
-			id = :id AND
+			id = ? AND
 			project_id = 10 AND
 			stats = 1
-	`, venue)
+	`
+	args := []interface{}{
+		venue.VenueId,
+		venue.VenueType,
+		venue.VenueName,
+		venue.Address,
+		venue.Zip,
+		venue.Capacity,
+		venue.Facilities,
+		venue.Longitude,
+		venue.Latitude,
+		venue.People,
+		venue.UpdatedAt,
+		venue.VenueCategory,
+		venue.PicName,
+		venue.PicContactNumber,
+		venue.VenueTechnicianName,
+		venue.VenueTechnicianContactNumber,
+		venue.VenuePhone,
+		venue.LastUpdateBy,
+		venue.Province,
+		venue.City,
+		venue.PtID,
+		venue.Id,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataTrail := auditTrail.AuditTrail{
+		UserID:    venue.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_venues",
+	}
+	c.auditTrail.Insert(tx, &dataTrail)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, venue.ProjectID, venue.Id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venue", redisPrefix, venue.ProjectID)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.LastUpdateBy)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Delete(pid int64, id int64) (err error) {
+func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 	now := time.Now()
 
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
 			mla_venues
 		SET
@@ -250,15 +358,63 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 		WHERE
 			id = ? AND
 			stats = 1 AND 
+			last_updated_by = ? AND 
 			project_id = 10
-	`, now, id)
+	`
+	args := []interface{}{
+		now,
+		id,
+		uid,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataTrail := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     queryTrail,
+		TableName: "mla_venues",
+	}
+	c.auditTrail.Insert(tx, &dataTrail)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, 10, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venue", redisPrefix, 10)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, 10, uid)
 	_ = c.deleteCache(redisKey)
 	return
 }
+
+func (c *core) SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error) {
+	err = c.db.Get(&venueAddress, `
+	select
+	COALESCE(venues.venue_name,'') as venue_name,
+	COALESCE(venues.address,'') as venue_address,
+	COALESCE(venues.city,'') as venue_city,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip
+	from 
+	v2_subscriptions.mla_license licenses   
+	left join v2_subscriptions.mla_orders orders on licenses.order_id = orders.order_id
+	left join v2_subscriptions.mla_venues venues on venues.id = orders.venue_id 
+	where
+	licenses.project_id = ? AND
+	licenses.id = ? AND
+	orders.deleted_at IS NULL
+	`, pid, lid)
+	return
+}
+
 
 func (c *core) selectFromCache(redisKey string) (venues Venues, err error) {
 	conn := c.redis.Get()

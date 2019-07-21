@@ -3,9 +3,12 @@ package controller
 import (
 	"bytes"
 	"database/sql"
+	"net/http"
 	"encoding/base64"
 	"fmt"
 
+
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
 )
@@ -87,3 +90,57 @@ func (c *Controller) handleBasePdf(id int64, userID string) string {
 
 	return b64Pdf
 }
+
+func (c *Controller) handleBaseSertificatePdf(w http.ResponseWriter, r *http.Request){
+	t, err := c.template.Get("pdf_sertificate.tmpl")
+	if err != nil {
+		return 
+	}
+	sumorder, err := c.order.SelectSummaryOrderByID(153, 10, "RxHeyqVsEndVAUo2EBA4VBQWp207OO")//fmt.Sprintf("%v", userID))
+    if err != nil {
+        c.reporter.Errorf("[handleGetSumOrderByID] sum order not found, err: %s", err.Error())
+        view.RenderJSONError(w, "Sum Order not found", http.StatusNotFound)
+        return
+	}
+	
+	b64Png := c.template.GetBase64Png(sumorder.LicenseNumber)
+	fmt.Println(b64Png)
+	templateData := map[string]interface{}{
+		"VenueName"		:   sumorder.VenueName,
+		"Address"		:   sumorder.VenueAddress,
+		"Zip"			:   sumorder.VenueZip,
+		"City"			:   sumorder.VenueCity,
+		"Province"		:   sumorder.VenueProvince,
+		"QrBase64"		:	b64Png,
+	}
+
+
+	buff := bytes.NewBuffer([]byte{})
+	err = t.Execute(buff, templateData)
+	if err != nil {
+		view.RenderJSONError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+
+	gen, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		view.RenderJSONError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
+		return
+	}
+	gen.SetOutput(w)
+	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
+	gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+
+	w.Header().Set("Content-Type", "application/pdf")
+	w.Header().Set("Content-Disposition", "attachment; filename=\"sertificate.pdf\"")
+	gen.Create()
+
+}
+
+func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
+	view.RenderJSONData(w, c.handleBasePdf(153,"RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
+}
+
+
+
+
