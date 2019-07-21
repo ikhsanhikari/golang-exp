@@ -167,7 +167,8 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 
-	router.POST("/email/send", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.send"))
+	router.POST("/email/send", c.handlePostEmail)
+
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
 	router.GET("/companies/:id", c.auth.MustAuthorize(c.handleGetCompanyByID, "molanobar:companies.read"))
 	router.POST("/companies", c.auth.MustAuthorize(c.handlePostCompany, "molanobar:companies.create"))
