@@ -78,3 +78,14 @@ type SummaryOrder struct {
 
 //Orders is list of order
 type SummaryOrders []SummaryOrder
+
+type Agent struct {
+	ID           int64     `db:"id"`
+	UserID       string    `db:"user_id"`
+	Status       float64   `db:"status"`
+	CreatedAt    time.Time `db:"created_at"`
+	CreatedBy    string    `db:"created_by"`
+	ProjectID    string    `db:"project_id"`
+	UpdatedAt    time.Time `db:"updated_at"`
+	LastUpdateBy string    `db:"last_update_by"`
+}
