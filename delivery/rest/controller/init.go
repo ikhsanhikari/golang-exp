@@ -5,6 +5,7 @@ import (
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/city"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
@@ -16,6 +17,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
@@ -49,6 +51,8 @@ type Controller struct {
 	orderDetail    order_detail.ICore
 	admin          admin.ICore
 	company        company.ICore
+	city           city.ICore
+	province       province.ICore
 }
 
 // New ...
@@ -72,6 +76,8 @@ func New(
 	orderDetail order_detail.ICore,
 	admin admin.ICore,
 	company company.ICore,
+	city city.ICore,
+	province province.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -93,6 +99,8 @@ func New(
 		orderDetail:    orderDetail,
 		admin:          admin,
 		company:        company,
+		city:           city,
+		province:       province,
 	}
 }
 
@@ -174,6 +182,12 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/companies", c.auth.MustAuthorize(c.handlePostCompany, "molanobar:companies.create"))
 	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
+
+	router.GET("/cities", c.auth.MustAuthorize(c.handleGetAllCities, "molanobar:cities.read"))
+	router.GET("/cities/:id", c.auth.MustAuthorize(c.handleGetCityByID, "molanobar:cities.read"))
+
+	router.GET("/province", c.auth.MustAuthorize(c.handleGetAllProvinces, "molanobar:province.read"))
+	router.GET("/province/:id", c.auth.MustAuthorize(c.handleGetProvincesByID, "molanobar:province.read"))
 
 	router.GET("/pdf", c.handleBaseSertificatePdf)
 

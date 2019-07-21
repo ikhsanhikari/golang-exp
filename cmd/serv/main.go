@@ -9,6 +9,7 @@ import (
 	admin "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
+	city "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/city"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
@@ -20,6 +21,7 @@ import (
 	orderDetail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	payment "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	province "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
 	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
@@ -147,6 +149,12 @@ func main() {
 	coreCompany := company.Init(db, redis)
 	reporter.Infoln("/pkg/company successfully initialized")
 
+	coreProvince := province.Init(db, redis)
+	reporter.Infoln("/pkg/province successfully initialized")
+
+	coreCity := city.Init(db, redis)
+	reporter.Infoln("/pkg/city successfully initialized")
+
 	var (
 		server = webserver.New(&cfg.Webserver)
 		rest   = rest.New(
@@ -169,6 +177,8 @@ func main() {
 			coreOrderDetail,
 			coreAdmin,
 			coreCompany,
+			coreCity,
+			coreProvince,
 		)
 	)
 	rest.Register(server.Router())
