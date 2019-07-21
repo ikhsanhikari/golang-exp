@@ -3,6 +3,7 @@ package controller
 import (
 	"net/http"
 
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
@@ -46,6 +47,7 @@ type Controller struct {
 	email          email.ICore
 	template       template.ICore
 	orderDetail    order_detail.ICore
+	admin          admin.ICore
 	company        company.ICore
 }
 
@@ -68,6 +70,7 @@ func New(
 	email email.ICore,
 	template template.ICore,
 	orderDetail order_detail.ICore,
+	admin admin.ICore,
 	company company.ICore,
 ) *Controller {
 	return &Controller{
@@ -88,6 +91,7 @@ func New(
 		email:          email,
 		template:       template,
 		orderDetail:    orderDetail,
+		admin:          admin,
 		company:        company,
 	}
 }
@@ -101,6 +105,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/products/:venue_type", c.auth.MustAuthorize(c.handleGetAllByVenueType, "molanobar:products.read"))
 
 	router.POST("/orders", c.auth.MustAuthorize(c.handlePostOrder, "molanobar:orders.create"))
+	router.POST("/ordersbyagents", c.auth.MustAuthorize(c.handlePostOrderByAgent, "molanobar:orders.create"))
 	router.PATCH("/orders/:id", c.auth.MustAuthorize(c.handlePatchOrder, "molanobar:orders.update"))
 	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateOrderStatusByID, "molanobar:orders.update"))
 	router.PATCH("/orders-open-payment-status/:id", c.auth.MustAuthorize(c.handleUpdateOpenPaymentStatusByID, "molanobar:orders.update"))
@@ -157,7 +162,15 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
 	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
 
+	router.GET("/admins", c.auth.MustAuthorize(c.handleGetAllAdmins, "molanobar:admins.read"))
+	router.POST("/admins", c.auth.MustAuthorize(c.handlePostAdmin, "molanobar:admins.create"))
+	router.PATCH("/admins/:id", c.auth.MustAuthorize(c.handlePatchAdmin, "molanobar:admins.update"))
+	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
+	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
+
+	router.POST("/email/send", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.send"))
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
+	router.GET("/companies/:id", c.auth.MustAuthorize(c.handleGetCompanyByID, "molanobar:companies.read"))
 	router.POST("/companies", c.auth.MustAuthorize(c.handlePostCompany, "molanobar:companies.create"))
 	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
