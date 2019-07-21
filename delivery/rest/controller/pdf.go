@@ -17,7 +17,7 @@ return 0 to failed get Data
 return 1 to failed get template
 */
 
-func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp string, nameFile string) string {
+func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp string, nameFile string, orientation string) string {
 	t, err := c.template.Get(tmp)
 	if err != nil {
 		return "1"
@@ -35,6 +35,10 @@ func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp stri
 	if err != nil {
 		c.reporter.Errorf("[handlePDF] Failed generate pdf, err: %s", err.Error())
 		return "1"
+	}
+
+	if orientation == "Landscape" {
+		gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
 	}
 	gen.SetOutput(pdfBuffer)
 	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
@@ -94,7 +98,7 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
 		"BalanceDue":        ac.FormatMoney(totPrice),
 	}
 
-	b64InvoicePdf := c.handleBasePdf(templateData, t, pdf)
+	b64InvoicePdf := c.handleBasePdf(templateData, t, pdf, "Potrait")
 
 	return b64InvoicePdf
 }
@@ -124,7 +128,7 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) stri
 		"Province":  sumorder.VenueProvince,
 		"QrBase64":  b64Png,
 	}
-	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf)
+	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
 	return b64SertificatePdf
 
 }

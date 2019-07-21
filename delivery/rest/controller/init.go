@@ -9,6 +9,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email_log"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
@@ -49,6 +50,7 @@ type Controller struct {
 	orderDetail    order_detail.ICore
 	admin          admin.ICore
 	company        company.ICore
+	emailLog       email_log.ICore
 }
 
 // New ...
@@ -72,6 +74,7 @@ func New(
 	orderDetail order_detail.ICore,
 	admin admin.ICore,
 	company company.ICore,
+	emailLog email_log.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -93,6 +96,7 @@ func New(
 		orderDetail:    orderDetail,
 		admin:          admin,
 		company:        company,
+		emailLog:       emailLog,
 	}
 }
 
@@ -168,7 +172,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 
-	router.POST("/sendmailecert", c.handlePostEmail)
+	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail,"molanobar:email.ecert"))
 
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
 	router.GET("/companies/:id", c.auth.MustAuthorize(c.handleGetCompanyByID, "molanobar:companies.read"))
