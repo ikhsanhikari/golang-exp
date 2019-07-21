@@ -199,6 +199,6 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 }
 
 func (c *Controller) handleGet(w http.ResponseWriter, r *http.Request) {
-	str := c.handleBasePdf(153, "RxHeyqVsEndVAUo2EBA4VBQWp207OO")
+	str := c.handleGetDataInvoice(153, "RxHeyqVsEndVAUo2EBA4VBQWp207OO")
 	view.RenderJSONData(w, str, http.StatusOK)
 }
