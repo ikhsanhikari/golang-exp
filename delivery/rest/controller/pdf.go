@@ -134,6 +134,6 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) stri
 }
 
 func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
-	view.RenderJSONData(w, c.handleGetDataInvoice(153, "RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
-	//view.RenderJSONData(w, c.handleGetDataSertificate(150, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo"), http.StatusOK)
+	//view.RenderJSONData(w, c.handleGetDataInvoice(153, "RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
+	view.RenderJSONData(w, c.handleGetDataSertificate(150, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo"), http.StatusOK)
 }
