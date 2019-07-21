@@ -5,8 +5,9 @@ type TokenGeneratorEmail interface {
 }
 
 // Init is used to initialize room package
-func Init(apiBaseURL string, tokenGeneratorEmail TokenGeneratorEmail) ICore {
+func Init(apiBaseURL string, urlQrCode string, tokenGeneratorEmail TokenGeneratorEmail) ICore {
 	return &core{
+		urlQrCode:     urlQrCode,
 		apiBaseURL:     apiBaseURL,
 		tokenGeneratorEmail: tokenGeneratorEmail,
 	}

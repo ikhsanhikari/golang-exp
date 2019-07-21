@@ -22,9 +22,8 @@ type ICore interface {
 
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
-	Update(venue *Venue) (err error)
+	Update(venue *Venue, uid string) (err error)
 	Delete(pid int64, id int64, uid string) (err error)
-	SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueAddress, err error)
 }
 
 // core contains db client
@@ -405,7 +404,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	return
 }
 
-func (c *core) Update(venue *Venue) (err error) {
+func (c *core) Update(venue *Venue, uid string) (err error) {
 	venue.UpdatedAt = time.Now()
 	venue.ProjectID = 10
 	query := `
@@ -486,7 +485,7 @@ func (c *core) Update(venue *Venue) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, venue.ProjectID, venue.Id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.LastUpdateBy)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, uid)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -504,7 +503,7 @@ func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 		WHERE
 			id = ? AND
 			stats = 1 AND 
-			last_updated_by = ? AND 
+			last_update_by = ? AND 
 			project_id = 10
 	`
 	args := []interface{}{

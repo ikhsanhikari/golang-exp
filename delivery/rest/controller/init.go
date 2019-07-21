@@ -10,6 +10,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email_log"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
@@ -53,6 +54,7 @@ type Controller struct {
 	company        company.ICore
 	city           city.ICore
 	province       province.ICore
+	emailLog       email_log.ICore
 }
 
 // New ...
@@ -76,8 +78,12 @@ func New(
 	orderDetail order_detail.ICore,
 	admin admin.ICore,
 	company company.ICore,
+<<<<<<< delivery/rest/controller/init.go
 	city city.ICore,
 	province province.ICore,
+=======
+	emailLog email_log.ICore,
+>>>>>>> delivery/rest/controller/init.go
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -99,8 +105,12 @@ func New(
 		orderDetail:    orderDetail,
 		admin:          admin,
 		company:        company,
+<<<<<<< delivery/rest/controller/init.go
 		city:           city,
 		province:       province,
+=======
+		emailLog:       emailLog,
+>>>>>>> delivery/rest/controller/init.go
 	}
 }
 
@@ -169,6 +179,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/licenses/:id", c.auth.MustAuthorize(c.handlePatchLicense, "molanobar:licenses.update"))
 	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
 	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
+	router.GET("/licensechecker/:id", c.auth.MustAuthorize(c.handleGetLicenseByIDForChecker, "molanobar:licenses.read"))
 
 	router.GET("/admins", c.auth.MustAuthorize(c.handleGetAllAdmins, "molanobar:admins.read"))
 	router.POST("/admins", c.auth.MustAuthorize(c.handlePostAdmin, "molanobar:admins.create"))
@@ -176,13 +187,15 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 
-	router.POST("/email/send", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.send"))
+	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail,"molanobar:email.ecert"))
+
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
 	router.GET("/companies/:id", c.auth.MustAuthorize(c.handleGetCompanyByID, "molanobar:companies.read"))
 	router.POST("/companies", c.auth.MustAuthorize(c.handlePostCompany, "molanobar:companies.create"))
 	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
 
+<<<<<<< delivery/rest/controller/init.go
 	router.GET("/cities", c.handleGetAllCities)
 	router.GET("/cities/:id", c.handleGetCityByID)
 	router.GET("/province", c.handleGetAllProvinces)
@@ -190,4 +203,6 @@ func (c *Controller) Register(router *router.Router) {
 
 	router.GET("/pdf", c.handleBaseSertificatePdf)
 
+=======
+>>>>>>> delivery/rest/controller/init.go
 }

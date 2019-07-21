@@ -264,7 +264,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		VenuePhone:                   params.VenuePhone,
 		LastUpdateBy:                 fmt.Sprintf("%v", userID),
 	}
-	err = c.venue.Update(&venue)
+	err = c.venue.Update(&venue, fmt.Sprintf("%v", userID))
 	if err != nil {
 		c.reporter.Errorf("[handlePatchVenue] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update Venue", http.StatusInternalServerError)

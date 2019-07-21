@@ -14,6 +14,7 @@ import (
 	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
+	emailLog "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email_log"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	license "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
@@ -134,7 +135,7 @@ func main() {
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
 
-	coreEmail := email.Init(cfg.EmailBaseURL, tokenGeneratorEmail)
+	coreEmail := email.Init(cfg.EmailBaseURL, cfg.urlQrCode, tokenGeneratorEmail)
 	reporter.Infoln("/pkg/email successfully initialized")
 
 	coreTemplate := template.New("./file/template")
@@ -154,6 +155,9 @@ func main() {
 
 	coreCity := city.Init(db, redis)
 	reporter.Infoln("/pkg/city successfully initialized")
+	
+	coreEmailLog := emailLog.Init(db, redis)
+	reporter.Infoln("/pkg/email_log successfully initialized")
 
 	var (
 		server = webserver.New(&cfg.Webserver)
@@ -177,8 +181,12 @@ func main() {
 			coreOrderDetail,
 			coreAdmin,
 			coreCompany,
+<<<<<<< cmd/serv/main.go
 			coreCity,
 			coreProvince,
+=======
+			coreEmailLog,
+>>>>>>> cmd/serv/main.go
 		)
 	)
 	rest.Register(server.Router())
