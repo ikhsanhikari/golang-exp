@@ -23,6 +23,7 @@ type ICore interface {
 
 	Get(id int64, pid int64, uid string) (order Order, err error)
 	GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error)
+	GetLicenseByIDForChecker(LicNumber string, pid int64) (sumorder SummaryOrder, err error)
 
 	Select(pid int64, uid string) (orders Orders, err error)
 	SelectByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error)
@@ -783,6 +784,67 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
 	LIMIT 1
 	;
 	`, orderID, pid, uid)
+	return
+}
+
+func (c *core) GetLicenseByIDForChecker(licNumber string, pid int64) (licsum SummaryOrder, err error) {
+	redisKey := fmt.Sprintf("%s:%d:licorder-id:%s", redisPrefix, pid, licNumber)
+
+	licsum, err = c.selectSumFromCache1()
+	if err != nil {
+		licsum, err = c.getLicenseSumByID(licNumber, pid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(licsum)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) getLicenseSumByID(licNumber string, pid int64) (licsum SummaryOrder, err error) {
+	err = c.db.Get(&licsum, `
+	select
+	orders.order_id as order_id,
+	COALESCE(orders.order_number,'') as order_number,
+    COALESCE(orders.total_price,0) as order_total_price,
+    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
+    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
+    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    COALESCE(orders.email,'') as order_email,
+	COALESCE(venues.venue_name,'') as venue_name,
+    COALESCE(venues.venue_type,0) as venue_type,
+	COALESCE(venues.address,'') as venue_address,
+	COALESCE(venues.city,'') as venue_city,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip,
+    COALESCE(venues.capacity,0) as venue_capacity,
+    COALESCE(venues.longitude,0) as venue_longitude,
+    COALESCE(venues.latitude,0) as venue_latitude,
+    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(devices.description,'') as device_name,
+	COALESCE(product.description,'') as product_name,
+	COALESCE(installation.description,'') as installation_name,
+	COALESCE(room.description,'') as room_name,
+    COALESCE(room.quantity,0) as room_qty,
+	COALESCE(aging.description,'') as aging_name,
+	COALESCE(orders.status,0) as order_status,
+	COALESCE(orders.open_payment_status,0) as open_payment_status,
+    COALESCE(license.license_number,'') as license_number,
+    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
+    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+	from 
+	mla_orders orders   
+	left join mla_venues venues on orders.venue_id = venues.id
+	left join mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join mla_license license on orders.order_id = license.order_id
+	where license.license_number = ? AND
+	license.project_id = ? AND
+	license.deleted_at IS NULL
+	LIMIT 1
+	;
+	`, licNumber, pid)
 	return
 }
 

@@ -161,6 +161,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/licenses/:id", c.auth.MustAuthorize(c.handlePatchLicense, "molanobar:licenses.update"))
 	router.DELETE("/licenses/:id", c.auth.MustAuthorize(c.handleDeleteLicense, "molanobar:licenses.delete"))
 	router.GET("/licenses_by_buyer/:buyer_id", c.auth.MustAuthorize(c.handleGetLicensesByBuyerID, "molanobar:licenses.read"))
+	router.GET("/licensechecker/:id", c.auth.MustAuthorize(c.handleGetLicenseByIDForChecker, "molanobar:licenses.read"))
 
 	router.GET("/admins", c.auth.MustAuthorize(c.handleGetAllAdmins, "molanobar:admins.read"))
 	router.POST("/admins", c.auth.MustAuthorize(c.handlePostAdmin, "molanobar:admins.create"))
