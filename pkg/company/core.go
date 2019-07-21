@@ -16,6 +16,7 @@ import (
 type ICore interface {
 	Select(pid int64, userID string) (companies Companies, err error)
 	Get(id int64, pid int64, userID string) (company Company, err error)
+	GetByOrderID(orderd int64, pid int64) (companyEmail CompanyEmail, err error)
 	Insert(company *Company) (err error)
 	Update(company *Company, uid string) (err error)
 	Delete(id int64, pid int64, userID string) (err error)
@@ -106,6 +107,24 @@ func (c *core) getFromDB(id int64, pid int64, userID string) (company Company, e
 			AND project_id = ?
 			AND deleted_at IS NULL
 	`, id, userID, pid)
+
+	return
+}
+
+func (c *core) GetByOrderID(orderd int64, pid int64) (companyEmail CompanyEmail, err error) {
+	err = c.db.Get(&companyEmail, `
+	select
+	company.email as company_email
+	from 
+	v2_subscriptions.mla_orders orders   
+	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
+	left join v2_subscriptions.mla_company company on venues.pt_id = company.id
+	where
+	orders.order_id = ? AND
+	orders.project_id = ? AND
+	orders.deleted_at IS NULL
+	LIMIT 1;
+	`, orderd, pid)
 
 	return
 }
@@ -229,6 +248,7 @@ func (c *core) getFromCache(key string) (company Company, err error) {
 	err = json.Unmarshal(b, &company)
 	return
 }
+
 
 func (c *core) setToCache(key string, expired int, data []byte) (err error) {
 	conn := c.redis.Get()

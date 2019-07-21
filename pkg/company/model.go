@@ -24,5 +24,9 @@ type Company struct {
 	LastUpdateBy string    `db:"last_update_by"`
 }
 
+type CompanyEmail struct {
+	CompanyEmail	string `db:"company_email"`
+}
+
 
 type Companies []Company

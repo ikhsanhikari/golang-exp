@@ -13,6 +13,7 @@ import (
 	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
+	emailLog "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email_log"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	license "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
@@ -147,6 +148,9 @@ func main() {
 	coreCompany := company.Init(db, redis)
 	reporter.Infoln("/pkg/company successfully initialized")
 
+	coreEmailLog := emailLog.Init(db, redis)
+	reporter.Infoln("/pkg/email_log successfully initialized")
+
 	var (
 		server = webserver.New(&cfg.Webserver)
 		rest   = rest.New(
@@ -169,6 +173,7 @@ func main() {
 			coreOrderDetail,
 			coreAdmin,
 			coreCompany,
+			coreEmailLog,
 		)
 	)
 	rest.Register(server.Router())
