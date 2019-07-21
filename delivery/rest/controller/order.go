@@ -42,7 +42,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	venue, err := c.venue.Get(projectID, params.VenueID,fmt.Sprintf("%v",userID))
+	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -506,7 +506,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//validasi foreign key
-	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v",userID))
+	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -1129,6 +1129,73 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 	}
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handleGetSumOrderByID] failed get sum order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get sum order", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponseOrder{
+		ID:   sumorder.OrderID,
+		Type: "sum_order",
+		Attributes: view.SumOrderAttributes{
+			OrderNumber:        sumorder.OrderNumber,
+			OrderTotalPrice:    sumorder.OrderTotalPrice,
+			OrderCreatedAt:     sumorder.OrderCreatedAt,
+			OrderPaidAt:        sumorder.OrderPaidAt,
+			OrderFailedAt:      sumorder.OrderFailedAt,
+			OrderEmail:         sumorder.OrderEmail,
+			VenueName:          sumorder.VenueName,
+			VenueType:          sumorder.VenueType,
+			VenueAddress:       sumorder.VenueAddress,
+			VenueProvince:      sumorder.VenueProvince,
+			VenueZip:           sumorder.VenueZip,
+			VenueCapacity:      sumorder.VenueCapacity,
+			VenueLongitude:     sumorder.VenueLongitude,
+			VenueLatitude:      sumorder.VenueLatitude,
+			VenueCategory:      sumorder.VenueCategory,
+			DeviceName:         sumorder.DeviceName,
+			ProductName:        sumorder.ProductName,
+			InstallationName:   sumorder.InstallationName,
+			RoomName:           sumorder.RoomName,
+			RoomQty:            sumorder.RoomQty,
+			AgingName:          sumorder.AgingName,
+			OrderStatus:        sumorder.OrderStatus,
+			OpenPaymentStatus:  sumorder.OpenPaymentStatus,
+			LicenseNumber:      sumorder.LicenseNumber,
+			LicenseActiveDate:  sumorder.LicenseActiveDate,
+			LicenseExpiredDate: sumorder.LicenseExpiredDate,
+		},
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *http.Request) {
+	var (
+		_id = router.GetParam(r, "id")
+	)
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+	// harus diganti dengan pengecekan user checker
+	fmt.Println(userID)
+
+	sumorder, err := c.order.GetLicenseByIDForChecker(_id, 10)
+	if err != nil {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] sum order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Sum Order not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get sum order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get sum order", http.StatusInternalServerError)
 		return
 	}
