@@ -16,7 +16,8 @@ func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	content := c.handleGetDataSertificate(params.OrderID, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
 	emailReq := email.EmailRequest{
 		Subject: "subject is nothing !!!",
 		To:      params.To,
@@ -26,7 +27,7 @@ func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
 		Attachments: []email.Attachment{
 			{
 				Content:     content,
-				Filename:    "invoice.pdf",
+				Filename:    "certificate.pdf",
 				Type:        "plain/text",
 				Disposition: "attachment",
 				ContentID:   "contentid-test",
