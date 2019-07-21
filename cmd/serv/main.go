@@ -6,9 +6,11 @@ import (
 	"syscall"
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
+	admin "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
+	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
@@ -22,7 +24,6 @@ import (
 	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	venueType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
-	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	token_generator "git.sstv.io/lib/go/go-auth-api.git/gettoken"
 	conn "git.sstv.io/lib/go/gojunkyard.git/conn"
@@ -140,6 +141,9 @@ func main() {
 	coreOrderDetail := orderDetail.Init(db, redis, coreAuditTrail)
 	reporter.Infoln("/pkg/order_detail successfully initialized")
 
+	coreAdmin := admin.Init(db, redis)
+	reporter.Infoln("/pkg/admin successfully initialized")
+
 	coreCompany := company.Init(db, redis)
 	reporter.Infoln("/pkg/company successfully initialized")
 
@@ -163,6 +167,7 @@ func main() {
 			coreEmail,
 			coreTemplate,
 			coreOrderDetail,
+			coreAdmin,
 			coreCompany,
 		)
 	)
