@@ -779,7 +779,7 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
 	where
 	orders.order_id = ? AND
 	orders.project_id = ? AND
-	orders.buyer_id = ? AND
+	orders.created_by = ? AND
 	orders.deleted_at IS NULL
 	LIMIT 1
 	;
@@ -902,7 +902,7 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
 	where
 	orders.project_id = ? AND
-	orders.buyer_id = ? AND
+	orders.created_by = ? AND
 	orders.deleted_at IS NULL
 	;
 	`, pid, uid)
