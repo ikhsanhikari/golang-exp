@@ -69,16 +69,7 @@ func (c *core) Get(id int64, pid int64) (city City, err error) {
 }
 
 func (c *core) SelectByProvince(id int64, pid int64) (cities Cities, err error) {
-	redisKey := fmt.Sprintf("%s:%d:city:%d", redisPrefix, pid, id)
-
-	cities, err = c.selectFromCache(redisKey)
-	if err != nil {
-		cities, err = c.getFromDBProvince(id, pid)
-		if err != sql.ErrNoRows {
-			byt, _ := jsoniter.ConfigFastest.Marshal(cities)
-			_ = c.setToCache(redisKey, 300, byt)
-		}
-	}
+	cities, err = c.getFromDBProvince(id, pid)
 	return
 }
 func (c *core) getFromDB(id int64, pid int64) (city City, err error) {

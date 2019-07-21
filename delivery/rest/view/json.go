@@ -12,7 +12,8 @@ type (
 		Error string `json:"error"`
 	}
 	jsonDataResponse struct {
-		Data interface{} `json:"data"`
+		Data    interface{} `json:"data"`
+		HasNext bool        `json:"hasNext,omitempty"`
 	}
 )
 

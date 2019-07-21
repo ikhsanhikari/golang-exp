@@ -128,7 +128,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/sumorders/:id", c.auth.MustAuthorize(c.handleGetSumOrderByID, "molanobar:orders.read"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
-	router.GET("/venue/:id", c.auth.MustAuthorize(c.handleGetByVenueID, "molanobar:venues.read"))
+	router.GET("/venues/detail", c.handleGetAllVenues)
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
 	router.PATCH("/venue/:id", c.auth.MustAuthorize(c.handlePatchVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
@@ -183,11 +183,10 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
 
-	router.GET("/cities", c.auth.MustAuthorize(c.handleGetAllCities, "molanobar:cities.read"))
-	router.GET("/cities/:id", c.auth.MustAuthorize(c.handleGetCityByID, "molanobar:cities.read"))
-
-	router.GET("/province", c.auth.MustAuthorize(c.handleGetAllProvinces, "molanobar:province.read"))
-	router.GET("/province/:id", c.auth.MustAuthorize(c.handleGetProvincesByID, "molanobar:province.read"))
+	router.GET("/cities", c.handleGetAllCities)
+	router.GET("/cities/:id", c.handleGetCityByID)
+	router.GET("/province", c.handleGetAllProvinces)
+	router.GET("/province/:id", c.handleGetProvincesByID)
 
 	router.GET("/pdf", c.handleBaseSertificatePdf)
 

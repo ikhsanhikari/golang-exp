@@ -16,6 +16,10 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64, uid string) (venues Venues, err error)
+	GetVenueByCity(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
+	GetVenueByStatus(pid int64, limit int, offset int) (venues Venues, err error)
+	GetVenueByCityID(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
+
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
 	Update(venue *Venue) (err error)
@@ -33,7 +37,7 @@ type core struct {
 const redisPrefix = "molanobar-v1"
 
 func (c *core) Select(pid int64, uid string) (venues Venues, err error) {
-	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, pid,uid)
+	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, pid, uid)
 	venues, err = c.selectFromCache(redisKey)
 	if err != nil {
 		venues, err = c.selectFromDB(pid, uid)
@@ -135,7 +139,149 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 	 		created_by = ? AND 
 			deleted_at IS NULL `
 
-		err = c.db.Get(&venue, qs, id, pid, uid)
+	err = c.db.Get(&venue, qs, id, pid, uid)
+
+	return
+}
+
+func (c *core) GetVenueByCity(pid int64, cityName string, limit int, offset int) (venues Venues, err error) {
+	venues, err = c.getFromDBVenue(cityName, pid, limit, offset)
+	return
+}
+
+func (c *core) getFromDBVenue(cityName string, pid int64, limit int, offset int) (venues Venues, err error) {
+	err = c.db.Select(&venues, `
+		SELECT
+			id,
+			venue_id,
+			venue_type,
+			venue_name,
+			address,
+			zip,
+			capacity,
+			facilities,
+			longitude,
+			latitude,
+			people,
+			created_at,
+			updated_at,
+			deleted_at,
+			stats,
+			venue_category,
+			pic_name,
+			pic_contact_number,
+			venue_technician_name,
+			venue_technician_contact_number,
+			venue_phone,
+			project_id,
+			created_by,
+			last_update_by,
+			province,
+			city,
+			pt_id
+		FROM
+			mla_venues
+		WHERE
+			city = ? AND
+			stats = 1 AND
+			project_id = ?
+			LIMIT ?, ?; 
+	`, cityName, pid, offset, limit)
+
+	return
+}
+
+func (c *core) GetVenueByStatus(pid int64, limit int, offset int) (venues Venues, err error) {
+	venues, err = c.getFromDBVenueStatus(pid, limit, offset)
+	return
+}
+
+func (c *core) getFromDBVenueStatus(pid int64, limit int, offset int) (venues Venues, err error) {
+	err = c.db.Select(&venues, `
+		SELECT
+			id,
+			venue_id,
+			venue_type,
+			venue_name,
+			address,
+			zip,
+			capacity,
+			facilities,
+			longitude,
+			latitude,
+			people,
+			created_at,
+			updated_at,
+			deleted_at,
+			stats,
+			venue_category,
+			pic_name,
+			pic_contact_number,
+			venue_technician_name,
+			venue_technician_contact_number,
+			venue_phone,
+			project_id,
+			created_by,
+			last_update_by,
+			province,
+			city,
+			pt_id
+		FROM
+			mla_venues
+		WHERE
+			stats = 2 OR
+			stats = 4 AND 
+			project_id = ?
+			LIMIT ?, ?; 
+	`, pid, offset, limit)
+
+	return
+}
+
+func (c *core) GetVenueByCityID(pid int64, cityName string, limit int, offset int) (venues Venues, err error) {
+	venues, err = c.getFromDBVenueCityID(cityName, pid, limit, offset)
+	return
+}
+
+func (c *core) getFromDBVenueCityID(cityName string, pid int64, limit int, offset int) (venues Venues, err error) {
+	err = c.db.Select(&venues, `
+		SELECT
+			id,
+			venue_id,
+			venue_type,
+			venue_name,
+			address,
+			zip,
+			capacity,
+			facilities,
+			longitude,
+			latitude,
+			people,
+			created_at,
+			updated_at,
+			deleted_at,
+			stats,
+			venue_category,
+			pic_name,
+			pic_contact_number,
+			venue_technician_name,
+			venue_technician_contact_number,
+			venue_phone,
+			project_id,
+			created_by,
+			last_update_by,
+			province,
+			city,
+			pt_id
+		FROM
+			mla_venues
+		WHERE		
+			stats = 2 OR
+			stats = 4 AND 
+			city = ? AND
+			project_id = ?
+			LIMIT ?, ?; 
+	`, pid, cityName, offset, limit)
 
 	return
 }
@@ -253,7 +399,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID,venue.CreatedBy)
+	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.CreatedBy)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -414,7 +560,6 @@ func (c *core) SelectVenueByLisenceID(pid int64, lid int64) (venueAddress VenueA
 	`, pid, lid)
 	return
 }
-
 
 func (c *core) selectFromCache(redisKey string) (venues Venues, err error) {
 	conn := c.redis.Get()

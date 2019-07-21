@@ -2,7 +2,6 @@ package controller
 
 import (
 	"database/sql"
-	"log"
 	"net/http"
 	"strconv"
 
@@ -61,7 +60,7 @@ func (c *Controller) handleGetProvincesByID(w http.ResponseWriter, r *http.Reque
 		return
 	}
 	getParam := r.URL.Query()
-	if getParam.Get("relationship") != "" {
+	if getParam.Get("relationship") == "true" {
 		cities, err := c.city.SelectByProvince(provinces.ProvinceID, 10)
 		if err != nil && err == sql.ErrNoRows {
 			c.reporter.Errorf("[handleSelectByProvince] select city in province not found, err: %s", err.Error())
@@ -87,7 +86,6 @@ func (c *Controller) handleGetProvincesByID(w http.ResponseWriter, r *http.Reque
 			})
 		}
 	}
-	log.Printf("%+v", citiesResp)
 	res := view.DataResponse{
 		Type: "province",
 		ID:   provinces.ProvinceID,
