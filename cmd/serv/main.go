@@ -9,6 +9,7 @@ import (
 	admin "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
+	city "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/city"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
@@ -21,6 +22,7 @@ import (
 	orderDetail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	payment "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	province "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
 	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
@@ -133,7 +135,7 @@ func main() {
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
 
-	coreEmail := email.Init(cfg.EmailBaseURL, cfg.urlQrCode, tokenGeneratorEmail)
+	coreEmail := email.Init(cfg.EmailBaseURL, cfg.UrlQrCode, tokenGeneratorEmail)
 	reporter.Infoln("/pkg/email successfully initialized")
 
 	coreTemplate := template.New("./file/template")
@@ -147,6 +149,12 @@ func main() {
 
 	coreCompany := company.Init(db, redis)
 	reporter.Infoln("/pkg/company successfully initialized")
+
+	coreProvince := province.Init(db, redis)
+	reporter.Infoln("/pkg/province successfully initialized")
+
+	coreCity := city.Init(db, redis)
+	reporter.Infoln("/pkg/city successfully initialized")
 
 	coreEmailLog := emailLog.Init(db, redis)
 	reporter.Infoln("/pkg/email_log successfully initialized")
@@ -173,6 +181,8 @@ func main() {
 			coreOrderDetail,
 			coreAdmin,
 			coreCompany,
+			coreCity,
+			coreProvince,
 			coreEmailLog,
 		)
 	)

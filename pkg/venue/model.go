@@ -19,7 +19,7 @@ type Venue struct {
 	Facilities                   string    `db:"facilities"`
 	Longitude                    float64   `db:"longitude"`
 	Latitude                     float64   `db:"latitude"`
-	People                       int64     `db:"people"`
+	People                       null.Int  `db:"people"`
 	PtID                         int64     `db:"pt_id"`
 	CreatedAt                    time.Time `db:"created_at"`
 	UpdatedAt                    time.Time `db:"updated_at"`
@@ -36,4 +36,23 @@ type Venue struct {
 	LastUpdateBy                 string    `db:"last_update_by"`
 }
 
+type VenueAddress struct {
+	VenueName string `db:"venue_name"`
+	Address   string `db:"venue_address"`
+	City      string `db:"venue_city"`
+	Province  string `db:"venue_province"`
+	Zip       string `db:"venue_zip"`
+}
+
 type Venues []Venue
+
+type VenueAvailable struct {
+	Id       int64  `db:"id"`
+	CityName string `db:"city_name"`
+}
+type VenueAvailables []VenueAvailable
+
+type VenueGroupAvailable struct {
+	CityName string `db:"city"`
+}
+type VenueGroupAvailables []VenueGroupAvailable

@@ -36,10 +36,19 @@ type VenueAttributes struct {
 	LastUpdateBy                 string    `json:"lastUpdateBy"`
 }
 
+type VenueAvailableAttributes struct {
+	Id       int64  `json:"id"`
+	CityName string `json:"city_name"`
+}
+
+type VenueGroupAvailableAttributes struct {
+	CityName string `json:"city_name"`
+}
+
 type VenueAddress struct {
-	VenueName                    string    `db:"venue_name"`
-	Address                      string    `db:"address"`
-	City                         string    `db:"city"`
-	Province                     string    `db:"province"`
-	Zip                          string    `db:"zip"`
+	VenueName string `db:"venue_name"`
+	Address   string `db:"address"`
+	City      string `db:"city"`
+	Province  string `db:"province"`
+	Zip       string `db:"zip"`
 }
