@@ -4,11 +4,15 @@ import (
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
+	"flag"
 	"fmt"
+	"image"
+	_ "image/png"
 	"net/http"
+	"os"
 	"time"
 
-	qrcode "github.com/skip2/go-qrcode"
+	"github.com/divan/qrlogo"
 )
 
 // ICore is the interface
@@ -68,12 +72,37 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 	return
 }
 
+var (
+	input  = flag.String("i", "file/img/logo.png", "Logo to be placed over QR code")
+	output = flag.String("o", "qr.png", "Output filename")
+	size   = flag.Int("size", 512, "Image size in pixels")
+)
+
 func (c *core) GetBase64Png(licenseNum string) string {
-	var png []byte
+
 	qrCode := c.urlQrCode + licenseNum
 
-	png, _ = qrcode.Encode(qrCode, qrcode.Medium, 256)
+	fmt.Println(qrCode)
+
+	file, err := os.Open(*input)
+	errcheck(err, "Failed to open logo:")
+	defer file.Close()
+
+	logo, _, err := image.Decode(file)
+	errcheck(err, "Failed to decode PNG with logo:")
+
+	qr, err := qrlogo.Encode(qrCode, logo, *size)
+	errcheck(err, "Failed to encode QR:")
+
+	png := qr.Bytes()
 	b64Png := base64.StdEncoding.EncodeToString(png)
 
 	return b64Png
+}
+
+func errcheck(err error, str string) {
+	if err != nil {
+		fmt.Println(str, err)
+		os.Exit(1)
+	}
 }

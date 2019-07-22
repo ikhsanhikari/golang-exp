@@ -5,9 +5,7 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
@@ -132,9 +130,4 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
 	return b64SertificatePdf, sumorder
 
-}
-
-func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
-	view.RenderJSONData(w, c.handleGetDataInvoice(153, "RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
-	//view.RenderJSONData(w, c.handleGetDataSertificate(150, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo"), http.StatusOK)
 }
