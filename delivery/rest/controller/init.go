@@ -78,12 +78,9 @@ func New(
 	orderDetail order_detail.ICore,
 	admin admin.ICore,
 	company company.ICore,
-<<<<<<< delivery/rest/controller/init.go
 	city city.ICore,
 	province province.ICore,
-=======
 	emailLog email_log.ICore,
->>>>>>> delivery/rest/controller/init.go
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -105,12 +102,9 @@ func New(
 		orderDetail:    orderDetail,
 		admin:          admin,
 		company:        company,
-<<<<<<< delivery/rest/controller/init.go
 		city:           city,
 		province:       province,
-=======
 		emailLog:       emailLog,
->>>>>>> delivery/rest/controller/init.go
 	}
 }
 
@@ -187,7 +181,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 
-	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail,"molanobar:email.ecert"))
+	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
 
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
 	router.GET("/companies/:id", c.auth.MustAuthorize(c.handleGetCompanyByID, "molanobar:companies.read"))
@@ -195,14 +189,13 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
 
-<<<<<<< delivery/rest/controller/init.go
 	router.GET("/cities", c.handleGetAllCities)
 	router.GET("/cities/:id", c.handleGetCityByID)
 	router.GET("/province", c.handleGetAllProvinces)
 	router.GET("/province/:id", c.handleGetProvincesByID)
 
-	router.GET("/pdf", c.handleBaseSertificatePdf)
+	//router.GET("/pdf", c.handleBaseSertificatePdf)
 
-=======
->>>>>>> delivery/rest/controller/init.go
+	//router.GET("/pdf", c.handleGetPdf1) //,"molanobar:email.ecert"))
+
 }

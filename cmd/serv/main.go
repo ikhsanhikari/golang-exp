@@ -155,7 +155,7 @@ func main() {
 
 	coreCity := city.Init(db, redis)
 	reporter.Infoln("/pkg/city successfully initialized")
-	
+
 	coreEmailLog := emailLog.Init(db, redis)
 	reporter.Infoln("/pkg/email_log successfully initialized")
 
@@ -181,12 +181,9 @@ func main() {
 			coreOrderDetail,
 			coreAdmin,
 			coreCompany,
-<<<<<<< cmd/serv/main.go
 			coreCity,
 			coreProvince,
-=======
 			coreEmailLog,
->>>>>>> cmd/serv/main.go
 		)
 	)
 	rest.Register(server.Router())
