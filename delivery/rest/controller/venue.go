@@ -96,7 +96,14 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 			},
 		})
 	}
-	view.RenderJSONData(w, res, http.StatusOK)
+	var hasNext bool
+	if len(res) > 9 {
+		hasNext = true
+		view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
+	} else {
+		view.RenderJSONData(w, res, http.StatusOK)
+	}
+
 }
 
 // Handle delete

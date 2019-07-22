@@ -70,6 +70,19 @@ func RenderJSONData(w http.ResponseWriter, data interface{}, statusCode int) {
 	response.put()
 }
 
+func RenderJSONDataPage(w http.ResponseWriter, data interface{}, hasNext bool, statusCode int) {
+	h := w.Header()
+	h["Content-Type"] = mimeJSON[:]
+
+	response := jsonDataPool.Get().(*jsonDataResponse)
+	response.Data = data
+	response.HasNext = hasNext
+
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(response)
+	response.put()
+}
+
 // RenderJSON is used to render json. It can render struct or primitive data type
 // Example Result: {"id":1,"name":"supersoccer"}
 func RenderJSON(w http.ResponseWriter, v interface{}, statusCode int) {
