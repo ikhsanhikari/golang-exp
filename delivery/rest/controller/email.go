@@ -30,8 +30,8 @@ func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content := c.handleGetDataSertificate(params.OrderID, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
-	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	content := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%v", userID))
+	// content := c.handleGetDataInvoice(params.OrderID, fmt.Sprintf("%v", userID))
 	emailReq := email.EmailRequest{
 		Subject: "subject is nothing !!!",
 		To:      params.To,
