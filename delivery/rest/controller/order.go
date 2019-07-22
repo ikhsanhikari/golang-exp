@@ -88,27 +88,21 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+	valid := isOrderValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 	if !valid {
-		c.reporter.Errorf("[handlePostOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
-			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+		c.reporter.Errorf("[handlePostOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d, roomQuantity: %d",
+			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
 		return
 	}
 
 	//generate order number
-	lastOrderNumber, err := c.order.GetLastOrderNumber()
+	orderNumber, err := c.generateOrderNumber()
 	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] failed get last order number, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get last order number", http.StatusInternalServerError)
+		c.reporter.Errorf("[handlePostOrder] Failed generate order number, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed generate order number", http.StatusInternalServerError)
 		return
 	}
-
-	dateNow := time.Now().Format("060102")
-	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
-		lastOrderNumber.Number = 0
-	}
-	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
 	//calculate total price
 	totalPrice := c.calculateTotalPrice(venue.VenueType, product.Price, installation.Price, room.Price, float64(params.RoomQuantity))
@@ -189,21 +183,21 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get user")
+		c.reporter.Errorf("[handlePostOrderByAgent] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
 
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		c.reporter.Errorf("[handlePostOrderByAgent] failed get userID")
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}
 
 	_, err := c.order.SelectAgentByUserID(fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] failed get agent")
+		c.reporter.Errorf("[handlePostOrderByAgent] failed get agent")
 		view.RenderJSONError(w, "failed get agent", http.StatusUnauthorized)
 		return
 	}
@@ -211,35 +205,35 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 	var params reqOrder
 	err = form.Bind(&params, r)
 	if err != nil {
-		c.reporter.Errorf("[handlePostOrder] invalid parameter, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
 	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
 		return
 	}
 
 	device, err := c.device.Get(projectID, params.DeviceID)
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] Device Not Found, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] Device Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
 		return
 	}
 
 	product, err := c.product.Get(projectID, params.ProductID)
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] Product Not Found, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] Product Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
 		return
 	}
 
 	installation, err := c.installation.Get(params.InstallationID, projectID)
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] Installation Not Found, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] Installation Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
 		return
 	}
@@ -248,7 +242,7 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 	if params.RoomID != 0 && params.RoomQuantity != 0 {
 		room, err = c.room.Get(projectID, params.RoomID)
 		if err == sql.ErrNoRows {
-			c.reporter.Errorf("[handlePostOrder] Room Not Found, err: %s", err.Error())
+			c.reporter.Errorf("[handlePostOrderByAgent] Room Not Found, err: %s", err.Error())
 			view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
 			return
 		}
@@ -256,23 +250,25 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 	aging, err := c.aging.Get(params.AgingID, projectID)
 	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] Aging Not Found, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] Aging Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
 		return
 	}
 
-	lastOrderNumber, err := c.order.GetLastOrderNumber()
-	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] failed get last order number, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get last order number", http.StatusInternalServerError)
+	valid := isOrderValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
+	if !valid {
+		c.reporter.Errorf("[handlePostOrderByAgent] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d, roomQuantity: %d",
+			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
+		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
 		return
 	}
 
-	dateNow := time.Now().Format("060102")
-	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
-		lastOrderNumber.Number = 0
+	orderNumber, err := c.generateOrderNumber()
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrderByAgent] Failed generate order number, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed generate order number", http.StatusInternalServerError)
+		return
 	}
-	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
 	totalPrice := c.calculateTotalPrice(venue.VenueType, product.Price, installation.Price, room.Price, float64(params.RoomQuantity))
 
@@ -297,14 +293,14 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 	err = c.order.InsertByAgent(&insertOrder)
 	if err != nil {
-		c.reporter.Errorf("[handlePostOrder] failed post order, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] failed post order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order", http.StatusInternalServerError)
 		return
 	}
 
 	err = c.insertOrderDetail(insertOrder, device, product, installation, room, aging)
 	if err != nil {
-		c.reporter.Errorf("[handlePostOrder] failed post order details, err: %s", err.Error())
+		c.reporter.Errorf("[handlePostOrderByAgent] failed post order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order details", http.StatusInternalServerError)
 		return
 	}
@@ -559,16 +555,16 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+	valid := isOrderValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 	if !valid {
-		c.reporter.Errorf("[handlePostOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
-			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+		c.reporter.Errorf("[handlePatchOrder] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d, roomQuantity: %d",
+			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
 		return
 	}
 
 	//validasi order detail
-	orderDetails, err := c.orderDetail.Get(id, projectID, userID.(string))
+	_, err = c.orderDetail.Get(id, projectID, userID.(string))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order details not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order details not found", http.StatusNotFound)
@@ -577,11 +573,6 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Failed get order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get order detail", http.StatusInternalServerError)
-		return
-	}
-	if len(orderDetails) < 4 || len(orderDetails) > 5 {
-		c.reporter.Errorf("[handlePatchOrder] Failed get all order details")
-		view.RenderJSONError(w, "Failed get all order details", http.StatusInternalServerError)
 		return
 	}
 
@@ -1611,10 +1602,10 @@ func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	valid := isValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+	valid := isOrderValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 	if !valid {
-		c.reporter.Errorf("[handleCalculateOrderPrice] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d",
-			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID)
+		c.reporter.Errorf("[handleCalculateOrderPrice] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d, roomQuantity: %d",
+			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
 		return
 	}
@@ -1640,66 +1631,99 @@ func leftPadLen(s string, padStr string, overallLen int) string {
 	return retStr[(len(retStr) - overallLen):]
 }
 
-func isValid(venueType, venueCapacity, agingID, deviceID, productID, installationID, roomID int64) bool {
-
-	if venueType > 0 && venueType <= 4 && roomID == 0 {
-		if venueCapacity == 1 {
-			if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
-				return true
-			} else if agingID == 2 && deviceID == 1 && productID == 2 && installationID == 2 {
-				return true
-			} else if agingID == 3 && deviceID == 1 && productID == 3 && installationID == 3 {
-				return true
-			} else if agingID == 1 && deviceID == 2 && productID == 4 && installationID == 4 {
-				return true
+func isOrderValid(venueType, venueCapacity, agingID, deviceID, productID, installationID, roomID, roomQuantity int64) bool {
+	if roomQuantity == 0 {
+		if venueType > 0 && venueType <= 4 && roomID == 0 {
+			if venueCapacity == 1 {
+				if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
+					return true
+				} else if agingID == 2 && deviceID == 1 && productID == 2 && installationID == 2 {
+					return true
+				} else if agingID == 3 && deviceID == 1 && productID == 3 && installationID == 3 {
+					return true
+				} else if agingID == 1 && deviceID == 2 && productID == 4 && installationID == 4 {
+					return true
+				} else if agingID == 1 && deviceID == 3 && productID == 9 && installationID == 9 {
+					return true
+				} else if agingID == 1 && deviceID == 4 && productID == 10 && installationID == 10 {
+					return true
+				} else {
+					return false
+				}
+			} else if venueCapacity == 2 {
+				if agingID == 1 && deviceID == 1 && productID == 5 && installationID == 5 {
+					return true
+				} else if agingID == 1 && deviceID == 2 && productID == 6 && installationID == 6 {
+					return true
+				} else if agingID == 1 && deviceID == 3 && productID == 11 && installationID == 11 {
+					return true
+				} else if agingID == 1 && deviceID == 4 && productID == 12 && installationID == 12 {
+					return true
+				} else {
+					return false
+				}
 			} else {
 				return false
 			}
-		} else if venueCapacity == 2 {
-			if agingID == 1 && deviceID == 1 && productID == 5 && installationID == 5 {
-				return true
-			} else if agingID == 1 && deviceID == 2 && productID == 6 && installationID == 6 {
-				return true
+		} else if (venueType == 5 || venueType == 6) && roomID == 0 {
+			if venueCapacity == 1 {
+				if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
+					return true
+				} else if agingID == 2 && deviceID == 1 && productID == 2 && installationID == 2 {
+					return true
+				} else if agingID == 3 && deviceID == 1 && productID == 3 && installationID == 3 {
+					return true
+				} else if agingID == 1 && deviceID == 2 && productID == 4 && installationID == 4 {
+					return true
+				} else if agingID == 1 && deviceID == 3 && productID == 9 && installationID == 9 {
+					return true
+				} else if agingID == 1 && deviceID == 4 && productID == 10 && installationID == 10 {
+					return true
+				} else {
+					return false
+				}
+			} else {
+				return false
+			}
+		} else if venueType >= 7 && venueType <= 11 && roomID == 0 {
+			if venueCapacity == 2 {
+				if agingID == 1 && deviceID == 1 && productID == 5 && installationID == 5 {
+					return true
+				} else if agingID == 1 && deviceID == 2 && productID == 6 && installationID == 6 {
+					return true
+				} else if agingID == 1 && deviceID == 3 && productID == 11 && installationID == 11 {
+					return true
+				} else if agingID == 1 && deviceID == 4 && productID == 12 && installationID == 12 {
+					return true
+				} else {
+					return false
+				}
 			} else {
 				return false
 			}
 		} else {
 			return false
 		}
-	} else if (venueType == 5 || venueType == 6) && roomID == 0 {
-		if venueCapacity == 1 {
-			if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
-				return true
-			} else if agingID == 2 && deviceID == 1 && productID == 2 && installationID == 2 {
-				return true
-			} else if agingID == 3 && deviceID == 1 && productID == 3 && installationID == 3 {
-				return true
-			} else if agingID == 1 && deviceID == 2 && productID == 4 && installationID == 4 {
-				return true
-			} else {
-				return false
-			}
-		} else {
-			return false
-		}
-	} else if venueType >= 7 && venueType <= 11 && roomID == 0 {
-		if venueCapacity == 2 {
-			if agingID == 1 && deviceID == 1 && productID == 5 && installationID == 5 {
-				return true
-			} else if agingID == 1 && deviceID == 2 && productID == 6 && installationID == 6 {
-				return true
-			} else {
-				return false
-			}
-		} else {
-			return false
-		}
-	} else if venueType >= 12 && venueType <= 14 && venueCapacity == 0 && agingID == 1 && deviceID == 1 && productID == 7 && installationID == 7 && roomID == 1 {
-		return true
-	} else if venueType >= 15 && venueType <= 18 && venueCapacity == 0 && agingID == 1 && deviceID == 1 && productID == 8 && installationID == 8 && roomID == 2 {
-		return true
 	} else {
-		return false
+		if venueType >= 12 && venueType <= 14 && venueCapacity == 0 && agingID == 1 && roomID == 1 {
+			if deviceID == 1 && productID == 7 && installationID == 7 {
+				return true
+			} else if deviceID == 3 && productID == 13 && installationID == 13 {
+				return true
+			} else {
+				return false
+			}
+		} else if venueType >= 15 && venueType <= 18 && venueCapacity == 0 && agingID == 1 && roomID == 2 {
+			if deviceID == 1 && productID == 8 && installationID == 8 {
+				return true
+			} else if deviceID == 3 && productID == 14 && installationID == 14 {
+				return true
+			} else {
+				return false
+			}
+		} else {
+			return false
+		}
 	}
 }
 
@@ -1713,4 +1737,17 @@ func (c *Controller) calculateTotalPrice(venueType int64, productPrice, installa
 
 	return totalPrice
 
+}
+
+func (c *Controller) generateOrderNumber() (string, error) {
+	lastOrderNumber, err := c.order.GetLastOrderNumber()
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+
+	dateNow := time.Now().Format("060102")
+	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
+		lastOrderNumber.Number = 0
+	}
+	return "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7), nil
 }
