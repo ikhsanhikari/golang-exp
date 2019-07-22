@@ -1154,6 +1154,12 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 			OrderPaidAt:        sumorder.OrderPaidAt,
 			OrderFailedAt:      sumorder.OrderFailedAt,
 			OrderEmail:         sumorder.OrderEmail,
+			CompanyName:        sumorder.CompanyName,
+			CompanyAddress:     sumorder.CompanyAddress,
+			CompanyCity:        sumorder.CompanyCity,
+			CompanyProvince:    sumorder.CompanyProvince,
+			CompanyZip:         sumorder.CompanyZip,
+			CompanyEmail:       sumorder.CompanyEmail,
 			VenueName:          sumorder.VenueName,
 			VenueType:          sumorder.VenueType,
 			VenueAddress:       sumorder.VenueAddress,
@@ -1174,6 +1180,7 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 			LicenseNumber:      sumorder.LicenseNumber,
 			LicenseActiveDate:  sumorder.LicenseActiveDate,
 			LicenseExpiredDate: sumorder.LicenseExpiredDate,
+			EcertLastSentDate:  sumorder.EcertLastSentDate,
 		},
 	}
 	view.RenderJSONData(w, res, http.StatusOK)
@@ -1221,6 +1228,12 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 			OrderPaidAt:        sumorder.OrderPaidAt,
 			OrderFailedAt:      sumorder.OrderFailedAt,
 			OrderEmail:         sumorder.OrderEmail,
+			CompanyName:        sumorder.CompanyName,
+			CompanyAddress:     sumorder.CompanyAddress,
+			CompanyCity:        sumorder.CompanyCity,
+			CompanyProvince:    sumorder.CompanyProvince,
+			CompanyZip:         sumorder.CompanyZip,
+			CompanyEmail:       sumorder.CompanyEmail,
 			VenueName:          sumorder.VenueName,
 			VenueType:          sumorder.VenueType,
 			VenueAddress:       sumorder.VenueAddress,
@@ -1241,6 +1254,7 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 			LicenseNumber:      sumorder.LicenseNumber,
 			LicenseActiveDate:  sumorder.LicenseActiveDate,
 			LicenseExpiredDate: sumorder.LicenseExpiredDate,
+			EcertLastSentDate:  sumorder.EcertLastSentDate,
 		},
 	}
 	view.RenderJSONData(w, res, http.StatusOK)
@@ -1284,6 +1298,12 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 				OrderPaidAt:        sumorder.OrderPaidAt,
 				OrderFailedAt:      sumorder.OrderFailedAt,
 				OrderEmail:         sumorder.OrderEmail,
+				CompanyName:        sumorder.CompanyName,
+				CompanyAddress:     sumorder.CompanyAddress,
+				CompanyCity:        sumorder.CompanyCity,
+				CompanyProvince:    sumorder.CompanyProvince,
+				CompanyZip:         sumorder.CompanyZip,
+				CompanyEmail:       sumorder.CompanyEmail,
 				VenueName:          sumorder.VenueName,
 				VenueType:          sumorder.VenueType,
 				VenueAddress:       sumorder.VenueAddress,
@@ -1304,6 +1324,7 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 				LicenseNumber:      sumorder.LicenseNumber,
 				LicenseActiveDate:  sumorder.LicenseActiveDate,
 				LicenseExpiredDate: sumorder.LicenseExpiredDate,
+				EcertLastSentDate:  sumorder.EcertLastSentDate,
 			},
 		})
 	}

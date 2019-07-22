@@ -12,7 +12,8 @@ type (
 		Error string `json:"error"`
 	}
 	jsonDataResponse struct {
-		Data interface{} `json:"data"`
+		Data    interface{} `json:"data"`
+		HasNext bool        `json:"hasNext,omitempty"`
 	}
 )
 
@@ -63,6 +64,19 @@ func RenderJSONData(w http.ResponseWriter, data interface{}, statusCode int) {
 
 	response := jsonDataPool.Get().(*jsonDataResponse)
 	response.Data = data
+
+	w.WriteHeader(statusCode)
+	json.NewEncoder(w).Encode(response)
+	response.put()
+}
+
+func RenderJSONDataPage(w http.ResponseWriter, data interface{}, hasNext bool, statusCode int) {
+	h := w.Header()
+	h["Content-Type"] = mimeJSON[:]
+
+	response := jsonDataPool.Get().(*jsonDataResponse)
+	response.Data = data
+	response.HasNext = hasNext
 
 	w.WriteHeader(statusCode)
 	json.NewEncoder(w).Encode(response)

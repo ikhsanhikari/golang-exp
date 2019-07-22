@@ -696,10 +696,16 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
 	orders.order_id as order_id,
 	COALESCE(orders.order_number,'') as order_number,
     COALESCE(orders.total_price,0) as order_total_price,
-    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
-    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
-    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    orders.created_at as order_created_at,
+    orders.paid_at as order_paid_at,
+    orders.failed_at as order_failed_at,
     COALESCE(orders.email,'') as order_email,
+    COALESCE(comp.name,'') as company_name,
+    COALESCE(comp.address,'') as company_address,
+    COALESCE(comp.city,'') as company_city,
+    COALESCE(comp.province,'') as company_province,
+    COALESCE(comp.zip,'') as company_zip,
+    COALESCE(comp.email,'') as company_email,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
 	COALESCE(venues.address,'') as venue_address,
@@ -719,17 +725,23 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
 	COALESCE(orders.status,0) as order_status,
 	COALESCE(orders.open_payment_status,0) as open_payment_status,
     COALESCE(license.license_number,'') as license_number,
-    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
-    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+    license.active_date as license_active_date,
+    license.expired_date as license_expired_date,
+    ecertsent.last_sent_date as ecert_last_sent_date
 	from 
-	v2_subscriptions.mla_orders orders   
-	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
-	left join v2_subscriptions.mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
-	left join v2_subscriptions.mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
-	left join v2_subscriptions.mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
-	left join v2_subscriptions.mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
-	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
-	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
+	mla_orders orders   
+	left join mla_venues venues on orders.venue_id = venues.id
+	left join mla_company comp on venues.pt_id = comp.id
+	left join mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join mla_license license on orders.order_id = license.order_id
+	left join (select order_id, max(created_at) as last_sent_date 
+		from mla_email_log where deleted_at is null and email_type='ecert' 
+		and project_id= ? group by order_id) ecertsent 
+		on orders.order_id = ecertsent.order_id
 	where
 	orders.order_id = ? AND
 	orders.project_id = ? AND
@@ -737,7 +749,7 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
 	orders.deleted_at IS NULL
 	LIMIT 1
 	;
-	`, orderID, pid, uid)
+	`, pid, orderID, pid, uid)
 	return
 }
 
@@ -759,10 +771,16 @@ func (c *core) getLicenseSumByID(licNumber string, pid int64) (licsum SummaryOrd
 	orders.order_id as order_id,
 	COALESCE(orders.order_number,'') as order_number,
     COALESCE(orders.total_price,0) as order_total_price,
-    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
-    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
-    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    orders.created_at as order_created_at,
+    orders.paid_at as order_paid_at,
+    orders.failed_at as order_failed_at,
     COALESCE(orders.email,'') as order_email,
+    COALESCE(comp.name,'') as company_name,
+    COALESCE(comp.address,'') as company_address,
+    COALESCE(comp.city,'') as company_city,
+    COALESCE(comp.province,'') as company_province,
+    COALESCE(comp.zip,'') as company_zip,
+    COALESCE(comp.email,'') as company_email,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
 	COALESCE(venues.address,'') as venue_address,
@@ -782,23 +800,29 @@ func (c *core) getLicenseSumByID(licNumber string, pid int64) (licsum SummaryOrd
 	COALESCE(orders.status,0) as order_status,
 	COALESCE(orders.open_payment_status,0) as open_payment_status,
     COALESCE(license.license_number,'') as license_number,
-    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
-    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+    license.active_date as license_active_date,
+    license.expired_date as license_expired_date,
+    ecertsent.last_sent_date as ecert_last_sent_date
 	from 
 	mla_orders orders   
 	left join mla_venues venues on orders.venue_id = venues.id
+	left join mla_company comp on venues.pt_id = comp.id
 	left join mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
 	left join mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
 	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
 	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
 	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
 	left join mla_license license on orders.order_id = license.order_id
+	left join (select order_id, max(created_at) as last_sent_date 
+		from mla_email_log where deleted_at is null and email_type='ecert' 
+		and project_id= ? group by order_id) ecertsent 
+		on orders.order_id = ecertsent.order_id
 	where license.license_number = ? AND
 	license.project_id = ? AND
 	license.deleted_at IS NULL
 	LIMIT 1
 	;
-	`, licNumber, pid)
+	`, pid, licNumber, pid)
 	return
 }
 
@@ -820,15 +844,21 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	orders.order_id as order_id,
 	COALESCE(orders.order_number,'') as order_number,
     COALESCE(orders.total_price,0) as order_total_price,
-    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
-    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
-    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    orders.created_at as order_created_at,
+    orders.paid_at as order_paid_at,
+    orders.failed_at as order_failed_at,
     COALESCE(orders.email,'') as order_email,
+    COALESCE(comp.name,'') as company_name,
+    COALESCE(comp.address,'') as company_address,
+    COALESCE(comp.city,'') as company_city,
+    COALESCE(comp.province,'') as company_province,
+    COALESCE(comp.zip,'') as company_zip,
+    COALESCE(comp.email,'') as company_email,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
 	COALESCE(venues.address,'') as venue_address,
 	COALESCE(venues.city,'') as venue_city,
-	COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.province,'') as venue_province,
     COALESCE(venues.zip,'') as venue_zip,
     COALESCE(venues.capacity,0) as venue_capacity,
     COALESCE(venues.longitude,0) as venue_longitude,
@@ -843,23 +873,29 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	COALESCE(orders.status,0) as order_status,
 	COALESCE(orders.open_payment_status,0) as open_payment_status,
     COALESCE(license.license_number,'') as license_number,
-    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
-    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+    license.active_date as license_active_date,
+    license.expired_date as license_expired_date,
+    ecertsent.last_sent_date as ecert_last_sent_date
 	from 
-	v2_subscriptions.mla_orders orders   
-	left join v2_subscriptions.mla_venues venues on orders.venue_id = venues.id
-	left join v2_subscriptions.mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
-	left join v2_subscriptions.mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
-	left join v2_subscriptions.mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
-	left join v2_subscriptions.mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
-	left join v2_subscriptions.mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
-	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
+	mla_orders orders   
+	left join mla_venues venues on orders.venue_id = venues.id
+	left join mla_company comp on venues.pt_id = comp.id
+	left join mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join mla_license license on orders.order_id = license.order_id
+	left join (select order_id, max(created_at) as last_sent_date 
+		from mla_email_log where deleted_at is null and email_type='ecert' 
+		and project_id= ? group by order_id) ecertsent 
+		on orders.order_id = ecertsent.order_id
 	where
 	orders.project_id = ? AND
 	orders.created_by = ? AND
 	orders.deleted_at IS NULL
 	;
-	`, pid, uid)
+	`, pid, pid, uid)
 	return
 }
 
