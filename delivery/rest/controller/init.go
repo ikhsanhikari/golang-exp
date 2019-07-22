@@ -5,6 +5,7 @@ import (
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/city"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
@@ -17,6 +18,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
@@ -50,6 +52,8 @@ type Controller struct {
 	orderDetail    order_detail.ICore
 	admin          admin.ICore
 	company        company.ICore
+	city           city.ICore
+	province       province.ICore
 	emailLog       email_log.ICore
 }
 
@@ -74,6 +78,8 @@ func New(
 	orderDetail order_detail.ICore,
 	admin admin.ICore,
 	company company.ICore,
+	city city.ICore,
+	province province.ICore,
 	emailLog email_log.ICore,
 ) *Controller {
 	return &Controller{
@@ -96,6 +102,8 @@ func New(
 		orderDetail:    orderDetail,
 		admin:          admin,
 		company:        company,
+		city:           city,
+		province:       province,
 		emailLog:       emailLog,
 	}
 }
@@ -125,7 +133,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/calculate-order", c.auth.MustAuthorize(c.handleCalculateOrderPrice, "molanobar:orders.create"))
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
-	router.GET("/venue/:id", c.auth.MustAuthorize(c.handleGetByVenueID, "molanobar:venues.read"))
+	router.GET("/venues/detail", c.handleGetAllVenues)
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
 	router.PATCH("/venue/:id", c.auth.MustAuthorize(c.handlePatchVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
@@ -174,6 +182,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 
+	//router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
 	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmailECert, "molanobar:email.ecert"))
 
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
@@ -181,6 +190,13 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/companies", c.auth.MustAuthorize(c.handlePostCompany, "molanobar:companies.create"))
 	router.PATCH("/companies/:id", c.auth.MustAuthorize(c.handlePatchCompany, "molanobar:companies.update"))
 	router.DELETE("/companies/:id", c.auth.MustAuthorize(c.handleDeleteCompany, "molanobar:companies.delete"))
+
+	router.GET("/cities", c.handleGetAllCities)
+	router.GET("/cities/:id", c.handleGetCityByID)
+	router.GET("/province", c.handleGetAllProvinces)
+	router.GET("/province/:id", c.handleGetProvincesByID)
+
+	//router.GET("/pdf", c.handleBaseSertificatePdf)
 
 	//router.GET("/pdf", c.handleGetPdf1) //,"molanobar:email.ecert"))
 

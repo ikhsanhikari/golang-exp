@@ -36,4 +36,12 @@ type Venue struct {
 	LastUpdateBy                 string    `db:"last_update_by"`
 }
 
+type VenueAddress struct {
+	VenueName string `db:"venue_name"`
+	Address   string `db:"venue_address"`
+	City      string `db:"venue_city"`
+	Province  string `db:"venue_province"`
+	Zip       string `db:"venue_zip"`
+}
+
 type Venues []Venue

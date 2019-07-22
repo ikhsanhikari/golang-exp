@@ -15,21 +15,47 @@ import (
 )
 
 func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) {
+	getParam := r.URL.Query()
+	cityName := getParam.Get("city")
+	statusVenue := getParam.Get("status")
+	limitVal := getParam.Get("limit")
+	offsetVal := getParam.Get("offset")
+	var venues venue.Venues
+	var err error
+	limit := 9
+	offset := 0
 
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleGetAllVenues] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
+	if limitVal != "" {
+		limit, err = strconv.Atoi(limitVal)
 	}
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handleGetAllVenues] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+	if offsetVal != "" {
+		offset, err = strconv.Atoi(offsetVal)
+	}
+	offset = limit * offset
+	limit = limit + 1
+
+	if cityName != "" && statusVenue != "true" {
+		venues, err = c.venue.GetVenueByCity(10, cityName, limit, offset)
+	} else if statusVenue == "true" && cityName == "" {
+		venues, err = c.venue.GetVenueByStatus(10, limit, offset)
+	} else if cityName != "" && statusVenue == "true" {
+		venues, err = c.venue.GetVenueByCityID(10, cityName, limit, offset)
+	} else {
+		user, ok := authpassport.GetUser(r)
+		if !ok {
+			c.reporter.Errorf("[handleGetAllVenues] failed get user")
+			view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+			return
+		}
+		userID, ok := user["sub"]
+		if !ok {
+			c.reporter.Errorf("[handleGetAllVenues] failed get userID")
+			view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+			return
+		}
+		venues, err = c.venue.Select(10, fmt.Sprintf("%v", userID))
 	}
 
-	venues, err := c.venue.Select(10, fmt.Sprintf("%v", userID))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
@@ -69,66 +95,6 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 				LastUpdateBy:                 venue.LastUpdateBy,
 			},
 		})
-	}
-	view.RenderJSONData(w, res, http.StatusOK)
-}
-
-func (c *Controller) handleGetByVenueID(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-	if err != nil {
-		c.reporter.Warningf("[handleGetByVenueID] id must be integer, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleGetByVenueID] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handleGetByVenueID] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
-	}
-
-	venue, err := c.venue.Get(10, id, fmt.Sprintf("%v", userID))
-	if err != nil {
-		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
-		return
-	}
-	res := view.DataResponse{
-		ID:   id,
-		Type: "venues",
-		Attributes: view.VenueAttributes{
-			Id:                           venue.Id,
-			VenueId:                      venue.VenueId,
-			VenueType:                    venue.VenueType,
-			VenueName:                    venue.VenueName,
-			Address:                      venue.Address,
-			City:                         venue.City,
-			Province:                     venue.Province,
-			Zip:                          venue.Zip,
-			Capacity:                     venue.Capacity,
-			Facilities:                   venue.Facilities,
-			Longitude:                    venue.Longitude,
-			Latitude:                     venue.Latitude,
-			People:                       venue.People,
-			PtID:                         venue.PtID,
-			CreatedAt:                    venue.CreatedAt,
-			UpdatedAt:                    venue.UpdatedAt,
-			Status:                       venue.Status,
-			VenueCategory:                venue.VenueCategory,
-			PicName:                      venue.PicName,
-			PicContactNumber:             venue.PicContactNumber,
-			VenueTechnicianName:          venue.VenueTechnicianName,
-			VenueTechnicianContactNumber: venue.VenueTechnicianContactNumber,
-			VenuePhone:                   venue.VenuePhone,
-			CreatedBy:                    venue.CreatedBy,
-			LastUpdateBy:                 venue.LastUpdateBy,
-		},
 	}
 	view.RenderJSONData(w, res, http.StatusOK)
 }
