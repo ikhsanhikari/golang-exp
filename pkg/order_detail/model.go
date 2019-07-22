@@ -24,3 +24,13 @@ type OrderDetail struct {
 }
 
 type OrderDetails []OrderDetail
+
+type Detail struct {
+	ItemType    string  `db:"item_type"`
+	ItemID      int64   `db:"item_id"`
+	Description string  `db:"description"`
+	Amount      float64 `db:"amount"`
+	Quantity    int64   `db:"quantity"`
+}
+
+type Details []Detail
