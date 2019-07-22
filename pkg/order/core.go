@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
+	"strings"
 	"time"
 
 	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
@@ -51,6 +52,11 @@ func (c *core) Insert(order *Order) (err error) {
 	order.Status = 0
 	order.PaymentMethodID = c.paymentMethodID
 	order.OpenPaymentStatus = 0
+
+	if order.Quantity == 0 {
+		order.Quantity = 1
+	}
+
 	query := `
 	INSERT INTO mla_orders (
 		order_number,
@@ -123,12 +129,8 @@ func (c *core) Insert(order *Order) (err error) {
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
-	_ = c.deleteCache(redisKey)
+
+	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, 0, order.VenueID, order.Status, "")
 
 	return
 }
@@ -136,6 +138,11 @@ func (c *core) Insert(order *Order) (err error) {
 func (c *core) Update(order *Order) (err error) {
 	order.UpdatedAt = time.Now()
 	order.PaymentMethodID = c.paymentMethodID
+
+	if order.Quantity == 0 {
+		order.Quantity = 1
+	}
+
 	query := `
 		UPDATE
 			mla_orders
@@ -202,21 +209,8 @@ func (c *core) Update(order *Order) (err error) {
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
-	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
-	_ = c.deleteCache(redisKey)
-
-	if order.Status == 2 {
-		paidDate := order.PaidAt.Time.String()
-		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
-		_ = c.deleteCache(redisKey)
-	}
+	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, order.OrderID, order.VenueID, order.Status, order.PaidAt.Time.String())
 
 	return
 }
@@ -284,21 +278,7 @@ func (c *core) UpdateOrderStatus(order *Order) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
-	_ = c.deleteCache(redisKey)
-
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
-	_ = c.deleteCache(redisKey)
-
-	if order.Status == 2 {
-		paidDate := order.PaidAt.Time.String()
-		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
-		_ = c.deleteCache(redisKey)
-	}
+	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, order.OrderID, order.VenueID, order.Status, order.PaidAt.Time.String())
 
 	return
 }
@@ -347,21 +327,8 @@ func (c *core) UpdateOpenPaymentStatus(order *Order) (err error) {
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
-	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
-	_ = c.deleteCache(redisKey)
-
-	if order.Status == 2 {
-		paidDate := order.PaidAt.Time.String()
-		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
-		_ = c.deleteCache(redisKey)
-	}
+	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, order.OrderID, order.VenueID, order.Status, order.PaidAt.Time.String())
 
 	return
 }
@@ -409,21 +376,8 @@ func (c *core) Delete(order *Order) (err error) {
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.OrderID)
-	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
-	_ = c.deleteCache(redisKey)
-
-	if order.Status == 2 {
-		paidDate := order.PaidAt.Time.String()
-		redisKey := fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, order.ProjectID, order.CreatedBy, paidDate[:10])
-		_ = c.deleteCache(redisKey)
-	}
+	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, order.OrderID, order.VenueID, order.Status, order.PaidAt.Time.String())
 
 	return
 }
@@ -945,59 +899,6 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	return
 }
 
-func (c *core) selectFromCache() (orders Orders, err error) {
-	conn := c.redis.Get()
-	defer conn.Close()
-
-	b, err := redis.Bytes(conn.Do("GET"))
-	err = json.Unmarshal(b, &orders)
-	return
-}
-
-func (c *core) selectSumFromCache1() (sumorder SummaryOrder, err error) {
-	conn := c.redis.Get()
-	defer conn.Close()
-
-	b, err := redis.Bytes(conn.Do("GET"))
-	err = json.Unmarshal(b, &sumorder)
-	return
-}
-
-func (c *core) selectSumFromCache() (sumorders SummaryOrders, err error) {
-	conn := c.redis.Get()
-	defer conn.Close()
-
-	b, err := redis.Bytes(conn.Do("GET"))
-	err = json.Unmarshal(b, &sumorders)
-	return
-}
-
-func (c *core) getFromCache(key string) (order Order, err error) {
-	conn := c.redis.Get()
-	defer conn.Close()
-
-	b, err := redis.Bytes(conn.Do("GET", key))
-	err = json.Unmarshal(b, &order)
-	return
-}
-
-func (c *core) setToCache(key string, expired int, data []byte) (err error) {
-	conn := c.redis.Get()
-	defer conn.Close()
-
-	_, err = conn.Do("SET", key, data)
-	_, err = conn.Do("EXPIRE", key, expired)
-	return
-}
-
-func (c *core) deleteCache(key string) error {
-	conn := c.redis.Get()
-	defer conn.Close()
-
-	_, err := conn.Do("DEL", key)
-	return err
-}
-
 func (c *core) SelectAgentByUserID(userID string) (agent Agent, err error) {
 	if userID == "" {
 		return agent, nil
@@ -1099,12 +1000,106 @@ func (c *core) InsertByAgent(order *Order) (err error) {
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:%s:orders", redisPrefix, order.ProjectID, order.CreatedBy)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, order.ProjectID, order.CreatedBy, order.BuyerID)
-	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, order.ProjectID, order.CreatedBy, order.VenueID)
-	_ = c.deleteCache(redisKey)
+
+	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, 0, order.VenueID, order.Status, "")
 
 	return
+}
+
+func (c *core) selectFromCache() (orders Orders, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &orders)
+	return
+}
+
+func (c *core) selectSumFromCache1() (sumorder SummaryOrder, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &sumorder)
+	return
+}
+
+func (c *core) selectSumFromCache() (sumorders SummaryOrders, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET"))
+	err = json.Unmarshal(b, &sumorders)
+	return
+}
+
+func (c *core) getFromCache(key string) (order Order, err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	b, err := redis.Bytes(conn.Do("GET", key))
+	err = json.Unmarshal(b, &order)
+	return
+}
+
+func (c *core) setToCache(key string, expired int, data []byte) (err error) {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	_, err = conn.Do("SET", key, data)
+	_, err = conn.Do("EXPIRE", key, expired)
+	return
+}
+
+func (c *core) deleteCache(key string) error {
+	conn := c.redis.Get()
+	defer conn.Close()
+
+	_, err := conn.Do("DEL", key)
+	return err
+}
+
+func (c *core) clearRedis(projectID int64, uidUser, uidAdmin string, orderID, venueID int64, orderStatus int16, paidDate string) {
+
+	redisKeys := []string{
+		fmt.Sprintf("%s:%d:%s:orders", redisPrefix, projectID, uidUser),
+		fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, projectID, uidUser, uidUser),
+		fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, projectID, uidUser, venueID),
+		fmt.Sprintf("%s:%d:%s:sumorders-userid", redisPrefix, projectID, uidUser),
+	}
+
+	if orderID != 0 {
+		redisKeys = append(redisKeys,
+			fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, projectID, uidUser, orderID),
+			fmt.Sprintf("%s:%d:%s:sumorder-id:%d", redisPrefix, projectID, uidUser, orderID),
+		)
+	}
+
+	if orderStatus == 2 {
+		redisKeys = append(redisKeys, fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, projectID, uidUser, paidDate[:10]))
+	}
+
+	if strings.Compare(uidUser, uidAdmin) == 1 {
+		redisKeys = append(redisKeys,
+			fmt.Sprintf("%s:%d:%s:orders", redisPrefix, projectID, uidAdmin),
+			fmt.Sprintf("%s:%d:%s:orders-buyerid:%s", redisPrefix, projectID, uidAdmin, uidUser),
+			fmt.Sprintf("%s:%d:%s:orders-venueid:%d", redisPrefix, projectID, uidAdmin, venueID),
+			fmt.Sprintf("%s:%d:%s:sumorders-userid", redisPrefix, projectID, uidAdmin),
+		)
+
+		if orderID != 0 {
+			redisKeys = append(redisKeys,
+				fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, projectID, uidAdmin, orderID),
+				fmt.Sprintf("%s:%d:%s:sumorder-id:%d", redisPrefix, projectID, uidAdmin, orderID),
+			)
+		}
+
+		if orderStatus == 2 {
+			redisKeys = append(redisKeys, fmt.Sprintf("%s:%d:%s:orders-paiddate:%s", redisPrefix, projectID, uidAdmin, paidDate[:10]))
+		}
+	}
+
+	for _, redisKey := range redisKeys {
+		_ = c.deleteCache(redisKey)
+	}
 }
