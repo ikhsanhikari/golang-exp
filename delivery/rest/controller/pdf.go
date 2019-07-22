@@ -8,7 +8,8 @@ import (
 	"net/http"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
-	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
 )
 
@@ -103,19 +104,19 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
 	return b64InvoicePdf
 }
 
-func (c *Controller) handleGetDataSertificate(orderid int64, userID string) string {
+func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (string, order.SummaryOrder) {
 
 	t := "pdf_sertificate.tmpl"
 	pdf := "sertificate.pdf"
 
-	sumorder, err := c.order.SelectSummaryOrderByID(150, 10, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo") //fmt.Sprintf("%v", userID))
+	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, userID) //fmt.Sprintf("%v", userID))
 	if err != nil {
 		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
-		return "0"
+		return "0", sumorder
 	}
 	if sumorder.LicenseNumber == "" {
 		c.reporter.Errorf("[handleSertificatePDF] License number not found, err: %s", err.Error())
-		return "0"
+		return "0", sumorder
 	}
 
 	b64Png := c.email.GetBase64Png(sumorder.LicenseNumber)
@@ -129,7 +130,7 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) stri
 		"QrBase64":  b64Png,
 	}
 	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
-	return b64SertificatePdf
+	return b64SertificatePdf, sumorder
 
 }
 

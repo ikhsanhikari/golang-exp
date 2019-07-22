@@ -10,34 +10,37 @@ import (
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 )
 
-func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request) {
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handleGetAllCompanies] failed get user")
+		c.reporter.Errorf("[handlePostEmailECert] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
 		return
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetAllCompanies] failed get userID")
+		c.reporter.Errorf("[handlePostEmailECert] failed get userID")
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
 		return
 	}
+
+	// lakukan pengecekan userid harus admin
+
 	var params reqEmail
 	err := form.Bind(&params, r)
 	if err != nil {
-		c.reporter.Warningf("[handlePostDevice] id must be integer, err: %s", err.Error())
+		c.reporter.Warningf("[handlePostEmailECert] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content := c.handleGetDataSertificate(params.OrderID, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	content, sumorder := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
 	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
 	emailReq := email.EmailRequest{
-		Subject: "subject is nothing !!!",
-		To:      params.To,
+		Subject: "Mola Live Arena E-Certificate",
+		To:      sumorder.CompanyEmail,
 		HTML:    "<h1>ISI PESAN !!!!!!!</h1>",
 		From:    "no-reply@molalivearena.com",
-		Text:    "Empty Text ........",
+		Text:    "...",
 		Attachments: []email.Attachment{
 			{
 				Content:     content,
@@ -51,7 +54,7 @@ func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
 	errEmail := c.email.Send(emailReq)
 	msg := c.handlePostEmailLog(fmt.Sprintf("%v", userID), params.OrderID, emailReq.To, "ecert")
 	if msg == "0" {
-		c.reporter.Errorf("[handlePostEmailLog], err save email_log: %s", errEmail.Error())
+		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
 	}
 	if errEmail != nil {
 		c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
