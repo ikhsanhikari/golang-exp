@@ -20,6 +20,7 @@ type ICore interface {
 	Update(admin *Admin, userID string) (err error)
 	Delete(pid int64, id int64, userID string) (err error)
 	SelectByUserID(pid int64, userID string) (admins Admins, err error)
+	Check(userID string) (admin Admin, err error)
 }
 
 // core contains db client
@@ -255,6 +256,32 @@ func (c *core) Delete(pid int64, id int64, userID string) (err error) {
 	redisKey = fmt.Sprintf("%s:admins:%s", redisPrefix, userID)
 	_ = c.deleteCache(redisKey)
 
+	return
+}
+
+func (c *core) Check(userID string) (admin Admin, err error) {
+	if userID == "" {
+		return admin, nil
+	}
+	err = c.db.Get(&admin, `
+		SELECT
+			id,
+			user_id,
+			status,
+			created_at,
+			updated_at,
+			deleted_at,
+			project_id,
+			created_by,
+			last_update_by
+		FROM
+			mla_admin
+		WHERE
+			user_id = ? 
+			AND deleted_at IS NULL
+			AND status = 1
+		LIMIT 1
+	`, userID)
 	return
 }
 
