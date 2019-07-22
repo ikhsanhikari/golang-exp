@@ -19,7 +19,7 @@ type Venue struct {
 	Facilities                   string    `db:"facilities"`
 	Longitude                    float64   `db:"longitude"`
 	Latitude                     float64   `db:"latitude"`
-	People                       int64     `db:"people"`
+	People                       null.Int  `db:"people"`
 	PtID                         int64     `db:"pt_id"`
 	CreatedAt                    time.Time `db:"created_at"`
 	UpdatedAt                    time.Time `db:"updated_at"`

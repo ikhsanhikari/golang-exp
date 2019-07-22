@@ -12,6 +12,7 @@ import (
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
+	null "gopkg.in/guregu/null.v3"
 )
 
 func (c *Controller) handleGetAllVenuesAvailable(w http.ResponseWriter, r *http.Request) {
@@ -86,9 +87,9 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	offset = limit * offset
 	limit = limit + 1
 
-	if cityName != "" && statusVenue != "true" {
+	if cityName != "all" && statusVenue != "true" {
 		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
-	} else if cityName == "all" && statusVenue == "true" {
+	} else if cityName == "all" && statusVenue == "" {
 		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
 	} else if statusVenue == "true" && cityName == "" {
 		venues, err = c.venue.GetVenueByStatus(projectID, limit, offset)
@@ -151,6 +152,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		})
 	}
 	var hasNext bool
+	hasNext = false
 	if len(res) > 9 {
 		hasNext = true
 		view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
@@ -239,7 +241,7 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		Facilities:                   params.Facilities,
 		Longitude:                    params.Longitude,
 		Latitude:                     params.Latitude,
-		People:                       params.People,
+		People:                       null.IntFrom(params.People),
 		PtID:                         params.PtID,
 		VenueCategory:                params.VenueCategory,
 		PicName:                      params.PicName,
@@ -319,7 +321,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		Facilities:                   params.Facilities,
 		Longitude:                    params.Longitude,
 		Latitude:                     params.Latitude,
-		People:                       params.People,
+		People:                       null.IntFrom(params.People),
 		PtID:                         params.PtID,
 		VenueCategory:                params.VenueCategory,
 		PicName:                      params.PicName,
