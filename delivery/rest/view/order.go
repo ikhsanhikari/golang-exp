@@ -53,9 +53,15 @@ type SumOrderAttributes struct {
 	OrderNumber        string    `db:"order_number"`
 	OrderTotalPrice    float64   `db:"order_total_price"`
 	OrderCreatedAt     time.Time `db:"order_created_at"`
-	OrderPaidAt        time.Time `db:"order_paid_at"`
-	OrderFailedAt      time.Time `db:"order_failed_at"`
+	OrderPaidAt        null.Time `db:"order_paid_at"`
+	OrderFailedAt      null.Time `db:"order_failed_at"`
 	OrderEmail         string    `db:"order_email"`
+	CompanyName        string    `db:"company_name"`
+	CompanyAddress     string    `db:"company_address"`
+	CompanyCity        string    `db:"company_city"`
+	CompanyProvince    string    `db:"company_province"`
+	CompanyZip         string    `db:"company_zip"`
+	CompanyEmail       string    `db:"company_email"`
 	VenueName          string    `db:"venue_name"`
 	VenueType          int64     `db:"venue_type"`
 	VenueAddress       string    `db:"venue_address"`
@@ -74,10 +80,16 @@ type SumOrderAttributes struct {
 	OrderStatus        int64     `db:"order_status"`
 	OpenPaymentStatus  int64     `db:"open_payment_status"`
 	LicenseNumber      string    `db:"license_number"`
-	LicenseActiveDate  time.Time `db:"license_active_date"`
-	LicenseExpiredDate time.Time `db:"license_expired_date"`
+	LicenseActiveDate  null.Time `db:"license_active_date"`
+	LicenseExpiredDate null.Time `db:"license_expired_date"`
+	EcertLastSentDate  null.Time `db:"ecert_last_sent_date"`
 }
 
 type PaymentAttributes struct {
 	URL string `json:"url"`
+}
+
+type CalculatePriceAttributes struct {
+	TotalPrice float64     `json:"total_price"`
+	Details    interface{} `json:"details"`
 }
