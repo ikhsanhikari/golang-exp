@@ -88,9 +88,11 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 
 	if cityName != "" && statusVenue != "true" {
 		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
+	} else if cityName == "all" && statusVenue == "true" {
+		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
 	} else if statusVenue == "true" && cityName == "" {
 		venues, err = c.venue.GetVenueByStatus(projectID, limit, offset)
-	} else if cityName != "" && statusVenue == "true" {
+	} else if cityName != "all" && statusVenue == "true" {
 		venues, err = c.venue.GetVenueByCityID(projectID, cityName, limit, offset)
 	} else {
 		user, ok := authpassport.GetUser(r)
@@ -253,6 +255,10 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		c.reporter.Infof("[handlePostVenue] error insert Venue repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post Venue", http.StatusInternalServerError)
 		return
+	}
+	_, err = c.venue.GetCity(params.City)
+	if err != sql.ErrNoRows {
+		err = c.venue.InsertVenueAvailable(params.City)
 	}
 
 	view.RenderJSONData(w, venue, http.StatusOK)
