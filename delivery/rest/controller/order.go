@@ -97,18 +97,12 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//generate order number
-	lastOrderNumber, err := c.order.GetLastOrderNumber()
+	orderNumber, err := c.generateOrderNumber()
 	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrder] failed get last order number, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get last order number", http.StatusInternalServerError)
+		c.reporter.Errorf("[handlePostOrder] Failed generate order number, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed generate order number", http.StatusInternalServerError)
 		return
 	}
-
-	dateNow := time.Now().Format("060102")
-	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
-		lastOrderNumber.Number = 0
-	}
-	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
 
 	//calculate total price
 	totalPrice := c.calculateTotalPrice(venue.VenueType, product.Price, installation.Price, room.Price, float64(params.RoomQuantity))
@@ -261,24 +255,18 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	lastOrderNumber, err := c.order.GetLastOrderNumber()
-	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrderByAgent] failed get last order number, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get last order number", http.StatusInternalServerError)
-		return
-	}
-
-	dateNow := time.Now().Format("060102")
-	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
-		lastOrderNumber.Number = 0
-	}
-	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
-
 	valid := isOrderValid(venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 	if !valid {
 		c.reporter.Errorf("[handlePostOrderByAgent] Order not valid, venueType: %d, capacity: %d, agingID: %d, deviceID: %d, productID: %d, installationID: %d, roomID: %d, roomQuantity: %d",
 			venue.VenueType, venue.Capacity, params.AgingID, params.DeviceID, params.ProductID, params.InstallationID, params.RoomID, params.RoomQuantity)
 		view.RenderJSONError(w, "Order not valid", http.StatusBadRequest)
+		return
+	}
+
+	orderNumber, err := c.generateOrderNumber()
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrderByAgent] Failed generate order number, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed generate order number", http.StatusInternalServerError)
 		return
 	}
 
@@ -1749,4 +1737,17 @@ func (c *Controller) calculateTotalPrice(venueType int64, productPrice, installa
 
 	return totalPrice
 
+}
+
+func (c *Controller) generateOrderNumber() (string, error) {
+	lastOrderNumber, err := c.order.GetLastOrderNumber()
+	if err != nil && err != sql.ErrNoRows {
+		return "", err
+	}
+
+	dateNow := time.Now().Format("060102")
+	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
+		lastOrderNumber.Number = 0
+	}
+	return "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7), nil
 }
