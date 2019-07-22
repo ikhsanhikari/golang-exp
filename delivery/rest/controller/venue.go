@@ -14,12 +14,64 @@ import (
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
 
+func (c *Controller) handleGetAllVenuesAvailable(w http.ResponseWriter, r *http.Request) {
+	var venues venue.VenueAvailables
+	var err error
+	venues, err = c.venue.GetVenueAvailable()
+
+	if err != nil {
+		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponse, 0, len(venues))
+	for _, venue := range venues {
+		res = append(res, view.DataResponse{
+			Type: "city available",
+			ID:   venue.Id,
+			Attributes: view.VenueAvailableAttributes{
+				Id:       venue.Id,
+				CityName: venue.CityName,
+			},
+		})
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleGetAllVenuesGroupAvailable(w http.ResponseWriter, r *http.Request) {
+	var venues venue.VenueGroupAvailables
+	var err error
+	projectID := int64(10)
+	venues, err = c.venue.GetVenueGroupAvailable(projectID)
+
+	if err != nil {
+		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponse, 0, len(venues))
+	for _, venue := range venues {
+		if venue.CityName != "" {
+			res = append(res, view.DataResponse{
+				Type: "Venue Group City",
+				Attributes: view.VenueGroupAvailableAttributes{
+					CityName: venue.CityName,
+				},
+			})
+		}
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) {
 	getParam := r.URL.Query()
 	cityName := getParam.Get("city")
 	statusVenue := getParam.Get("status")
 	limitVal := getParam.Get("limit")
 	offsetVal := getParam.Get("offset")
+	projectID := int64(10)
 	var venues venue.Venues
 	var err error
 	limit := 9
@@ -35,11 +87,11 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	limit = limit + 1
 
 	if cityName != "" && statusVenue != "true" {
-		venues, err = c.venue.GetVenueByCity(10, cityName, limit, offset)
+		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
 	} else if statusVenue == "true" && cityName == "" {
-		venues, err = c.venue.GetVenueByStatus(10, limit, offset)
+		venues, err = c.venue.GetVenueByStatus(projectID, limit, offset)
 	} else if cityName != "" && statusVenue == "true" {
-		venues, err = c.venue.GetVenueByCityID(10, cityName, limit, offset)
+		venues, err = c.venue.GetVenueByCityID(projectID, cityName, limit, offset)
 	} else {
 		user, ok := authpassport.GetUser(r)
 		if !ok {

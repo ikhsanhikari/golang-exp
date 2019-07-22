@@ -19,6 +19,8 @@ type ICore interface {
 	GetVenueByCity(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
 	GetVenueByStatus(pid int64, limit int, offset int) (venues Venues, err error)
 	GetVenueByCityID(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
+	GetVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error)
+	GetVenueAvailable() (venues VenueAvailables, err error)
 
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
@@ -281,6 +283,43 @@ func (c *core) getFromDBVenueCityID(cityName string, pid int64, limit int, offse
 			project_id = ?
 			LIMIT ?, ?; 
 	`, pid, cityName, offset, limit)
+
+	return
+}
+
+func (c *core) GetVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error) {
+	venues, err = c.getFromDBVenueGroupAvailable(pid)
+	return
+}
+
+func (c *core) getFromDBVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error) {
+	err = c.db.Select(&venues, `
+		SELECT
+			city
+		FROM
+			mla_venues
+		WHERE		
+			project_id = ?
+		GROUP BY city
+	`, pid)
+
+	return
+}
+
+func (c *core) GetVenueAvailable() (venues VenueAvailables, err error) {
+	venues, err = c.getFromDBVenueAvailable()
+	return
+}
+
+func (c *core) getFromDBVenueAvailable() (venues VenueAvailables, err error) {
+	err = c.db.Select(&venues, `
+		SELECT
+			id,city_name
+		FROM
+			mla_venues_available
+		WHERE		
+			status = 1
+	`)
 
 	return
 }
