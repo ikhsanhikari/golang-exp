@@ -108,7 +108,8 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 			view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 			return
 		}
-		venues, err = c.venue.Select(10, fmt.Sprintf("%v", userID))
+	
+		venues, err = c.venue.Select(10,fmt.Sprintf("%v", userID))
 	}
 
 	if err != nil {
@@ -116,6 +117,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
 		return
 	}
+	
 
 	res := make([]view.DataResponse, 0, len(venues))
 	for _, venue := range venues {
@@ -140,11 +142,8 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 				Longitude:                    venue.Longitude,
 				Latitude:                     venue.Latitude,
 				Status:                       venue.Status,
-				VenueCategory:                venue.VenueCategory,
 				PicName:                      venue.PicName,
 				PicContactNumber:             venue.PicContactNumber,
-				VenueTechnicianName:          venue.VenueTechnicianName,
-				VenueTechnicianContactNumber: venue.VenueTechnicianContactNumber,
 				VenuePhone:                   venue.VenuePhone,
 				CreatedBy:                    venue.CreatedBy,
 				LastUpdateBy:                 venue.LastUpdateBy,
@@ -243,7 +242,6 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		Latitude:                     params.Latitude,
 		People:                       null.IntFrom(params.People),
 		PtID:                         params.PtID,
-		VenueCategory:                params.VenueCategory,
 		PicName:                      params.PicName,
 		PicContactNumber:             params.PicContactNumber,
 		VenueTechnicianName:          params.VenueTechnicianName,
@@ -353,15 +351,11 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 			Facilities:                   params.Facilities,
 			Longitude:                    params.Longitude,
 			Latitude:                     params.Latitude,
-			People:                       params.People,
 			PtID:                         params.PtID,
 			UpdatedAt:                    time.Now(),
 			Status:                       1,
-			VenueCategory:                params.VenueCategory,
 			PicName:                      params.PicName,
 			PicContactNumber:             params.PicContactNumber,
-			VenueTechnicianName:          params.VenueTechnicianName,
-			VenueTechnicianContactNumber: params.VenueTechnicianContactNumber,
 			VenuePhone:                   params.VenuePhone,
 			LastUpdateBy:                 fmt.Sprintf("%v", userID),
 		},
