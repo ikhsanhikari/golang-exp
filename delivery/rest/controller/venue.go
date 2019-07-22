@@ -68,11 +68,11 @@ func (c *Controller) handleGetAllVenuesGroupAvailable(w http.ResponseWriter, r *
 
 func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) {
 	getParam := r.URL.Query()
-	//cityName := getParam.Get("city")
-	//statusVenue := getParam.Get("status")
+	cityName := getParam.Get("city")
+	statusVenue := getParam.Get("status")
 	limitVal := getParam.Get("limit")
 	offsetVal := getParam.Get("offset")
-	//projectID := int64(10)
+	projectID := int64(10)
 	var venues venue.Venues
 	var err error
 	limit := 9
@@ -87,15 +87,15 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	offset = limit * offset
 	limit = limit + 1
 
-	// if cityName != "all" && statusVenue != "true" {
-	// 	venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
-	// } else if cityName == "all" && statusVenue == "" {
-	// 	venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
-	// } else if statusVenue == "true" && cityName == "" {
-	// 	venues, err = c.venue.GetVenueByStatus(projectID, limit, offset)
-	// } else if cityName != "all" && statusVenue == "true" {
-	// 	venues, err = c.venue.GetVenueByCityID(projectID, cityName, limit, offset)
-	// } else {
+	if cityName != "all" && statusVenue != "true" {
+		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
+	} else if cityName == "all" && statusVenue == "" {
+		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
+	} else if statusVenue == "true" && cityName == "" {
+		venues, err = c.venue.GetVenueByStatus(projectID, limit, offset)
+	} else if cityName != "all" && statusVenue == "true" {
+		venues, err = c.venue.GetVenueByCityID(projectID, cityName, limit, offset)
+	} else {
 		user, ok := authpassport.GetUser(r)
 		if !ok {
 			c.reporter.Errorf("[handleGetAllVenues] failed get user")
@@ -110,7 +110,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		}
 	
 		venues, err = c.venue.Select(10,fmt.Sprintf("%v", userID))
-	//}
+	}
 
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
