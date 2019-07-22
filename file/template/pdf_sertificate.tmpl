@@ -1,0 +1,76 @@
+<html>
+    <head>
+        <base href="http://www.example.com/">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+        <style>
+            body {
+                background-image: url("https://1.bp.blogspot.com/-Nqi7DkXfayM/XTSTBS-8zSI/AAAAAAAAAS8/XtbsC3TTFjshyRDh4uSemgQPn0qJIC0WgCLcBGAs/s1600/Screen%2BShot%2B2019-07-21%2Bat%2B23.28.50.png");
+                background-repeat: no-repeat;
+                background-size: contain;
+            }
+            .h {
+                font-size: 20px;
+                color: white;
+            }
+            .columns1 {
+                float: left;
+                width: 40%;
+                padding: 15px;
+            }
+            .columns {
+                float: left;
+                width: 60%;
+                padding: 15px;
+            }
+            .row::after {
+                content: "";
+                clear: both;
+                display: table;
+            }
+            img {
+                border-radius: 8px;
+            }
+        </style>
+    </head>
+    <body>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <p align="center" style="color: white;font-size: 48px;font-family: cursive">{{ .VenueName }}</p>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <br>
+        <div class="row">
+            <div class="columns1" >
+                <img src="data:image/png;base64,{{.QrBase64}}" width="100px" height="100px" align ="right"/>
+             </div>
+            <div class="columns" >
+                <p class="h">Venue Name<br>{{ .Address }}<br>{{ .City }} &nbsp{{ .Province }}&nbsp,&nbsp {{ .Zip }}</p>
+            </div>
+        </div>
+    </body>
+</html>
