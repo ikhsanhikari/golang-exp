@@ -183,6 +183,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/admins/:id", c.auth.MustAuthorize(c.handlePatchAdmin, "molanobar:admins.update"))
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
+	router.GET("/admins-check", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 
 	//router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
 	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmailECert, "molanobar:email.ecert"))
