@@ -1,28 +1,26 @@
 package controller
 
 import (
-	"fmt"
 	"net/http"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
-	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 )
 
 func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleGetAllCompanies] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handleGetAllCompanies] failed get userID")
-		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
-		return
-	}
+	// user, ok := authpassport.GetUser(r)
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllCompanies] failed get user")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
+	// 	return
+	// }
+	// userID, ok := user["sub"]
+	// if !ok {
+	// 	c.reporter.Errorf("[handleGetAllCompanies] failed get userID")
+	// 	view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
+	// 	return
+	// }
 	var params reqEmail
 	err := form.Bind(&params, r)
 	if err != nil {
@@ -49,7 +47,7 @@ func (c *Controller) handlePostEmail(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailLog(fmt.Sprintf("%v", userID), params.OrderID, emailReq.To, "ecert")
+	msg := c.handlePostEmailLog("kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo", params.OrderID, emailReq.To, "ecert")
 	if msg == "0" {
 		c.reporter.Errorf("[handlePostEmailLog], err save email_log: %s", errEmail.Error())
 	}
