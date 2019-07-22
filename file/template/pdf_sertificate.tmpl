@@ -4,7 +4,7 @@
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
         <style>
             body {
-                background-image: url("https://1.bp.blogspot.com/-Nqi7DkXfayM/XTSTBS-8zSI/AAAAAAAAAS8/XtbsC3TTFjshyRDh4uSemgQPn0qJIC0WgCLcBGAs/s1600/Screen%2BShot%2B2019-07-21%2Bat%2B23.28.50.png");
+                background-image: url("data:image/png;base64, {{.Background}}");
                 background-repeat: no-repeat;
                 background-size: contain;
             }
@@ -69,7 +69,7 @@
                 <img src="data:image/png;base64,{{.QrBase64}}" width="100px" height="100px" align ="right"/>
              </div>
             <div class="columns" >
-                <p class="h">Venue Name<br>{{ .Address }}<br>{{ .City }} &nbsp{{ .Province }}&nbsp,&nbsp {{ .Zip }}</p>
+                <p class="h">{{ .VenueName }}<br>{{ .Address }}<br>{{ .City }} &nbsp{{ .Province }}&nbsp,&nbsp {{ .Zip }}</p>
             </div>
         </div>
     </body>

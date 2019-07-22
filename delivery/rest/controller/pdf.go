@@ -5,7 +5,9 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
+	"net/http"
 
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
@@ -117,17 +119,27 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 		return "0", sumorder
 	}
 
-	b64Png := c.email.GetBase64Png(sumorder.LicenseNumber)
+	b64Png, backBase64 := c.email.GetBase64Png(sumorder.LicenseNumber)
+	if b64Png == "0" && backBase64 == "backBase64" {
+		c.reporter.Errorf("[handleSertificatePDF] Error base64 from image")
+		return "0", sumorder
+	}
 
 	templateData := map[string]interface{}{
-		"VenueName": sumorder.VenueName,
-		"Address":   sumorder.VenueAddress,
-		"Zip":       sumorder.VenueZip,
-		"City":      sumorder.VenueCity,
-		"Province":  sumorder.VenueProvince,
-		"QrBase64":  b64Png,
+		"VenueName":  sumorder.VenueName,
+		"Address":    sumorder.VenueAddress,
+		"Zip":        sumorder.VenueZip,
+		"City":       sumorder.VenueCity,
+		"Province":   sumorder.VenueProvince,
+		"QrBase64":   b64Png,
+		"Background": backBase64,
 	}
 	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
 	return b64SertificatePdf, sumorder
 
+}
+
+func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
+	a, _ := c.handleGetDataSertificate(150, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	view.RenderJSONData(w, a, http.StatusOK)
 }
