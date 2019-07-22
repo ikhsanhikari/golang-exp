@@ -45,3 +45,14 @@ type VenueAddress struct {
 }
 
 type Venues []Venue
+
+type VenueAvailable struct {
+	Id       int64  `db:"id"`
+	CityName string `db:"city_name"`
+}
+type VenueAvailables []VenueAvailable
+
+type VenueGroupAvailable struct {
+	CityName string `db:"city"`
+}
+type VenueGroupAvailables []VenueGroupAvailable
