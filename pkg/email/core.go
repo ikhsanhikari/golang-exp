@@ -1,6 +1,7 @@
 package email
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/base64"
 	"encoding/json"
@@ -18,7 +19,7 @@ import (
 // ICore is the interface
 type ICore interface {
 	Send(emailRequest EmailRequest) (err error)
-	GetBase64Png(licenseNum string) string
+	GetBase64Png(licenseNum string) (string, string)
 }
 
 // core contains db client
@@ -73,36 +74,45 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 }
 
 var (
-	input  = flag.String("i", "file/img/logo.png", "Logo to be placed over QR code")
+	input  = flag.String("i", "file/img/c.png", "Logo to be placed over QR code")
 	output = flag.String("o", "qr.png", "Output filename")
 	size   = flag.Int("size", 600, "Image size in pixels")
 )
 
-func (c *core) GetBase64Png(licenseNum string) string {
+func (c *core) GetBase64Png(licenseNum string) (string, string) {
 
 	qrCode := c.urlQrCode + licenseNum
 
-	fmt.Println(qrCode)
-
 	file, err := os.Open(*input)
-	errcheck(err, "Failed to open logo:")
+	if err != nil {
+		return "0", "0"
+	}
 	defer file.Close()
 
 	logo, _, err := image.Decode(file)
-	errcheck(err, "Failed to decode PNG with logo:")
-
+	if err != nil {
+		return "0", "0"
+	}
 	qr, err := qrlogo.Encode(qrCode, logo, *size)
-	errcheck(err, "Failed to encode QR:")
-
+	if err != nil {
+		return "0", "0"
+	}
 	png := qr.Bytes()
 	b64Png := base64.StdEncoding.EncodeToString(png)
 
-	return b64Png
-}
+	file, err = os.Open("file/img/back.png") // a QR code image
 
-func errcheck(err error, str string) {
 	if err != nil {
-		fmt.Println(str, err)
-		os.Exit(1)
+		return "0", "0"
 	}
+
+	fInfo, _ := file.Stat()
+	var size int64 = fInfo.Size()
+	buf := make([]byte, size)
+
+	fReader := bufio.NewReader(file)
+	fReader.Read(buf)
+
+	b64Pd := base64.StdEncoding.EncodeToString(buf)
+	return b64Png, b64Pd
 }
