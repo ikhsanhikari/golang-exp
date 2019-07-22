@@ -133,7 +133,7 @@ func main() {
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
 
-	coreEmail := email.Init(cfg.EmailBaseURL, cfg.urlQrCode, tokenGeneratorEmail)
+	coreEmail := email.Init(cfg.EmailBaseURL, cfg.UrlQrCode, tokenGeneratorEmail)
 	reporter.Infoln("/pkg/email successfully initialized")
 
 	coreTemplate := template.New("./file/template")
