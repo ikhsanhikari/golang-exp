@@ -111,11 +111,9 @@ func (c *core) getFromDB(id int64, pid int64) (venueType VenueType, err error) {
 
 func (c *core) GetByCommercialType(pid int64, id int64) (venueTypes VenueTypes, err error) {
 	redisKey := fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, pid, id)
-	fmt.Println("save ", redisKey)
 	venueTypes, err = c.selectFromCache(redisKey)
 	if err != nil {
 		venueTypes, err = c.GetByCommercialTypeID(pid, id)
-		fmt.Println(venueTypes)
 		if err != sql.ErrNoRows {
 			byt, _ := jsoniter.ConfigFastest.Marshal(venueTypes)
 			_ = c.setToCache(redisKey, 300, byt)
@@ -285,8 +283,6 @@ func (c *core) Update(venueType *VenueType, comId int64) (err error) {
 	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, venueType.ProjectID)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, venueType.ProjectID, comId)
-	fmt.Println("last ", redisKey)
-	fmt.Println("now ", venueType.CommercialTypeID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -335,7 +331,6 @@ func (c *core) Delete(pid int64, id int64, comId int64) (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println(comId)
 	redisKey := fmt.Sprintf("%s:%d:venueType:%d", redisPrefix, 10, id)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, 10)

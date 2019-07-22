@@ -6,11 +6,14 @@ import (
 	"syscall"
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
+	admin "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
+	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
+	emailLog "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email_log"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
 	installation "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
 	license "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
@@ -22,7 +25,6 @@ import (
 	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	venueType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
-	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	authpassport "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	token_generator "git.sstv.io/lib/go/go-auth-api.git/gettoken"
 	conn "git.sstv.io/lib/go/gojunkyard.git/conn"
@@ -131,7 +133,7 @@ func main() {
 	corePayment := payment.Init(cfg.PaymentBaseURL, tokenGenerator)
 	reporter.Infoln("/pkg/payment successfully initialized")
 
-	coreEmail := email.Init(cfg.EmailBaseURL, tokenGeneratorEmail)
+	coreEmail := email.Init(cfg.EmailBaseURL, cfg.urlQrCode, tokenGeneratorEmail)
 	reporter.Infoln("/pkg/email successfully initialized")
 
 	coreTemplate := template.New("./file/template")
@@ -140,8 +142,14 @@ func main() {
 	coreOrderDetail := orderDetail.Init(db, redis, coreAuditTrail)
 	reporter.Infoln("/pkg/order_detail successfully initialized")
 
+	coreAdmin := admin.Init(db, redis)
+	reporter.Infoln("/pkg/admin successfully initialized")
+
 	coreCompany := company.Init(db, redis)
 	reporter.Infoln("/pkg/company successfully initialized")
+
+	coreEmailLog := emailLog.Init(db, redis)
+	reporter.Infoln("/pkg/email_log successfully initialized")
 
 	var (
 		server = webserver.New(&cfg.Webserver)
@@ -163,7 +171,9 @@ func main() {
 			coreEmail,
 			coreTemplate,
 			coreOrderDetail,
+			coreAdmin,
 			coreCompany,
+			coreEmailLog,
 		)
 	)
 	rest.Register(server.Router())

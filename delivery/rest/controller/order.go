@@ -43,7 +43,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	venue, err := c.venue.Get(projectID, params.VenueID)
+	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -149,6 +149,166 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//set response
+	res := view.DataResponseOrder{
+		ID:   insertOrder.OrderID,
+		Type: "order",
+		Attributes: view.OrderAttributes{
+			OrderNumber:       insertOrder.OrderNumber,
+			BuyerID:           insertOrder.BuyerID,
+			VenueID:           insertOrder.VenueID,
+			DeviceID:          insertOrder.DeviceID,
+			ProductID:         insertOrder.ProductID,
+			InstallationID:    insertOrder.InstallationID,
+			Quantity:          insertOrder.Quantity,
+			AgingID:           insertOrder.AgingID,
+			RoomID:            insertOrder.RoomID,
+			RoomQuantity:      insertOrder.RoomQuantity,
+			TotalPrice:        insertOrder.TotalPrice,
+			PaymentMethodID:   insertOrder.PaymentMethodID,
+			PaymentFee:        insertOrder.PaymentFee,
+			Status:            insertOrder.Status,
+			CreatedAt:         insertOrder.CreatedAt,
+			CreatedBy:         insertOrder.CreatedBy,
+			UpdatedAt:         insertOrder.UpdatedAt,
+			LastUpdateBy:      insertOrder.LastUpdateBy,
+			DeletedAt:         insertOrder.DeletedAt,
+			PendingAt:         insertOrder.PendingAt,
+			PaidAt:            insertOrder.PaidAt,
+			FailedAt:          insertOrder.FailedAt,
+			ProjectID:         insertOrder.ProjectID,
+			Email:             insertOrder.Email,
+			OpenPaymentStatus: insertOrder.OpenPaymentStatus,
+		},
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Request) {
+	projectID := int64(10)
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePostOrder] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+
+	_, err := c.order.SelectAgentByUserID(fmt.Sprintf("%v", userID))
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] failed get agent")
+		view.RenderJSONError(w, "failed get agent", http.StatusUnauthorized)
+		return
+	}
+
+	var params reqOrder
+	err = form.Bind(&params, r)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
+		return
+	}
+
+	device, err := c.device.Get(projectID, params.DeviceID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Device Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
+		return
+	}
+
+	product, err := c.product.Get(projectID, params.ProductID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Product Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
+		return
+	}
+
+	installation, err := c.installation.Get(params.InstallationID, projectID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Installation Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
+		return
+	}
+
+	var room room.Room
+	if params.RoomID != 0 && params.RoomQuantity != 0 {
+		room, err = c.room.Get(projectID, params.RoomID)
+		if err == sql.ErrNoRows {
+			c.reporter.Errorf("[handlePostOrder] Room Not Found, err: %s", err.Error())
+			view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
+			return
+		}
+	}
+
+	aging, err := c.aging.Get(params.AgingID, projectID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] Aging Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
+		return
+	}
+
+	lastOrderNumber, err := c.order.GetLastOrderNumber()
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrder] failed get last order number, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get last order number", http.StatusInternalServerError)
+		return
+	}
+
+	dateNow := time.Now().Format("060102")
+	if strings.Compare(dateNow, lastOrderNumber.Date) == 1 {
+		lastOrderNumber.Number = 0
+	}
+	orderNumber := "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7)
+
+	totalPrice := c.calculateTotalPrice(venue.VenueType, product.Price, installation.Price, room.Price, float64(params.RoomQuantity))
+
+	insertOrder := order.Order{
+		OrderNumber:    orderNumber,
+		BuyerID:        fmt.Sprintf("%v", userID),
+		VenueID:        params.VenueID,
+		DeviceID:       params.DeviceID,
+		ProductID:      params.ProductID,
+		InstallationID: params.InstallationID,
+		Quantity:       params.Quantity,
+		AgingID:        params.AgingID,
+		RoomID:         params.RoomID,
+		RoomQuantity:   params.RoomQuantity,
+		TotalPrice:     totalPrice,
+		PaymentFee:     params.PaymentFee,
+		CreatedBy:      fmt.Sprintf("%v", userID),
+		LastUpdateBy:   fmt.Sprintf("%v", userID),
+		ProjectID:      projectID,
+		Email:          params.Email,
+	}
+
+	err = c.order.InsertByAgent(&insertOrder)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] failed post order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed post order", http.StatusInternalServerError)
+		return
+	}
+
+	err = c.insertOrderDetail(insertOrder, device, product, installation, room, aging)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] failed post order details, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed post order details", http.StatusInternalServerError)
+		return
+	}
+
 	res := view.DataResponseOrder{
 		ID:   insertOrder.OrderID,
 		Type: "order",
@@ -354,7 +514,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//validasi foreign key
-	venue, err := c.venue.Get(projectID, params.VenueID)
+	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -1016,6 +1176,73 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *http.Request) {
+	var (
+		_id = router.GetParam(r, "id")
+	)
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+	// harus diganti dengan pengecekan user checker
+	fmt.Println(userID)
+
+	sumorder, err := c.order.GetLicenseByIDForChecker(_id, 10)
+	if err != nil {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] sum order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Sum Order not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get sum order, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get sum order", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponseOrder{
+		ID:   sumorder.OrderID,
+		Type: "sum_order",
+		Attributes: view.SumOrderAttributes{
+			OrderNumber:        sumorder.OrderNumber,
+			OrderTotalPrice:    sumorder.OrderTotalPrice,
+			OrderCreatedAt:     sumorder.OrderCreatedAt,
+			OrderPaidAt:        sumorder.OrderPaidAt,
+			OrderFailedAt:      sumorder.OrderFailedAt,
+			OrderEmail:         sumorder.OrderEmail,
+			VenueName:          sumorder.VenueName,
+			VenueType:          sumorder.VenueType,
+			VenueAddress:       sumorder.VenueAddress,
+			VenueProvince:      sumorder.VenueProvince,
+			VenueZip:           sumorder.VenueZip,
+			VenueCapacity:      sumorder.VenueCapacity,
+			VenueLongitude:     sumorder.VenueLongitude,
+			VenueLatitude:      sumorder.VenueLatitude,
+			VenueCategory:      sumorder.VenueCategory,
+			DeviceName:         sumorder.DeviceName,
+			ProductName:        sumorder.ProductName,
+			InstallationName:   sumorder.InstallationName,
+			RoomName:           sumorder.RoomName,
+			RoomQty:            sumorder.RoomQty,
+			AgingName:          sumorder.AgingName,
+			OrderStatus:        sumorder.OrderStatus,
+			OpenPaymentStatus:  sumorder.OpenPaymentStatus,
+			LicenseNumber:      sumorder.LicenseNumber,
+			LicenseActiveDate:  sumorder.LicenseActiveDate,
+			LicenseExpiredDate: sumorder.LicenseExpiredDate,
+		},
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.Request) {
 	user, ok := authpassport.GetUser(r)
 	if !ok {
@@ -1305,7 +1532,20 @@ func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	venue, err := c.venue.Get(projectID, params.VenueID)
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleCalculateOrderPrice] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handleCalculateOrderPrice] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+
+	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleCalculateOrderPrice] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)

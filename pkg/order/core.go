@@ -24,6 +24,7 @@ type ICore interface {
 
 	Get(id int64, pid int64, uid string) (order Order, err error)
 	GetLastOrderNumber() (lastOrderNumber LastOrderNumber, err error)
+	GetLicenseByIDForChecker(LicNumber string, pid int64) (sumorder SummaryOrder, err error)
 
 	Select(pid int64, uid string) (orders Orders, err error)
 	SelectByBuyerID(buyerID string, pid int64, uid string) (orders Orders, err error)
@@ -31,6 +32,8 @@ type ICore interface {
 	SelectByPaidDate(paidDate string, pid int64, uid string) (orders Orders, err error)
 	SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error)
 	SelectSummaryOrderByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error)
+	SelectAgentByUserID(userID string) (agent Agent, err error)
+	InsertByAgent(order *Order) (err error)
 }
 
 // core contains db client
@@ -730,11 +733,72 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
 	where
 	orders.order_id = ? AND
 	orders.project_id = ? AND
-	orders.buyer_id = ? AND
+	orders.created_by = ? AND
 	orders.deleted_at IS NULL
 	LIMIT 1
 	;
 	`, orderID, pid, uid)
+	return
+}
+
+func (c *core) GetLicenseByIDForChecker(licNumber string, pid int64) (licsum SummaryOrder, err error) {
+	redisKey := fmt.Sprintf("%s:%d:licorder-id:%s", redisPrefix, pid, licNumber)
+
+	licsum, err = c.selectSumFromCache1()
+	if err != nil {
+		licsum, err = c.getLicenseSumByID(licNumber, pid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(licsum)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
+
+func (c *core) getLicenseSumByID(licNumber string, pid int64) (licsum SummaryOrder, err error) {
+	err = c.db.Get(&licsum, `
+	select
+	orders.order_id as order_id,
+	COALESCE(orders.order_number,'') as order_number,
+    COALESCE(orders.total_price,0) as order_total_price,
+    COALESCE(orders.created_at,TIMESTAMP('1001-01-01')) as order_created_at,
+    COALESCE(orders.paid_at,TIMESTAMP('1001-01-01')) as order_paid_at,
+    COALESCE(orders.failed_at,TIMESTAMP('1001-01-01')) as order_failed_at,
+    COALESCE(orders.email,'') as order_email,
+	COALESCE(venues.venue_name,'') as venue_name,
+    COALESCE(venues.venue_type,0) as venue_type,
+	COALESCE(venues.address,'') as venue_address,
+	COALESCE(venues.city,'') as venue_city,
+    COALESCE(venues.province,'') as venue_province,
+    COALESCE(venues.zip,'') as venue_zip,
+    COALESCE(venues.capacity,0) as venue_capacity,
+    COALESCE(venues.longitude,0) as venue_longitude,
+    COALESCE(venues.latitude,0) as venue_latitude,
+    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(devices.description,'') as device_name,
+	COALESCE(product.description,'') as product_name,
+	COALESCE(installation.description,'') as installation_name,
+	COALESCE(room.description,'') as room_name,
+    COALESCE(room.quantity,0) as room_qty,
+	COALESCE(aging.description,'') as aging_name,
+	COALESCE(orders.status,0) as order_status,
+	COALESCE(orders.open_payment_status,0) as open_payment_status,
+    COALESCE(license.license_number,'') as license_number,
+    COALESCE(license.active_date,TIMESTAMP('1001-01-01')) as license_active_date,
+    COALESCE(license.expired_date,TIMESTAMP('1001-01-01')) as license_expired_date
+	from 
+	mla_orders orders   
+	left join mla_venues venues on orders.venue_id = venues.id
+	left join mla_order_details devices on orders.order_id = devices.order_id and devices.item_type='device'
+	left join mla_order_details product on orders.order_id = product.order_id and product.item_type='product'
+	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
+	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
+	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
+	left join mla_license license on orders.order_id = license.order_id
+	where license.license_number = ? AND
+	license.project_id = ? AND
+	license.deleted_at IS NULL
+	LIMIT 1
+	;
+	`, licNumber, pid)
 	return
 }
 
@@ -792,10 +856,117 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	left join v2_subscriptions.mla_license license on orders.order_id = license.order_id
 	where
 	orders.project_id = ? AND
-	orders.buyer_id = ? AND
+	orders.created_by = ? AND
 	orders.deleted_at IS NULL
 	;
 	`, pid, uid)
+	return
+}
+
+func (c *core) SelectAgentByUserID(userID string) (agent Agent, err error) {
+	if userID == "" {
+		return agent, nil
+	}
+	err = c.db.Get(&agent, `
+		SELECT
+			id,
+			user_id,
+			status,
+			created_at,
+			created_by,
+			project_id,
+			updated_at,
+			last_update_by
+		FROM
+			mla_admin
+		WHERE
+			user_id = ?
+		LIMIT 1
+	`, userID)
+	return
+}
+
+func (c *core) InsertByAgent(order *Order) (err error) {
+	order.CreatedAt = time.Now()
+	order.UpdatedAt = order.CreatedAt
+	order.Status = 4
+	order.PaymentMethodID = c.paymentMethodID
+	order.OpenPaymentStatus = 0
+	query := `
+	INSERT INTO mla_orders (
+		order_number,
+		buyer_id,
+		venue_id,
+		device_id,
+		product_id,
+		installation_id,
+		quantity,
+		aging_id,
+		room_id,
+		room_quantity,
+		total_price,
+		payment_method_id,
+		payment_fee,
+		status,
+		created_at,
+		created_by,
+		updated_at,
+		last_update_by,
+		project_id,
+		email,
+		open_payment_status
+	) VALUES (
+		?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
+	)`
+
+	args := []interface{}{
+		order.OrderNumber,
+		order.BuyerID,
+		order.VenueID,
+		order.DeviceID,
+		order.ProductID,
+		order.InstallationID,
+		order.Quantity,
+		order.AgingID,
+		order.RoomID,
+		order.RoomQuantity,
+		order.TotalPrice,
+		order.PaymentMethodID,
+		order.PaymentFee,
+		order.Status,
+		order.CreatedAt,
+		order.CreatedBy,
+		order.UpdatedAt,
+		order.LastUpdateBy,
+		order.ProjectID,
+		order.Email,
+		order.OpenPaymentStatus,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	order.OrderID, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    order.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_orders",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
+
+	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, 0, order.VenueID, order.Status, "")
+
 	return
 }
 

@@ -3,10 +3,9 @@ package controller
 import (
 	"bytes"
 	"database/sql"
-	"net/http"
 	"encoding/base64"
 	"fmt"
-
+	"net/http"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"github.com/SebastiaanKlippert/go-wkhtmltopdf"
@@ -18,13 +17,44 @@ return 0 to failed get Data
 return 1 to failed get template
 */
 
-func (c *Controller) handleBasePdf(id int64, userID string) string {
-	var totPrice int64
-
-	t, err := c.template.Get("pdf_invoice.tmpl")
+func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp string, nameFile string, orientation string) string {
+	t, err := c.template.Get(tmp)
 	if err != nil {
 		return "1"
 	}
+
+	buff := bytes.NewBuffer([]byte{})
+	err = t.Execute(buff, templateData)
+	if err != nil {
+		c.reporter.Errorf("[handlePDF] Failed execute pdf, err: %s", err.Error())
+		return "1"
+	}
+
+	pdfBuffer := bytes.NewBuffer([]byte{})
+	gen, err := wkhtmltopdf.NewPDFGenerator()
+	if err != nil {
+		c.reporter.Errorf("[handlePDF] Failed generate pdf, err: %s", err.Error())
+		return "1"
+	}
+
+	if orientation == "Landscape" {
+		gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+	}
+	gen.SetOutput(pdfBuffer)
+	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
+	gen.Create()
+
+	b := pdfBuffer.Bytes()
+	b64Pdf := base64.StdEncoding.EncodeToString(b)
+
+	return b64Pdf
+}
+
+func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
+	var totPrice int64
+
+	t := "pdf_invoice.tmpl"
+	pdf := "invoice.pdf"
 
 	order, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
@@ -68,79 +98,42 @@ func (c *Controller) handleBasePdf(id int64, userID string) string {
 		"BalanceDue":        ac.FormatMoney(totPrice),
 	}
 
-	buff := bytes.NewBuffer([]byte{})
-	err = t.Execute(buff, templateData)
-	if err != nil {
-		c.reporter.Errorf("[handlePDF] Failed execute pdf, err: %s", err.Error())
-		return "1"
-	}
+	b64InvoicePdf := c.handleBasePdf(templateData, t, pdf, "Potrait")
 
-	pdfBuffer := bytes.NewBuffer([]byte{})
-	gen, err := wkhtmltopdf.NewPDFGenerator()
-	if err != nil {
-		c.reporter.Errorf("[handlePDF] Failed generate pdf, err: %s", err.Error())
-		return "1"
-	}
-	gen.SetOutput(pdfBuffer)
-	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
-	gen.Create()
-
-	b := pdfBuffer.Bytes()
-	b64Pdf := base64.StdEncoding.EncodeToString(b)
-
-	return b64Pdf
+	return b64InvoicePdf
 }
 
-func (c *Controller) handleBaseSertificatePdf(w http.ResponseWriter, r *http.Request){
-	t, err := c.template.Get("pdf_sertificate.tmpl")
+func (c *Controller) handleGetDataSertificate(orderid int64, userID string) string {
+
+	t := "pdf_sertificate.tmpl"
+	pdf := "sertificate.pdf"
+
+	sumorder, err := c.order.SelectSummaryOrderByID(150, 10, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo") //fmt.Sprintf("%v", userID))
 	if err != nil {
-		return 
+		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
+		return "0"
 	}
-	sumorder, err := c.order.SelectSummaryOrderByID(153, 10, "RxHeyqVsEndVAUo2EBA4VBQWp207OO")//fmt.Sprintf("%v", userID))
-    if err != nil {
-        c.reporter.Errorf("[handleGetSumOrderByID] sum order not found, err: %s", err.Error())
-        view.RenderJSONError(w, "Sum Order not found", http.StatusNotFound)
-        return
+	if sumorder.LicenseNumber == "" {
+		c.reporter.Errorf("[handleSertificatePDF] License number not found, err: %s", err.Error())
+		return "0"
 	}
-	
-	b64Png := c.template.GetBase64Png(sumorder.LicenseNumber)
-	fmt.Println(b64Png)
+
+	b64Png := c.email.GetBase64Png(sumorder.LicenseNumber)
+
 	templateData := map[string]interface{}{
-		"VenueName"		:   sumorder.VenueName,
-		"Address"		:   sumorder.VenueAddress,
-		"Zip"			:   sumorder.VenueZip,
-		"City"			:   sumorder.VenueCity,
-		"Province"		:   sumorder.VenueProvince,
-		"QrBase64"		:	b64Png,
+		"VenueName": sumorder.VenueName,
+		"Address":   sumorder.VenueAddress,
+		"Zip":       sumorder.VenueZip,
+		"City":      sumorder.VenueCity,
+		"Province":  sumorder.VenueProvince,
+		"QrBase64":  b64Png,
 	}
-
-
-	buff := bytes.NewBuffer([]byte{})
-	err = t.Execute(buff, templateData)
-	if err != nil {
-		view.RenderJSONError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-
-	gen, err := wkhtmltopdf.NewPDFGenerator()
-	if err != nil {
-		view.RenderJSONError(w, http.StatusText(http.StatusInternalServerError), http.StatusInternalServerError)
-		return
-	}
-	gen.SetOutput(w)
-	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
-	gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
-
-	w.Header().Set("Content-Type", "application/pdf")
-	w.Header().Set("Content-Disposition", "attachment; filename=\"sertificate.pdf\"")
-	gen.Create()
+	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
+	return b64SertificatePdf
 
 }
 
 func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
-	view.RenderJSONData(w, c.handleBasePdf(153,"RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
+	//view.RenderJSONData(w, c.handleGetDataInvoice(153, "RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
+	view.RenderJSONData(w, c.handleGetDataSertificate(150, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo"), http.StatusOK)
 }
-
-
-
-
