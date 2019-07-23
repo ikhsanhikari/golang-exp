@@ -1251,19 +1251,19 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.Request) {
 	getParam := r.URL.Query()
 	limitVal := getParam.Get("limit")
-	offsetVal := getParam.Get("offset")
+	offsetVal := getParam.Get("page")
 	pagination := getParam.Get("pagination")
 	var err error
 	var sumorders order.SummaryOrders
-	offset := 0
+	offset := 1
 	limit := 15
-
 	if limitVal != "" {
 		limit, err = strconv.Atoi(limitVal)
 	}
 	if offsetVal != "" {
 		offset, err = strconv.Atoi(offsetVal)
 	}
+	offset = offset - 1
 	offset = limit * offset
 	limit = limit + 1
 
@@ -1347,9 +1347,10 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 			},
 		})
 	}
+	limit = limit - 1
 	var hasNext bool
 	hasNext = false
-	if len(res) > 15 {
+	if len(res) > limit {
 		hasNext = true
 		//view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 	}
