@@ -71,12 +71,12 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	cityName := getParam.Get("city")
 	statusVenue := getParam.Get("status")
 	limitVal := getParam.Get("limit")
-	offsetVal := getParam.Get("offset")
+	offsetVal := getParam.Get("page")
 	projectID := int64(10)
 	var venues venue.Venues
 	var err error
 	limit := 9
-	offset := 0
+	offset := 1
 
 	if limitVal != "" {
 		limit, err = strconv.Atoi(limitVal)
@@ -84,6 +84,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	if offsetVal != "" {
 		offset, err = strconv.Atoi(offsetVal)
 	}
+	offset = offset - 1
 	offset = limit * offset
 	limit = limit + 1
 
@@ -108,8 +109,8 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 			view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 			return
 		}
-	
-		venues, err = c.venue.Select(10,fmt.Sprintf("%v", userID))
+
+		venues, err = c.venue.Select(10, fmt.Sprintf("%v", userID))
 	}
 
 	if err != nil {
@@ -117,7 +118,6 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
 		return
 	}
-	
 
 	res := make([]view.DataResponse, 0, len(venues))
 	for _, venue := range venues {
@@ -125,39 +125,43 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 			Type: "venues",
 			ID:   venue.Id,
 			Attributes: view.VenueAttributes{
-				Id:                           venue.Id,
-				VenueId:                      venue.VenueId,
-				VenueType:                    venue.VenueType,
-				VenueName:                    venue.VenueName,
-				Address:                      venue.Address,
-				City:                         venue.City,
-				Province:                     venue.Province,
-				Zip:                          venue.Zip,
-				Capacity:                     venue.Capacity,
-				Facilities:                   venue.Facilities,
-				PtID:                         venue.PtID,
-				CreatedAt:                    venue.CreatedAt,
-				UpdatedAt:                    venue.UpdatedAt,
-				DeletedAt:                    venue.DeletedAt,
-				Longitude:                    venue.Longitude,
-				Latitude:                     venue.Latitude,
-				Status:                       venue.Status,
-				PicName:                      venue.PicName,
-				PicContactNumber:             venue.PicContactNumber,
-				VenuePhone:                   venue.VenuePhone,
-				CreatedBy:                    venue.CreatedBy,
-				LastUpdateBy:                 venue.LastUpdateBy,
+				Id:               venue.Id,
+				VenueId:          venue.VenueId,
+				VenueType:        venue.VenueType,
+				VenueName:        venue.VenueName,
+				Address:          venue.Address,
+				City:             venue.City,
+				Province:         venue.Province,
+				Zip:              venue.Zip,
+				Capacity:         venue.Capacity,
+				Facilities:       venue.Facilities,
+				PtID:             venue.PtID,
+				CreatedAt:        venue.CreatedAt,
+				UpdatedAt:        venue.UpdatedAt,
+				DeletedAt:        venue.DeletedAt,
+				Longitude:        venue.Longitude,
+				Latitude:         venue.Latitude,
+				Status:           venue.Status,
+				PicName:          venue.PicName,
+				PicContactNumber: venue.PicContactNumber,
+				VenuePhone:       venue.VenuePhone,
+				CreatedBy:        venue.CreatedBy,
+				LastUpdateBy:     venue.LastUpdateBy,
 			},
 		})
 	}
 	var hasNext bool
 	hasNext = false
-	if len(res) > 9 {
+	limit = limit - 1
+
+	if len(res) > limit {
 		hasNext = true
-		view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
-	} else {
-		view.RenderJSONData(w, res, http.StatusOK)
+		//view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 	}
+	//else {
+	//view.RenderJSONData(w, res, http.StatusOK)
+	//}
+	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 
 }
 
@@ -339,25 +343,25 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		ID:   id,
 		Type: "venues",
 		Attributes: view.VenueAttributes{
-			Id:                           id,
-			VenueId:                      params.VenueId,
-			VenueType:                    params.VenueType,
-			VenueName:                    params.VenueName,
-			Address:                      params.Address,
-			City:                         params.City,
-			Province:                     params.Province,
-			Zip:                          params.Zip,
-			Capacity:                     params.Capacity,
-			Facilities:                   params.Facilities,
-			Longitude:                    params.Longitude,
-			Latitude:                     params.Latitude,
-			PtID:                         params.PtID,
-			UpdatedAt:                    time.Now(),
-			Status:                       1,
-			PicName:                      params.PicName,
-			PicContactNumber:             params.PicContactNumber,
-			VenuePhone:                   params.VenuePhone,
-			LastUpdateBy:                 fmt.Sprintf("%v", userID),
+			Id:               id,
+			VenueId:          params.VenueId,
+			VenueType:        params.VenueType,
+			VenueName:        params.VenueName,
+			Address:          params.Address,
+			City:             params.City,
+			Province:         params.Province,
+			Zip:              params.Zip,
+			Capacity:         params.Capacity,
+			Facilities:       params.Facilities,
+			Longitude:        params.Longitude,
+			Latitude:         params.Latitude,
+			PtID:             params.PtID,
+			UpdatedAt:        time.Now(),
+			Status:           1,
+			PicName:          params.PicName,
+			PicContactNumber: params.PicContactNumber,
+			VenuePhone:       params.VenuePhone,
+			LastUpdateBy:     fmt.Sprintf("%v", userID),
 		},
 	}
 
