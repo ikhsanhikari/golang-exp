@@ -35,6 +35,9 @@ WORKDIR /$CI_PROJECT_NAME
 RUN apk --update add wkhtmltopdf xvfb ttf-freefont fontconfig dbus
 COPY --from=builder /$CI_PROJECT_NAME/$CI_PROJECT_NAME ./app
 COPY --from=certs /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
+COPY wkhtmltox.so.0.12.5 /usr/lib/libwkhtmltox.so.0.12.5
+COPY wkhtmltopdf /usr/bin/wkhtmltopdf
+COPY wkhtmltoimage /usr/bin/wkhtmltoimage
 # Add dummy .env file
 COPY .env.sample .env
 COPY file file
