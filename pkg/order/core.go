@@ -34,7 +34,6 @@ type ICore interface {
 	SelectSummaryOrdersByUserIDPagination(pid int64, uid string, limit int64, offset int64) (sumorders SummaryOrders, err error)
 	SelectSummaryOrderByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error)
 	SelectAgentByUserID(userID string) (agent Agent, err error)
-	InsertByAgent(order *Order) (err error)
 }
 
 // core contains db client
@@ -50,7 +49,6 @@ const redisPrefix = "molanobar-v1"
 func (c *core) Insert(order *Order) (err error) {
 	order.CreatedAt = time.Now()
 	order.UpdatedAt = order.CreatedAt
-	order.Status = 0
 	order.PaymentMethodID = c.paymentMethodID
 	order.OpenPaymentStatus = 0
 
@@ -994,90 +992,6 @@ func (c *core) SelectAgentByUserID(userID string) (agent Agent, err error) {
 			user_id = ?
 		LIMIT 1
 	`, userID)
-	return
-}
-
-func (c *core) InsertByAgent(order *Order) (err error) {
-	order.CreatedAt = time.Now()
-	order.UpdatedAt = order.CreatedAt
-	order.Status = 4
-	order.PaymentMethodID = c.paymentMethodID
-	order.OpenPaymentStatus = 0
-	query := `
-	INSERT INTO mla_orders (
-		order_number,
-		buyer_id,
-		venue_id,
-		device_id,
-		product_id,
-		installation_id,
-		quantity,
-		aging_id,
-		room_id,
-		room_quantity,
-		total_price,
-		payment_method_id,
-		payment_fee,
-		status,
-		created_at,
-		created_by,
-		updated_at,
-		last_update_by,
-		project_id,
-		email,
-		open_payment_status
-	) VALUES (
-		?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?
-	)`
-
-	args := []interface{}{
-		order.OrderNumber,
-		order.BuyerID,
-		order.VenueID,
-		order.DeviceID,
-		order.ProductID,
-		order.InstallationID,
-		order.Quantity,
-		order.AgingID,
-		order.RoomID,
-		order.RoomQuantity,
-		order.TotalPrice,
-		order.PaymentMethodID,
-		order.PaymentFee,
-		order.Status,
-		order.CreatedAt,
-		order.CreatedBy,
-		order.UpdatedAt,
-		order.LastUpdateBy,
-		order.ProjectID,
-		order.Email,
-		order.OpenPaymentStatus,
-	}
-	queryTrail := auditTrail.ConstructLogQuery(query, args...)
-	tx, err := c.db.Beginx()
-	if err != nil {
-		return err
-	}
-	defer tx.Rollback()
-	res, err := tx.Exec(query, args...)
-	order.OrderID, err = res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	//Add Logs
-	dataAudit := auditTrail.AuditTrail{
-		UserID:    order.CreatedBy,
-		Query:     queryTrail,
-		TableName: "mla_orders",
-	}
-	c.auditTrail.Insert(tx, &dataAudit)
-	err = tx.Commit()
-	if err != nil {
-		return err
-	}
-
-	c.clearRedis(order.ProjectID, order.CreatedBy, order.LastUpdateBy, 0, order.VenueID, order.Status, "")
-
 	return
 }
 
