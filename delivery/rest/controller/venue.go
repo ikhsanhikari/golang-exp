@@ -155,10 +155,12 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	hasNext = false
 	if len(res) > 9 {
 		hasNext = true
-		view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
-	} else {
-		view.RenderJSONData(w, res, http.StatusOK)
+		//view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 	}
+	//else {
+	//view.RenderJSONData(w, res, http.StatusOK)
+	//}
+	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 
 }
 
