@@ -17,7 +17,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
 		return
 	}
-	userID, ok := user["sub"]
+	userID, ok := user["sub"].(string)
 	if !ok {
 		c.reporter.Errorf("[handlePostEmailECert] failed get userID")
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
@@ -52,7 +52,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailLog("kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo", params.OrderID, emailReq.To, "ecert")
+	msg := c.handlePostEmailLog(userID, params.OrderID, emailReq.To, "ecert")
 	if msg == "0" {
 		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
 	}
