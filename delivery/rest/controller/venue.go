@@ -12,6 +12,7 @@ import (
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
+	null "gopkg.in/guregu/null.v3"
 )
 
 func (c *Controller) handleGetAllVenuesAvailable(w http.ResponseWriter, r *http.Request) {
@@ -70,12 +71,12 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	cityName := getParam.Get("city")
 	statusVenue := getParam.Get("status")
 	limitVal := getParam.Get("limit")
-	offsetVal := getParam.Get("offset")
+	offsetVal := getParam.Get("page")
 	projectID := int64(10)
 	var venues venue.Venues
 	var err error
 	limit := 9
-	offset := 0
+	offset := 1
 
 	if limitVal != "" {
 		limit, err = strconv.Atoi(limitVal)
@@ -83,14 +84,17 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	if offsetVal != "" {
 		offset, err = strconv.Atoi(offsetVal)
 	}
+	offset = offset - 1
 	offset = limit * offset
 	limit = limit + 1
 
-	if cityName != "" && statusVenue != "true" {
+	if cityName != "all" && statusVenue != "true" {
+		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
+	} else if cityName == "all" && statusVenue == "" {
 		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
 	} else if statusVenue == "true" && cityName == "" {
 		venues, err = c.venue.GetVenueByStatus(projectID, limit, offset)
-	} else if cityName != "" && statusVenue == "true" {
+	} else if cityName != "all" && statusVenue == "true" {
 		venues, err = c.venue.GetVenueByCityID(projectID, cityName, limit, offset)
 	} else {
 		user, ok := authpassport.GetUser(r)
@@ -105,6 +109,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 			view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 			return
 		}
+
 		venues, err = c.venue.Select(10, fmt.Sprintf("%v", userID))
 	}
 
@@ -120,41 +125,43 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 			Type: "venues",
 			ID:   venue.Id,
 			Attributes: view.VenueAttributes{
-				Id:                           venue.Id,
-				VenueId:                      venue.VenueId,
-				VenueType:                    venue.VenueType,
-				VenueName:                    venue.VenueName,
-				Address:                      venue.Address,
-				City:                         venue.City,
-				Province:                     venue.Province,
-				Zip:                          venue.Zip,
-				Capacity:                     venue.Capacity,
-				Facilities:                   venue.Facilities,
-				PtID:                         venue.PtID,
-				CreatedAt:                    venue.CreatedAt,
-				UpdatedAt:                    venue.UpdatedAt,
-				DeletedAt:                    venue.DeletedAt,
-				Longitude:                    venue.Longitude,
-				Latitude:                     venue.Latitude,
-				Status:                       venue.Status,
-				VenueCategory:                venue.VenueCategory,
-				PicName:                      venue.PicName,
-				PicContactNumber:             venue.PicContactNumber,
-				VenueTechnicianName:          venue.VenueTechnicianName,
-				VenueTechnicianContactNumber: venue.VenueTechnicianContactNumber,
-				VenuePhone:                   venue.VenuePhone,
-				CreatedBy:                    venue.CreatedBy,
-				LastUpdateBy:                 venue.LastUpdateBy,
+				Id:               venue.Id,
+				VenueId:          venue.VenueId,
+				VenueType:        venue.VenueType,
+				VenueName:        venue.VenueName,
+				Address:          venue.Address,
+				City:             venue.City,
+				Province:         venue.Province,
+				Zip:              venue.Zip,
+				Capacity:         venue.Capacity,
+				Facilities:       venue.Facilities,
+				PtID:             venue.PtID,
+				CreatedAt:        venue.CreatedAt,
+				UpdatedAt:        venue.UpdatedAt,
+				DeletedAt:        venue.DeletedAt,
+				Longitude:        venue.Longitude,
+				Latitude:         venue.Latitude,
+				Status:           venue.Status,
+				PicName:          venue.PicName,
+				PicContactNumber: venue.PicContactNumber,
+				VenuePhone:       venue.VenuePhone,
+				CreatedBy:        venue.CreatedBy,
+				LastUpdateBy:     venue.LastUpdateBy,
 			},
 		})
 	}
 	var hasNext bool
-	if len(res) > 9 {
+	hasNext = false
+	limit = limit - 1
+
+	if len(res) > limit {
 		hasNext = true
-		view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
-	} else {
-		view.RenderJSONData(w, res, http.StatusOK)
+		//view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 	}
+	//else {
+	//view.RenderJSONData(w, res, http.StatusOK)
+	//}
+	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 
 }
 
@@ -237,9 +244,8 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		Facilities:                   params.Facilities,
 		Longitude:                    params.Longitude,
 		Latitude:                     params.Latitude,
-		People:                       params.People,
+		People:                       null.IntFrom(params.People),
 		PtID:                         params.PtID,
-		VenueCategory:                params.VenueCategory,
 		PicName:                      params.PicName,
 		PicContactNumber:             params.PicContactNumber,
 		VenueTechnicianName:          params.VenueTechnicianName,
@@ -253,6 +259,10 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		c.reporter.Infof("[handlePostVenue] error insert Venue repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post Venue", http.StatusInternalServerError)
 		return
+	}
+	_, err = c.venue.GetCity(params.City)
+	if err != sql.ErrNoRows {
+		err = c.venue.InsertVenueAvailable(params.City)
 	}
 
 	view.RenderJSONData(w, venue, http.StatusOK)
@@ -313,7 +323,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		Facilities:                   params.Facilities,
 		Longitude:                    params.Longitude,
 		Latitude:                     params.Latitude,
-		People:                       params.People,
+		People:                       null.IntFrom(params.People),
 		PtID:                         params.PtID,
 		VenueCategory:                params.VenueCategory,
 		PicName:                      params.PicName,
@@ -333,29 +343,25 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		ID:   id,
 		Type: "venues",
 		Attributes: view.VenueAttributes{
-			Id:                           id,
-			VenueId:                      params.VenueId,
-			VenueType:                    params.VenueType,
-			VenueName:                    params.VenueName,
-			Address:                      params.Address,
-			City:                         params.City,
-			Province:                     params.Province,
-			Zip:                          params.Zip,
-			Capacity:                     params.Capacity,
-			Facilities:                   params.Facilities,
-			Longitude:                    params.Longitude,
-			Latitude:                     params.Latitude,
-			People:                       params.People,
-			PtID:                         params.PtID,
-			UpdatedAt:                    time.Now(),
-			Status:                       1,
-			VenueCategory:                params.VenueCategory,
-			PicName:                      params.PicName,
-			PicContactNumber:             params.PicContactNumber,
-			VenueTechnicianName:          params.VenueTechnicianName,
-			VenueTechnicianContactNumber: params.VenueTechnicianContactNumber,
-			VenuePhone:                   params.VenuePhone,
-			LastUpdateBy:                 fmt.Sprintf("%v", userID),
+			Id:               id,
+			VenueId:          params.VenueId,
+			VenueType:        params.VenueType,
+			VenueName:        params.VenueName,
+			Address:          params.Address,
+			City:             params.City,
+			Province:         params.Province,
+			Zip:              params.Zip,
+			Capacity:         params.Capacity,
+			Facilities:       params.Facilities,
+			Longitude:        params.Longitude,
+			Latitude:         params.Latitude,
+			PtID:             params.PtID,
+			UpdatedAt:        time.Now(),
+			Status:           1,
+			PicName:          params.PicName,
+			PicContactNumber: params.PicContactNumber,
+			VenuePhone:       params.VenuePhone,
+			LastUpdateBy:     fmt.Sprintf("%v", userID),
 		},
 	}
 
