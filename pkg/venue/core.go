@@ -82,6 +82,7 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 			stats = 1 AND
 			project_id = ? AND 
 			created_by = ? 
+		ORDER BY venue_name ASC
 	`, pid, uid)
 
 	return
@@ -132,7 +133,8 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 			id = ? AND
 			project_id = ? AND 
 	 		created_by = ? AND 
-			deleted_at IS NULL `
+			deleted_at IS NULL
+		ORDER BY venue_name ASC `
 
 	err = c.db.Get(&venue, qs, id, pid, uid)
 
@@ -177,8 +179,9 @@ func (c *core) getFromDBVenueAll(pid int64, limit int, offset int) (venues Venue
 			mla_venues
 		WHERE
 			stats = 1 AND
-			project_id = ?
-			LIMIT ?, ?; 
+			project_id = ?		
+		ORDER BY venue_name ASC	
+		LIMIT ?, ?
 	`, pid, offset, limit)
 
 	return
@@ -215,7 +218,8 @@ func (c *core) getFromDBVenue(cityName string, pid int64, limit int, offset int)
 			city = ? AND
 			stats = 1 AND
 			project_id = ?
-			LIMIT ?, ?; 
+		ORDER BY venue_name ASC
+		LIMIT ?, ?
 	`, cityName, pid, offset, limit)
 
 	return
@@ -258,7 +262,8 @@ func (c *core) getFromDBVenueStatus(pid int64, limit int, offset int) (venues Ve
 			stats = 2 OR
 			stats = 4 AND 
 			project_id = ?
-			LIMIT ?, ?; 
+		ORDER BY venue_name ASC	
+		LIMIT ?, ?
 	`, pid, offset, limit)
 
 	return
@@ -302,7 +307,8 @@ func (c *core) getFromDBVenueCityID(cityName string, pid int64, limit int, offse
 			stats = 4 AND 
 			city = ? AND
 			project_id = ?
-			LIMIT ?, ?; 
+		ORDER BY venue_name ASC		
+		LIMIT ?, ?
 	`, pid, cityName, offset, limit)
 
 	return
@@ -322,6 +328,7 @@ func (c *core) getFromDBVenueGroupAvailable(pid int64) (venues VenueGroupAvailab
 		WHERE		
 			project_id = ?
 		GROUP BY city
+		ORDER BY city ASC	
 	`, pid)
 
 	return
@@ -340,6 +347,7 @@ func (c *core) getFromDBVenueAvailable() (venues VenueAvailables, err error) {
 			mla_venues_available
 		WHERE		
 			status = 1
+		ORDER BY city_name ASC	
 	`)
 
 	return
@@ -352,7 +360,8 @@ func (c *core) getFromDBCity(cityName string) (venue VenueAvailables, err error)
 	query := `
 		select id, city_name
 		from mla_venues_available
-		where city_name = ?`
+		where city_name = ?
+		ORDER BY city_name ASC`
 	err = c.db.Get(&venue, query, cityName)
 	return
 }
