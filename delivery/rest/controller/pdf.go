@@ -40,6 +40,10 @@ func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp stri
 
 	if orientation == "Landscape" {
 		gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+		gen.MarginBottom.Set(0)
+		gen.MarginTop.Set(0)
+		gen.MarginLeft.Set(0)
+		gen.MarginRight.Set(0)
 	}
 	gen.SetOutput(pdfBuffer)
 	gen.AddPage(wkhtmltopdf.NewPageReader(buff))

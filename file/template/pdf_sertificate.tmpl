@@ -4,13 +4,17 @@
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
         <style>
             body {
-                background-image: url("data:image/png;base64, {{.Background}}");
-                background-repeat: no-repeat;
-                background-size: contain;
+                margin: 0;
             }
-            .h {
-                font-size: 20px;
-                color: white;
+            .containerbg {
+                position: center;
+                overflow: hidden;
+            }
+            .imgBg {
+                object-fit: cover;
+                object-position: center;
+                width:100%;
+                z-index: -100;
             }
             .columns1 {
                 float: left;
@@ -21,55 +25,40 @@
                 float: left;
                 width: 60%;
                 padding: 15px;
+                color:#f60;
             }
             .row::after {
                 content: "";
                 clear: both;
                 display: table;
             }
-            img {
-                border-radius: 8px;
+            .row {
+                position: absolute;
+                top: 800px;
+                left: 0;
+                width: 100%;
+                color: rgb(255, 255, 255);
             }
         </style>
     </head>
     <body>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <p align="center" style="color: white;font-size: 48px;font-family: cursive">{{ .VenueName }}</p>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
-        <br>
+        <div class="containerbg">
+            <img src="data:image/png;base64,{{.Background}}" class="imgBg">
+        </div>
+        <p align="center" style="color: rgb(255, 255, 255);
+            font-size: 48px;
+            font-family: cursive;
+            position: absolute;
+            top: 420px;
+            left: 0;
+            width: 100%;">{{ .VenueName }}</p>
         <div class="row">
-            <div class="columns1" >
-                <img src="data:image/png;base64,{{.QrBase64}}" width="100px" height="100px" align ="right"/>
-             </div>
-            <div class="columns" >
-                <p class="h">{{ .VenueName }}<br>{{ .Address }}<br>{{ .City }} &nbsp{{ .Province }}&nbsp,&nbsp {{ .Zip }}</p>
+                <div class="columns1">
+                    <img src="data:image/png;base64,{{.QrBase64}}" width="100px" height="100px" align="right">
+                </div>
+                <div class="columns" style="color:#fff;">
+                    <p>{{ .VenueName }}<br>{{ .Address }}<br>{{ .City }} &nbsp;{{ .Province }}&nbsp;,&nbsp; {{ .Zip }}</p>
+                </div>
             </div>
         </div>
     </body>
