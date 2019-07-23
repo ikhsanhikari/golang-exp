@@ -2,11 +2,13 @@ package controller
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -155,4 +157,29 @@ func (c *Controller) handlePatchAdmin(w http.ResponseWriter, r *http.Request) {
 	}
 
 	view.RenderJSONData(w, admin, http.StatusOK)
+}
+
+func (c *Controller) handleAdminsCheck(w http.ResponseWriter, r *http.Request) {
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePostOrder] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+
+	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handleAdminsCheck] user is not exist")
+		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
+		return
+	}
+
+	view.RenderJSON(w, nil, http.StatusOK)
 }
