@@ -33,7 +33,6 @@ type ICore interface {
 	SelectSummaryOrdersByUserID(pid int64, uid string) (sumorders SummaryOrders, err error)
 	SelectSummaryOrdersByUserIDPagination(pid int64, uid string, limit int64, offset int64) (sumorders SummaryOrders, err error)
 	SelectSummaryOrderByID(orderID int64, pid int64, uid string) (sumorder SummaryOrder, err error)
-	SelectAgentByUserID(userID string) (agent Agent, err error)
 }
 
 // core contains db client
@@ -704,7 +703,8 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
     COALESCE(comp.city,'') as company_city,
     COALESCE(comp.province,'') as company_province,
     COALESCE(comp.zip,'') as company_zip,
-    COALESCE(comp.email,'') as company_email,
+	COALESCE(comp.email,'') as company_email,
+	COALESCE(venues.id) as venue_id,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
 	COALESCE(venues.address,'') as venue_address,
@@ -714,7 +714,8 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
     COALESCE(venues.capacity,0) as venue_capacity,
     COALESCE(venues.longitude,0) as venue_longitude,
     COALESCE(venues.latitude,0) as venue_latitude,
-    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.show_status,0) as venue_show_status,
 	COALESCE(devices.description,'') as device_name,
 	COALESCE(product.description,'') as product_name,
 	COALESCE(installation.description,'') as installation_name,
@@ -779,7 +780,8 @@ func (c *core) getLicenseSumByID(licNumber string, pid int64) (licsum SummaryOrd
     COALESCE(comp.city,'') as company_city,
     COALESCE(comp.province,'') as company_province,
     COALESCE(comp.zip,'') as company_zip,
-    COALESCE(comp.email,'') as company_email,
+	COALESCE(comp.email,'') as company_email,
+	COALESCE(venues.id) as venue_id,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
 	COALESCE(venues.address,'') as venue_address,
@@ -789,7 +791,8 @@ func (c *core) getLicenseSumByID(licNumber string, pid int64) (licsum SummaryOrd
     COALESCE(venues.capacity,0) as venue_capacity,
     COALESCE(venues.longitude,0) as venue_longitude,
     COALESCE(venues.latitude,0) as venue_latitude,
-    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.show_status,0) as venue_show_status,
 	COALESCE(devices.description,'') as device_name,
 	COALESCE(product.description,'') as product_name,
 	COALESCE(installation.description,'') as installation_name,
@@ -852,7 +855,8 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
     COALESCE(comp.city,'') as company_city,
     COALESCE(comp.province,'') as company_province,
     COALESCE(comp.zip,'') as company_zip,
-    COALESCE(comp.email,'') as company_email,
+	COALESCE(comp.email,'') as company_email,
+	COALESCE(venues.id) as venue_id,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
 	COALESCE(venues.address,'') as venue_address,
@@ -862,7 +866,8 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
     COALESCE(venues.capacity,0) as venue_capacity,
     COALESCE(venues.longitude,0) as venue_longitude,
     COALESCE(venues.latitude,0) as venue_latitude,
-    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.show_status,0) as venue_show_status,
 	COALESCE(devices.description,'') as device_name,
 	COALESCE(product.description,'') as product_name,
 	COALESCE(installation.description,'') as installation_name,
@@ -925,7 +930,8 @@ func (c *core) selectSumFromDBByUserIDPagination(pid int64, uid string, limit in
     COALESCE(comp.city,'') as company_city,
     COALESCE(comp.province,'') as company_province,
     COALESCE(comp.zip,'') as company_zip,
-    COALESCE(comp.email,'') as company_email,
+	COALESCE(comp.email,'') as company_email,
+	COALESCE(venues.id) as venue_id,
 	COALESCE(venues.venue_name,'') as venue_name,
     COALESCE(venues.venue_type,0) as venue_type,
 	COALESCE(venues.address,'') as venue_address,
@@ -935,7 +941,8 @@ func (c *core) selectSumFromDBByUserIDPagination(pid int64, uid string, limit in
     COALESCE(venues.capacity,0) as venue_capacity,
     COALESCE(venues.longitude,0) as venue_longitude,
     COALESCE(venues.latitude,0) as venue_latitude,
-    COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.venue_category,0) as venue_category,
+	COALESCE(venues.show_status,0) as venue_show_status,
 	COALESCE(devices.description,'') as device_name,
 	COALESCE(product.description,'') as product_name,
 	COALESCE(installation.description,'') as installation_name,
@@ -969,29 +976,6 @@ func (c *core) selectSumFromDBByUserIDPagination(pid int64, uid string, limit in
 	LIMIT ?,?
 	;
 	`, pid, pid, uid, offset, limit)
-	return
-}
-
-func (c *core) SelectAgentByUserID(userID string) (agent Agent, err error) {
-	if userID == "" {
-		return agent, nil
-	}
-	err = c.db.Get(&agent, `
-		SELECT
-			id,
-			user_id,
-			status,
-			created_at,
-			created_by,
-			project_id,
-			updated_at,
-			last_update_by
-		FROM
-			mla_admin
-		WHERE
-			user_id = ?
-		LIMIT 1
-	`, userID)
 	return
 }
 
