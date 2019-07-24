@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -24,19 +25,14 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// lakukan pengecekan userid harus admin
-	// admins, err := c.admin.SelectByUserID(10, fmt.Sprintf("%s", userID))
-	// if err != nil {
-	// 	c.reporter.Errorf("[handleGetAllAdminsByUserID] error get from repository, err: %s", err.Error())
-	// 	view.RenderJSONError(w, "Failed get Admins", http.StatusInternalServerError)
-	// 	return
-	// }
-	// status := true
-	// if len(admins) <= 0 {
-	// 	status = false
-	// 	view.RenderJSONData(w, status, http.StatusOK)
-	// 	return
-	// }
+	// cek admin
+	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostEmailECert] user is not exist")
+		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
+		return
+	}
+
 	var params reqEmail
 
 	err := form.Bind(&params, r)
