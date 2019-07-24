@@ -99,7 +99,7 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = c.license.Delete(10, id, buyerID)
+	err = c.license.Delete(10, id, buyerID, licenseParam.LicenseNumber)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteLicense] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete license", http.StatusInternalServerError)

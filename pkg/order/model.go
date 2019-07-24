@@ -59,6 +59,7 @@ type SummaryOrder struct {
 	CompanyProvince    string    `db:"company_province"`
 	CompanyZip         string    `db:"company_zip"`
 	CompanyEmail       string    `db:"company_email"`
+	VenueID            int64     `db:"venue_id"`
 	VenueName          string    `db:"venue_name"`
 	VenueType          int64     `db:"venue_type"`
 	VenueAddress       string    `db:"venue_address"`
@@ -69,6 +70,7 @@ type SummaryOrder struct {
 	VenueLongitude     float64   `db:"venue_longitude"`
 	VenueLatitude      float64   `db:"venue_latitude"`
 	VenueCategory      int64     `db:"venue_category"`
+	VenueShowStatus    int64     `db:"venue_show_status"`
 	DeviceName         string    `db:"device_name"`
 	ProductName        string    `db:"product_name"`
 	InstallationName   string    `db:"installation_name"`
@@ -85,14 +87,3 @@ type SummaryOrder struct {
 
 //Orders is list of order
 type SummaryOrders []SummaryOrder
-
-type Agent struct {
-	ID           int64     `db:"id"`
-	UserID       string    `db:"user_id"`
-	Status       float64   `db:"status"`
-	CreatedAt    time.Time `db:"created_at"`
-	CreatedBy    string    `db:"created_by"`
-	ProjectID    string    `db:"project_id"`
-	UpdatedAt    time.Time `db:"updated_at"`
-	LastUpdateBy string    `db:"last_update_by"`
-}
