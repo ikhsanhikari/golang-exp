@@ -115,7 +115,7 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 	t := "pdf_sertificate.tmpl"
 	pdf := "sertificate.pdf"
 
-	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo") //fmt.Sprintf("%v", userID))
+	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, userID)
 	if err != nil {
 		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
 		return "0", sumorder
