@@ -261,7 +261,7 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	_, err = c.venue.GetCity(params.City)
-	if err != sql.ErrNoRows {
+	if err == sql.ErrNoRows {
 		err = c.venue.InsertVenueAvailable(params.City)
 	}
 
