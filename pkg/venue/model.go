@@ -34,6 +34,7 @@ type Venue struct {
 	ProjectID                    int64     `db:"project_id"`
 	CreatedBy                    string    `db:"created_by"`
 	LastUpdateBy                 string    `db:"last_update_by"`
+	ShowStatus                   int64     `db:"show_status"`
 }
 
 type VenueAddress struct {

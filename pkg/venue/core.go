@@ -22,11 +22,12 @@ type ICore interface {
 	GetVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error)
 	GetVenueAvailable() (venues VenueAvailables, err error)
 	GetCity(cityName string) (venues VenueAvailables, err error)
-
+	GetStatus(pid int64, id int64) (venue Venue, err error)
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
 	InsertVenueAvailable(cityName string) (err error)
 	Update(venue *Venue, uid string) (err error)
+	//UpdateStatus(venue *Venue) (err error)
 	Delete(pid int64, id int64, uid string) (err error)
 }
 
@@ -84,6 +85,50 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 			created_by = ? 
 		ORDER BY venue_name ASC
 	`, pid, uid)
+
+	return
+}
+
+func (c *core) GetStatus(pid int64, id int64) (venue Venue, err error) {
+	venue, err = c.getStatusFromDB(id, pid)
+	return
+}
+func (c *core) getStatusFromDB(id int64, pid int64) (venue Venue, err error) {
+	qs := `
+		SELECT
+			id,
+			venue_id,
+			venue_type,
+			venue_name,
+			address,
+			zip,
+			capacity,
+			facilities,
+			longitude,
+			latitude,
+			created_at,
+			updated_at,
+			deleted_at,
+			stats,
+			pic_name,
+			pic_contact_number,
+			venue_phone,
+			project_id,
+			created_by,
+			last_update_by,
+			province,
+			city,
+			pt_id,
+			show_status
+		FROM
+			mla_venues
+		WHERE
+			id = ? AND
+			project_id = ? AND 
+			deleted_at IS NULL
+		ORDER BY venue_name ASC `
+
+	err = c.db.Get(&venue, qs, id, pid)
 
 	return
 }
@@ -526,7 +571,8 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 			last_update_by = ?,
 			province= ?,
 			city= ?,
-			pt_id = ?
+			pt_id = ?,
+			show_status = ?
 		WHERE
 			id = ? AND
 			project_id = 10 AND
@@ -550,6 +596,7 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 		venue.Province,
 		venue.City,
 		venue.PtID,
+		venue.ShowStatus,
 		venue.Id,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
