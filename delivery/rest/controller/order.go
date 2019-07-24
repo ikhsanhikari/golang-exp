@@ -196,15 +196,15 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// _, err := c.order.SelectAgentByUserID(fmt.Sprintf("%v", userID))
-	// if err == sql.ErrNoRows {
-	// 	c.reporter.Errorf("[handlePostOrderByAgent] failed get agent")
-	// 	view.RenderJSONError(w, "failed get agent", http.StatusUnauthorized)
-	// 	return
-	// }
+	_, err := c.admin.SelectByUserID(projectID, fmt.Sprintf("%v", userID))
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrderByAgent] failed get agent")
+		view.RenderJSONError(w, "failed get agent", http.StatusUnauthorized)
+		return
+	}
 
 	var params reqOrder
-	err := form.Bind(&params, r)
+	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -1138,6 +1138,7 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 			CompanyProvince:    sumorder.CompanyProvince,
 			CompanyZip:         sumorder.CompanyZip,
 			CompanyEmail:       sumorder.CompanyEmail,
+			VenueID:            sumorder.VenueID,
 			VenueName:          sumorder.VenueName,
 			VenueType:          sumorder.VenueType,
 			VenueAddress:       sumorder.VenueAddress,
@@ -1147,6 +1148,7 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 			VenueLongitude:     sumorder.VenueLongitude,
 			VenueLatitude:      sumorder.VenueLatitude,
 			VenueCategory:      sumorder.VenueCategory,
+			VenueShowStatus:    sumorder.VenueShowStatus,
 			DeviceName:         sumorder.DeviceName,
 			ProductName:        sumorder.ProductName,
 			InstallationName:   sumorder.InstallationName,
@@ -1212,6 +1214,7 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 			CompanyProvince:    sumorder.CompanyProvince,
 			CompanyZip:         sumorder.CompanyZip,
 			CompanyEmail:       sumorder.CompanyEmail,
+			VenueID:            sumorder.VenueID,
 			VenueName:          sumorder.VenueName,
 			VenueType:          sumorder.VenueType,
 			VenueAddress:       sumorder.VenueAddress,
@@ -1221,6 +1224,7 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 			VenueLongitude:     sumorder.VenueLongitude,
 			VenueLatitude:      sumorder.VenueLatitude,
 			VenueCategory:      sumorder.VenueCategory,
+			VenueShowStatus:    sumorder.VenueShowStatus,
 			DeviceName:         sumorder.DeviceName,
 			ProductName:        sumorder.ProductName,
 			InstallationName:   sumorder.InstallationName,
@@ -1313,6 +1317,7 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 				CompanyProvince:    sumorder.CompanyProvince,
 				CompanyZip:         sumorder.CompanyZip,
 				CompanyEmail:       sumorder.CompanyEmail,
+				VenueID:            sumorder.VenueID,
 				VenueName:          sumorder.VenueName,
 				VenueType:          sumorder.VenueType,
 				VenueAddress:       sumorder.VenueAddress,
@@ -1322,6 +1327,7 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 				VenueLongitude:     sumorder.VenueLongitude,
 				VenueLatitude:      sumorder.VenueLatitude,
 				VenueCategory:      sumorder.VenueCategory,
+				VenueShowStatus:    sumorder.VenueShowStatus,
 				DeviceName:         sumorder.DeviceName,
 				ProductName:        sumorder.ProductName,
 				InstallationName:   sumorder.InstallationName,
