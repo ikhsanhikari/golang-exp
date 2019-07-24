@@ -121,6 +121,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		RoomQuantity:   params.RoomQuantity,
 		TotalPrice:     totalPrice,
 		PaymentFee:     params.PaymentFee,
+		Status:         0,
 		CreatedBy:      fmt.Sprintf("%v", userID),
 		LastUpdateBy:   fmt.Sprintf("%v", userID),
 		ProjectID:      projectID,
@@ -195,15 +196,15 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, err := c.order.SelectAgentByUserID(fmt.Sprintf("%v", userID))
-	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrderByAgent] failed get agent")
-		view.RenderJSONError(w, "failed get agent", http.StatusUnauthorized)
-		return
-	}
+	// _, err := c.order.SelectAgentByUserID(fmt.Sprintf("%v", userID))
+	// if err == sql.ErrNoRows {
+	// 	c.reporter.Errorf("[handlePostOrderByAgent] failed get agent")
+	// 	view.RenderJSONError(w, "failed get agent", http.StatusUnauthorized)
+	// 	return
+	// }
 
 	var params reqOrder
-	err = form.Bind(&params, r)
+	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -285,13 +286,14 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		RoomQuantity:   params.RoomQuantity,
 		TotalPrice:     totalPrice,
 		PaymentFee:     params.PaymentFee,
+		Status:         4,
 		CreatedBy:      fmt.Sprintf("%v", userID),
 		LastUpdateBy:   fmt.Sprintf("%v", userID),
 		ProjectID:      projectID,
 		Email:          params.Email,
 	}
 
-	err = c.order.InsertByAgent(&insertOrder)
+	err = c.order.Insert(&insertOrder)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] failed post order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order", http.StatusInternalServerError)
@@ -302,6 +304,13 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] failed post order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order details", http.StatusInternalServerError)
+		return
+	}
+
+	err = c.insertLicense(insertOrder.OrderID, insertOrder.CreatedBy, insertOrder.BuyerID)
+	if err != nil {
+		c.reporter.Infof("[handleUpdate Order Status] Failed post license, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed post license", http.StatusInternalServerError)
 		return
 	}
 
@@ -713,32 +722,13 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 		return
 	}
 
-	//insert license start
-	licenseNumberUUID := util.GenerateUUID()
-	layout := "2006-01-02T15:04:05.000Z"
-	str := "1999-01-01T11:45:26.371Z"
-	defaultTime, err := time.Parse(layout, str)
+	//insert license
+	err = c.insertLicense(getOrder.OrderID, getOrder.CreatedBy, getOrder.BuyerID)
 	if err != nil {
-		fmt.Println(err)
-	}
-	license := license.License{
-		LicenseNumber: licenseNumberUUID,
-		OrderID:       updateStatus.OrderID,
-		LicenseStatus: 1,
-		ActiveDate:    defaultTime,
-		ExpiredDate:   defaultTime,
-		ProjectID:     10,
-		CreatedBy:     getOrder.CreatedBy,
-		BuyerID:       getOrder.BuyerID,
-	}
-
-	err = c.license.Insert(&license)
-	if err != nil {
-		c.reporter.Infof("[handlePostLicense] error insert license repository, err: %s", err.Error())
+		c.reporter.Infof("[handleUpdate Order Status] Failed post license, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post license", http.StatusInternalServerError)
 		return
 	}
-	//insert license end
 
 	//set response
 	res := view.DataResponseOrder{
@@ -1249,6 +1239,24 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 }
 
 func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.Request) {
+	getParam := r.URL.Query()
+	limitVal := getParam.Get("limit")
+	offsetVal := getParam.Get("page")
+	pagination := getParam.Get("pagination")
+	var err error
+	var sumorders order.SummaryOrders
+	offset := 1
+	limit := 15
+	if limitVal != "" {
+		limit, err = strconv.Atoi(limitVal)
+	}
+	if offsetVal != "" {
+		offset, err = strconv.Atoi(offsetVal)
+	}
+	offset = offset - 1
+	offset = limit * offset
+	limit = limit + 1
+
 	user, ok := authpassport.GetUser(r)
 	if !ok {
 		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get user")
@@ -1261,17 +1269,30 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}
-
-	sumorders, err := c.order.SelectSummaryOrdersByUserID(10, fmt.Sprintf("%v", userID))
-	if err != nil {
-		c.reporter.Errorf("[handleGetSumOrdersByUserID] order not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Sum orders not found", http.StatusNotFound)
-		return
-	}
-	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum order, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
-		return
+	if pagination == "true" {
+		sumorders, err = c.order.SelectSummaryOrdersByUserID(10, fmt.Sprintf("%v", userID))
+		if err != nil {
+			c.reporter.Errorf("[handleGetSumOrdersByUserIDPagination] order not found, err: %s", err.Error())
+			view.RenderJSONError(w, "Sum orders not found", http.StatusNotFound)
+			return
+		}
+		if err != nil && err != sql.ErrNoRows {
+			c.reporter.Errorf("[handleGetSumOrdersByUserIDPagination] failed get sum order, err: %s", err.Error())
+			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
+			return
+		}
+	} else {
+		sumorders, err = c.order.SelectSummaryOrdersByUserID(10, fmt.Sprintf("%v", userID))
+		if err != nil {
+			c.reporter.Errorf("[handleGetSumOrdersByUserID] order not found, err: %s", err.Error())
+			view.RenderJSONError(w, "Sum orders not found", http.StatusNotFound)
+			return
+		}
+		if err != nil && err != sql.ErrNoRows {
+			c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum order, err: %s", err.Error())
+			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
+			return
+		}
 	}
 
 	res := make([]view.DataResponseOrder, 0, len(sumorders))
@@ -1316,8 +1337,17 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 			},
 		})
 	}
-
-	view.RenderJSONData(w, res, http.StatusOK)
+	limit = limit - 1
+	var hasNext bool
+	hasNext = false
+	if len(res) > limit {
+		hasNext = true
+		//view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
+	}
+	//else {
+	//view.RenderJSONData(w, res, http.StatusOK)
+	//}
+	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 }
 
 func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Request) {
@@ -1750,4 +1780,31 @@ func (c *Controller) generateOrderNumber() (string, error) {
 		lastOrderNumber.Number = 0
 	}
 	return "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7), nil
+}
+
+func (c *Controller) insertLicense(orderID int64, createdBy, buyerID string) error {
+	licenseNumberUUID := util.GenerateUUID()
+	layout := "2006-01-02T15:04:05.000Z"
+	str := "1999-01-01T11:45:26.371Z"
+	defaultTime, err := time.Parse(layout, str)
+	if err != nil {
+		fmt.Println(err)
+	}
+	license := license.License{
+		LicenseNumber: licenseNumberUUID,
+		OrderID:       orderID,
+		LicenseStatus: 1,
+		ActiveDate:    defaultTime,
+		ExpiredDate:   defaultTime,
+		ProjectID:     10,
+		CreatedBy:     createdBy,
+		BuyerID:       buyerID,
+	}
+
+	err = c.license.Insert(&license)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }

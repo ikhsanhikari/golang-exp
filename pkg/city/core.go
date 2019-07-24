@@ -48,6 +48,7 @@ func (c *core) selectFromDB(pid int64) (cities Cities, err error) {
 			city
 		WHERE
 			project_id = ? 
+		ORDER BY city ASC
 	`, pid)
 	return
 }
@@ -83,6 +84,7 @@ func (c *core) getFromDB(id int64, pid int64) (city City, err error) {
 		WHERE
 			city_id = ? 
 			AND project_id = ?
+		ORDER BY city ASC
 	`, id, pid)
 
 	return
@@ -101,6 +103,7 @@ func (c *core) getFromDBProvince(id int64, pid int64) (cities Cities, err error)
 		WHERE
 			province_id = ? 
 			AND project_id = ?
+		ORDER BY city ASC
 	`, id, pid)
 
 	return

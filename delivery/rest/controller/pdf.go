@@ -1,11 +1,13 @@
 package controller
 
 import (
+	"bufio"
 	"bytes"
 	"database/sql"
 	"encoding/base64"
 	"fmt"
 	"net/http"
+	"os"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
@@ -40,6 +42,10 @@ func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp stri
 
 	if orientation == "Landscape" {
 		gen.Orientation.Set(wkhtmltopdf.OrientationLandscape)
+		gen.MarginBottom.Set(0)
+		gen.MarginTop.Set(0)
+		gen.MarginLeft.Set(0)
+		gen.MarginRight.Set(0)
 	}
 	gen.SetOutput(pdfBuffer)
 	gen.AddPage(wkhtmltopdf.NewPageReader(buff))
@@ -136,6 +142,173 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 	}
 	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
 	return b64SertificatePdf, sumorder
+
+}
+
+func (c *Controller) handleGetHtmlBodyCert(venueName string) string {
+
+	file, err := os.Open("file/img_email_cert/artboard-background.png")
+	if err != nil {
+		return "0"
+	}
+	defer file.Close()
+	fInfo, _ := file.Stat()
+	var size int64 = fInfo.Size()
+	buf := make([]byte, size)
+	fReader := bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardBackground := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-combined-shape-62@2x.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardCombinedShape62 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-ellipse-1@2x.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardEllipse1 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-layer-1.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardLayer1 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-layer-2@2x.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardLayer2 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-layer-3@2x.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardLayer3 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-rectangle-3-1.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardRectangle31 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-rectangle-3-2.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardRectangle32 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-rectangle-3.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardRectangle3 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-shape-1-copy.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardShape1Copy := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-shape-1.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardShape1 := base64.StdEncoding.EncodeToString(buf)
+
+	file, err = os.Open("file/img_email_cert/artboard-shape-2.png")
+	if err != nil {
+		return "0"
+	}
+	fInfo, _ = file.Stat()
+	size = fInfo.Size()
+	buf = make([]byte, size)
+	fReader = bufio.NewReader(file)
+	fReader.Read(buf)
+	artboardShape2 := base64.StdEncoding.EncodeToString(buf)
+
+	templateData := map[string]interface{}{
+		"Artboardbackground":        artboardBackground,
+		"Artboardshape2":            artboardShape2,
+		"Artboardshape1":            artboardShape1,
+		"Artboardlayer1":            artboardLayer1,
+		"Artboardshape1copy":        artboardShape1Copy,
+		"VenueName":                 venueName,
+		"Artboardrectangle3":        artboardRectangle3,
+		"Artboardellipse12x":        artboardEllipse1,
+		"Artboardlayer22x":          artboardLayer2,
+		"Artboardrectangle31":       artboardRectangle31,
+		"Artboardlayer32x":          artboardLayer3,
+		"Artboardrectangle32":       artboardRectangle32,
+		"Artboardcombinedshape622x": artboardCombinedShape62,
+	}
+
+	t, err := c.template.Get("email_sertificate.tmpl")
+	if err != nil {
+		return "1"
+	}
+
+	buff := bytes.NewBuffer([]byte{})
+	err = t.Execute(buff, templateData)
+	if err != nil {
+		c.reporter.Errorf("[handleGetHtmlBodyCert] Failed execute html, err: %s", err.Error())
+		return "1"
+	}
+
+	return buff.String()
 
 }
 

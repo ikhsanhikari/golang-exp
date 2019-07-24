@@ -17,7 +17,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
 		return
 	}
-	userID, ok := user["sub"]
+	userID, ok := user["sub"].(string)
 	if !ok {
 		c.reporter.Errorf("[handlePostEmailECert] failed get userID")
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
@@ -47,12 +47,14 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 	}
 	content, sumorder := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
 	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	// htmlEmail := c.handleGetHtmlBodyCert(sumorder.VenueName)
 	emailReq := email.EmailRequest{
 		Subject: "Mola Live Arena E-Certificate",
 		To:      sumorder.CompanyEmail,
-		HTML:    "<h1>ISI PESAN !!!!!!!</h1>",
-		From:    "no-reply@molalivearena.com",
-		Text:    "...",
+		HTML: "<p>Congratulations! <br />You are now a member of Mola Live Arena. <br />Hi, " + sumorder.VenueName + " <br />Attached in this email is the certificate of membership. Please print it, and cut out the QR code to be placed on the provided Mola Live Arena membership sticker that you must place inside the venue. Validators from Mola Live Arena will come and inspect the validity of your Mola Live Arena membership through this QR code. So please make sure that the QR code is available on the venue&#160;&#160;at all times during the membership period. <br />We hope that Mola Live Arena can help bringing additional value to your establishment. <br />Best Regards <br />MOLA TV <br />Thank you for joining Mola Live Arena. We aim to provideyou and your customers with the best sports and entertainment contents. <br />or any questions, please contact us through: </p><p> Phone <br />+62 21 2212 2534 </p>	   <p> Email <br />info@molalivearena.com </p>	   <p> Whatsapp <br />+62 812 8200 7043</p>",
+		// HTML:    htmlEmail,
+		From: "no-reply@molalivearena.com",
+		Text: " ",
 		Attachments: []email.Attachment{
 			{
 				Content:     content,
@@ -64,7 +66,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailLog("kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo", params.OrderID, emailReq.To, "ecert")
+	msg := c.handlePostEmailLog(userID, params.OrderID, emailReq.To, "ecert")
 	if msg == "0" {
 		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
 	}
