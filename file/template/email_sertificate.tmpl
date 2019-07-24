@@ -1,89 +1,37 @@
 <!DOCTYPE html>
 <html>
     <head>
-        <meta charset="utf-8">
-        <meta content="width=2400, maximum-scale=1.0" name="viewport">
-        <link href="https://fonts.googleapis.com/css?family=Open+Sans:600,400" rel="stylesheet" type="text/css">
+        <base href="http://www.example.com/">
+        <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+            <style>
+            p {
+                margin-left: 10x;
+                margin-right: 300px;
+                text-align: justify;
+                text-justify: inter-word; 
+            }
+        </style>
     </head>
-    <body style="margin: 0;
- background: rgba(255, 255, 255, 1.0);">
-        <input id="anPageName" name="page" type="hidden" value="artboard">
-        <div class="artboard" style="-webkit-text-size-adjust: none;width: 100%;min-width: 2400px;height: 100vh;min-height: 3915px;position: relative;overflow: hidden;margin: 0px;-webkit-font-smoothing: antialiased;-moz-osx-font-smoothing: grayscale;background-color: rgba(255, 255, 255, 1.0);">
-            <div style="width: 2400px;height: 100%;position: relative;margin: auto;-webkit-text-size-adjust: none;">
-                <img src="data:image/png;base64,{{.Artboardbackground}}" class="background" style="background-color: rgba(255,255,255,0.0);top: 0px;height: 4200px;width: 2400px;position: absolute;margin: 0;left: 0px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                <div class="group3" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: -1px;height: 1066px;width: 2422px;position: absolute;margin: 0;left: -13px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardshape2}}" class="shape2" style="background-color: rgba(255,255,255,0.0);top: 381px;height: 655px;width: 1888px;position: absolute;margin: 0;left: 534px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardshape1}}" class="shape1" style="background-color: rgba(255,255,255,0.0);top: 0px;height: 1066px;width: 2422px;position: absolute;margin: 0;left: 0px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardlayer1}}" class="layer1" style="background-color: rgba(255,255,255,0.0);top: 147px;height: 411px;width: 870px;position: absolute;margin: 0;left: 1303px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <div class="group1" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 311px;height: 248px;width: 769px;position: absolute;margin: 0;left: 253px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                        <div class="congratulations" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 0px;height: auto;width: 794px;position: absolute;margin: 0;left: 5px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 600;font-style: normal;font-size: 91.67px;color: rgba(255, 255, 255, 1.0);text-align: left;line-height: 125.0px;">
-                            Congratulations!
-                        </div>
-                        <div class="youarenowamemberofu2019molalivearena" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 134px;height: auto;width: 676px;position: absolute;margin: 0;left: 0px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 50.0px;color: rgba(255, 255, 255, 1.0);text-align: left;line-height: 66.67px;">
-                            You are now a member of’
-Mola Live Arena.
-                        </div>
-                    </div>
-                </div>
-                <img src="data:image/png;base64,{{.Artboardshape1copy}}" class="shape1copy" style="background-color: rgba(255,255,255,0.0);top: 2485px;height: 1457px;width: 2422px;position: absolute;margin: 0;left: -13px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                <div class="hivenuename" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 1090px;height: auto;width: 599px;position: absolute;margin: 0;left: 231px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 600;font-style: normal;font-size: 66.67px;color: rgba(17, 17, 17, 1.0);text-align: center;line-height: 91.0px;">
-                    Hi, {{ .VenueName }}
-                </div>
-                <div class="attachedinthisemailisthecertificateofmembershipplease" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 1417px;height: auto;width: 1938px;position: absolute;margin: 0;left: 240px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 50.0px;color: rgba(102, 102, 102, 1.0);text-align: left;line-height: 75.0px;">
-                    Attached in this email is the certificate of membership. Please print it, and cut out the QR code to be placed on the provided Mola Live Arena membership sticker that you must place inside the venue. 
-
-Validators from Mola Live Arena will come and inspect the validity of your Mola Live Arena membership through this QR code. So please make sure that the QR code is available on the venue  at all times during the membership period.
-                </div>
-                <div class="wehopethatmolalivearenacanhelpbringingadditionalvalue" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 3167px;height: auto;width: 1804px;position: absolute;margin: 0;left: 248px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 50.0px;color: rgba(255, 255, 255, 1.0);text-align: left;line-height: 75.0px;">
-                    We hope that Mola Live Arena can help bringing additional value to your establishment.
-                </div>
-                <div class="bestregards" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 3401px;height: auto;width: 344px;position: absolute;margin: 0;left: 1037px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 50.0px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 75.0px;">
-                    Best Regards
-                </div>
-                <div class="molatv" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 3706px;height: auto;width: 248px;position: absolute;margin: 0;left: 1086px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 50.0px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 75.0px;">
-                    MOLA TV
-                </div>
-                <div class="thankyouforjoiningmolalivearenaweaimtoprovideyouan" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 1198px;height: auto;width: 1843px;position: absolute;margin: 0;left: 240px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 50.0px;color: rgba(102, 102, 102, 1.0);text-align: left;line-height: 75.0px;">
-                    Thank you for joining Mola Live Arena. We aim to provide
-you and your customers with the best sports and entertainment contents.
-                </div>
-                <div class="oranyquestionspleasecontactusthrough" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 2143px;height: auto;width: 1340px;position: absolute;margin: 0;left: 529px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 600;font-style: normal;font-size: 58.33px;color: rgba(17, 17, 17, 1.0);text-align: center;line-height: 75.0px;">
-                    or any questions, please contact us through:
-                </div>
-                <div class="phone" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 2315px;height: 762px;width: 738px;position: absolute;margin: 0;left: 171px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardrectangle3}}" class="rectangle3" style="background-color: rgba(255,255,255,0.0);top: 0px;height: 762px;width: 738px;position: absolute;margin: 0;left: 0px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardellipse12x}}" class="ellipse1" style="background-color: rgba(255,255,255,0.0);top: 188px;height: 152px;width: 152px;position: absolute;margin: 0;left: 293px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);opacity: 0.5;">
-                    <img src="data:image/png;base64,{{.Artboardlayer22x}}" class="layer2" style="background-color: rgba(255,255,255,0.0);top: 224px;height: 80px;width: 80px;position: absolute;margin: 0;left: 329px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <div class="phone1" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 383px;height: auto;width: 130px;position: absolute;margin: 0;left: 305px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 33.33px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 46.0px;">
-                        Phone
-                    </div>
-                    <div class="a622122122534" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 456px;height: auto;width: 389px;position: absolute;margin: 0;left: 176px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 41.67px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 57.0px;">
-                        +62 21 2212 2534
-                    </div>
-                </div>
-                <div class="email" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 2265px;height: 862px;width: 738px;position: absolute;margin: 0;left: 831px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardrectangle31}}" class="rectangle3" style="background-color: rgba(255,255,255,0.0);top: 0px;height: 862px;width: 738px;position: absolute;margin: 0;left: 0px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardellipse12x}}" class="ellipse1" style="background-color: rgba(255,255,255,0.0);top: 238px;height: 152px;width: 152px;position: absolute;margin: 0;left: 293px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);opacity: 0.5;">
-                    <img src="data:image/png;base64,{{.Artboardlayer32x}}" class="layer3" style="background-color: rgba(255,255,255,0.0);top: 276px;height: 76px;width: 92px;position: absolute;margin: 0;left: 323px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <div class="email1" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 433px;height: auto;width: 114px;position: absolute;margin: 0;left: 313px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 33.33px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 46.0px;">
-                        Email
-                    </div>
-                    <div class="infomolalivearenacom" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 510px;height: auto;width: 531px;position: absolute;margin: 0;left: 104px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 41.67px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 57.0px;">
-                        info@molalivearena.com
-                    </div>
-                </div>
-                <div class="whatsapp" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 2315px;height: 762px;width: 738px;position: absolute;margin: 0;left: 1491px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardrectangle32}}" class="rectangle3" style="background-color: rgba(255,255,255,0.0);top: 0px;height: 762px;width: 738px;position: absolute;margin: 0;left: 0px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <img src="data:image/png;base64,{{.Artboardellipse12x}}" class="ellipse1" style="background-color: rgba(255,255,255,0.0);top: 188px;height: 152px;width: 152px;position: absolute;margin: 0;left: 293px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);opacity: 0.5;">
-                    <img src="data:image/png;base64,{{.Artboardcombinedshape622x}}" class="combinedshape62" style="background-color: rgba(255,255,255,0.0);top: 217px;height: 94px;width: 94px;position: absolute;margin: 0;left: 322px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);">
-                    <div class="whatsapp1" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 390px;height: auto;width: 193px;position: absolute;margin: 0;left: 272px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 33.33px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 46.0px;">
-                        Whatsapp
-                    </div>
-                    <div class="a6281282007043" style="-webkit-text-size-adjust: none;background-color: rgba(255,255,255,0.0);top: 456px;height: auto;width: 411px;position: absolute;margin: 0;left: 164px;-ms-transform: rotate(0deg);-webkit-transform: rotate(0deg);transform: rotate(0deg);font-family: &quot;Open Sans&quot;, Helvetica, Arial, serif;font-weight: 400;font-style: normal;font-size: 41.67px;color: rgba(255, 255, 255, 1.0);text-align: center;line-height: 57.0px;">
-                        +62 812 8200 7043
-                    </div>
-                </div>
-            </div>
-        </div>
+    <body>
+        <p>Selamat! </p>
+        <p>Anda sekarang menjadi anggota <br> Mola Live Arena</p>
+        <p> Hai,{{ .VenueName}}<br></p>
+        <p>  Terlampir dalam email ini adalah sertifikat keanggotaan. Silakan cetak, dan gunting kode QR <br>
+             untuk ditempatkan pada stiker keanggotaan Mola Live Arena yang disediakan yang harus Anda <br>tempatkan 
+             di dalam venue. Validator dari Mola Live Arena akan datang dan memeriksa validitas <br> keanggotaan 
+             Mola Live Arena Anda melalui kode QR ini.  Jadi, pastikan kode QR tersedia di venue <br> setiap saat 
+             selama periode keanggotaan. Kami berharap Mola Live Arena dapat membantu memberikan <br> nilai tambahan 
+             bagi pendirian Anda. <br>
+            Salam Hormat, MOLA TV.</p>
+            <br>
+        <p > Terima kasih telah bergabung dengan Mola Live Arena. <br>
+             Kami bertujuan untuk memberikan Anda dan pelanggan Anda <br>
+             dengan konten olahraga dan hiburan terbaik atau pertanyaan,
+             </p>
+        <br>
+        <p>silakan hubungi kami melalui:</p>
+        <p >Telepon&nbsp;:&nbsp;+62 21 2212 2534</p>
+        <p >Email&nbsp;:&nbsp;info@molalivearena.com</p>
+        <p>Whatsapp&nbsp;:&nbsp;+62 812 8200 7043</p>
     </body>
 </html>

@@ -115,7 +115,7 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 	t := "pdf_sertificate.tmpl"
 	pdf := "sertificate.pdf"
 
-	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, userID) //fmt.Sprintf("%v", userID))
+	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo") //fmt.Sprintf("%v", userID))
 	if err != nil {
 		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
 		return "0", sumorder
@@ -126,7 +126,7 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 	}
 
 	b64Png, backBase64 := c.email.GetBase64Png(sumorder.LicenseNumber)
-	if b64Png == "0" && backBase64 == "backBase64" {
+	if b64Png == "0" && backBase64 == "0" {
 		c.reporter.Errorf("[handleSertificatePDF] Error base64 from image")
 		return "0", sumorder
 	}
