@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -24,9 +25,16 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// lakukan pengecekan userid harus admin
+	// cek admin
+	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostEmailECert] user is not exist")
+		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
+		return
+	}
 
 	var params reqEmail
+
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostEmailECert] id must be integer, err: %s", err.Error())

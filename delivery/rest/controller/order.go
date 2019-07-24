@@ -196,15 +196,16 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	_, err := c.admin.SelectByUserID(projectID, fmt.Sprintf("%v", userID))
-	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrderByAgent] failed get agent")
-		view.RenderJSONError(w, "failed get agent", http.StatusUnauthorized)
+	//check admin
+	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostOrderByAgent] user is not exist")
+		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
 		return
 	}
 
 	var params reqOrder
-	err = form.Bind(&params, r)
+	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
