@@ -25,8 +25,20 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 	}
 
 	// lakukan pengecekan userid harus admin
-
+	// admins, err := c.admin.SelectByUserID(10, fmt.Sprintf("%s", userID))
+	// if err != nil {
+	// 	c.reporter.Errorf("[handleGetAllAdminsByUserID] error get from repository, err: %s", err.Error())
+	// 	view.RenderJSONError(w, "Failed get Admins", http.StatusInternalServerError)
+	// 	return
+	// }
+	// status := true
+	// if len(admins) <= 0 {
+	// 	status = false
+	// 	view.RenderJSONData(w, status, http.StatusOK)
+	// 	return
+	// }
 	var params reqEmail
+
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostEmailECert] id must be integer, err: %s", err.Error())
