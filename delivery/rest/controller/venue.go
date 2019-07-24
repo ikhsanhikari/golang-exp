@@ -358,6 +358,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 			PtID:             params.PtID,
 			UpdatedAt:        time.Now(),
 			Status:           1,
+			ShowStatus:       params.ShowStatus,
 			PicName:          params.PicName,
 			PicContactNumber: params.PicContactNumber,
 			VenuePhone:       params.VenuePhone,
@@ -366,4 +367,94 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+	if err != nil {
+		c.reporter.Warningf("[handlePatchVenue] id must be integer, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePatchVenue] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		c.reporter.Errorf("[handlePatchVenue] failed get userID")
+		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
+		return
+	}
+	venues, err := c.venue.GetStatus(10, id)
+	if err == sql.ErrNoRows {
+		c.reporter.Infof("[handleDeleteVenue] Venue not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
+		return
+	}
+	var status int64
+	if venues.ShowStatus == 1 {
+		status = 0
+	} else {
+		status = 1
+	}
+	venue := venue.Venue{
+		Id:               id,
+		VenueId:          venues.VenueId,
+		VenueType:        venues.VenueType,
+		VenueName:        venues.VenueName,
+		Address:          venues.Address,
+		City:             venues.City,
+		Province:         venues.Province,
+		Zip:              venues.Zip,
+		Capacity:         venues.Capacity,
+		Facilities:       venues.Facilities,
+		Longitude:        venues.Longitude,
+		Latitude:         venues.Latitude,
+		PtID:             venues.PtID,
+		UpdatedAt:        time.Now(),
+		Status:           venues.Status,
+		PicName:          venues.PicName,
+		PicContactNumber: venues.PicContactNumber,
+		VenuePhone:       venues.VenuePhone,
+		LastUpdateBy:     fmt.Sprintf("%v", userID),
+		ShowStatus:       status,
+	}
+	err = c.venue.Update(&venue, fmt.Sprintf("%v", userID))
+	if err != nil {
+		c.reporter.Errorf("[handlePatchVenue] error updating repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed update Venue", http.StatusInternalServerError)
+		return
+	}
+	res := view.DataResponse{
+		ID:   id,
+		Type: "venues",
+		Attributes: view.VenueAttributes{
+			Id:               id,
+			VenueId:          venues.VenueId,
+			VenueType:        venues.VenueType,
+			VenueName:        venues.VenueName,
+			Address:          venues.Address,
+			City:             venues.City,
+			Province:         venues.Province,
+			Zip:              venues.Zip,
+			Capacity:         venues.Capacity,
+			Facilities:       venues.Facilities,
+			Longitude:        venues.Longitude,
+			Latitude:         venues.Latitude,
+			PtID:             venues.PtID,
+			UpdatedAt:        time.Now(),
+			Status:           venues.Status,
+			PicName:          venues.PicName,
+			PicContactNumber: venues.PicContactNumber,
+			VenuePhone:       venues.VenuePhone,
+			LastUpdateBy:     fmt.Sprintf("%v", userID),
+			ShowStatus:       status,
+		},
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+	return
 }
