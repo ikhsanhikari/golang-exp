@@ -62,6 +62,7 @@ type SumOrderAttributes struct {
 	CompanyProvince    string    `db:"company_province"`
 	CompanyZip         string    `db:"company_zip"`
 	CompanyEmail       string    `db:"company_email"`
+	VenueID            int64     `db:"venue_id"`
 	VenueName          string    `db:"venue_name"`
 	VenueType          int64     `db:"venue_type"`
 	VenueAddress       string    `db:"venue_address"`
@@ -71,6 +72,7 @@ type SumOrderAttributes struct {
 	VenueLongitude     float64   `db:"venue_longitude"`
 	VenueLatitude      float64   `db:"venue_latitude"`
 	VenueCategory      int64     `db:"venue_category"`
+	VenueShowStatus    int64     `db:"venue_show_status"`
 	DeviceName         string    `db:"device_name"`
 	ProductName        string    `db:"product_name"`
 	InstallationName   string    `db:"installation_name"`
