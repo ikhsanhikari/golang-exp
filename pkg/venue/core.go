@@ -16,7 +16,7 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64, uid string) (venues Venues, err error)
-	GetVenueByCity(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
+	GetVenueByCity(pid int64, cityName string, showStatus string, limit int, offset int) (venues Venues, err error)
 	GetVenueByStatus(pid int64, limit int, offset int) (venues Venues, err error)
 	GetVenueByCityID(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
 	GetVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error)
@@ -186,87 +186,64 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 	return
 }
 
-func (c *core) GetVenueByCity(pid int64, cityName string, limit int, offset int) (venues Venues, err error) {
-	if cityName == "all" {
-		venues, err = c.getFromDBVenueAll(pid, limit, offset)
+func (c *core) GetVenueByCity(pid int64, cityName string, showStatus string, limit int, offset int) (venues Venues, err error) {
+	venues, err = c.getFromDBVenue(pid, showStatus, cityName, limit, offset)
+	return
+}
+func (c *core) getFromDBVenue(pid int64, showStatus string, cityName string, limit int, offset int) (venues Venues, err error) {
+	query := `SELECT
+				id,
+				venue_id,
+				venue_type,
+				venue_name,
+				address,
+				zip,
+				capacity,
+				facilities,
+				longitude,
+				latitude,
+				created_at,
+				updated_at,
+				deleted_at,
+				stats,
+				pic_name,
+				pic_contact_number,
+				venue_phone,
+				project_id,
+				created_by,
+				last_update_by,
+				province,
+				city,
+				pt_id,
+				show_status
+			FROM
+				mla_venues
+			WHERE
+				stats = 1 AND
+				project_id = ? `
+
+	if showStatus == "true" {
+		if cityName == "all" {
+
+			query += `AND show_status = 1
+				ORDER BY venue_name ASC
+				LIMIT ?, ?`
+			err = c.db.Select(&venues, query, pid, offset, limit)
+		} else {
+
+			query += `AND show_status = 1
+				And city = ?
+				ORDER BY venue_name ASC
+				LIMIT ?, ?`
+			err = c.db.Select(&venues, query, pid, cityName, offset, limit)
+		}
+
 	} else {
-		venues, err = c.getFromDBVenue(cityName, pid, limit, offset)
+		query +=
+			`ORDER BY venue_name ASC
+			LIMIT ?, ?`
+		err = c.db.Select(&venues, query, pid, offset, limit)
 	}
-	return
-}
-func (c *core) getFromDBVenueAll(pid int64, limit int, offset int) (venues Venues, err error) {
-	err = c.db.Select(&venues, `
-		SELECT
-			id,
-			venue_id,
-			venue_type,
-			venue_name,
-			address,
-			zip,
-			capacity,
-			facilities,
-			longitude,
-			latitude,
-			created_at,
-			updated_at,
-			deleted_at,
-			stats,
-			pic_name,
-			pic_contact_number,
-			venue_phone,
-			project_id,
-			created_by,
-			last_update_by,
-			province,
-			city,
-			pt_id
-		FROM
-			mla_venues
-		WHERE
-			stats = 1 AND
-			project_id = ?		
-		ORDER BY venue_name ASC	
-		LIMIT ?, ?
-	`, pid, offset, limit)
-
-	return
-}
-func (c *core) getFromDBVenue(cityName string, pid int64, limit int, offset int) (venues Venues, err error) {
-	err = c.db.Select(&venues, `
-		SELECT
-			id,
-			venue_id,
-			venue_type,
-			venue_name,
-			address,
-			zip,
-			capacity,
-			facilities,
-			longitude,
-			latitude,
-			created_at,
-			updated_at,
-			deleted_at,
-			stats,
-			pic_name,
-			pic_contact_number,
-			venue_phone,
-			project_id,
-			created_by,
-			last_update_by,
-			province,
-			city,
-			pt_id
-		FROM
-			mla_venues
-		WHERE
-			city = ? AND
-			stats = 1 AND
-			project_id = ?
-		ORDER BY venue_name ASC
-		LIMIT ?, ?
-	`, cityName, pid, offset, limit)
-
 	return
 }
 

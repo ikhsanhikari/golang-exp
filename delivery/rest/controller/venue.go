@@ -72,12 +72,15 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	statusVenue := getParam.Get("status")
 	limitVal := getParam.Get("limit")
 	offsetVal := getParam.Get("page")
+	showStatus := getParam.Get("show")
 	projectID := int64(10)
 	var venues venue.Venues
 	var err error
 	limit := 9
 	offset := 1
-
+	if showStatus != "true" {
+		showStatus = "false"
+	}
 	if limitVal != "" {
 		limit, err = strconv.Atoi(limitVal)
 	}
@@ -88,13 +91,14 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	offset = limit * offset
 	limit = limit + 1
 
-	if cityName != "all" && statusVenue != "true" {
-		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
-	} else if cityName == "all" && statusVenue == "" {
-		venues, err = c.venue.GetVenueByCity(projectID, cityName, limit, offset)
+	if cityName != "" && statusVenue != "true" {
+		//get Venue with cityName
+		venues, err = c.venue.GetVenueByCity(projectID, cityName, showStatus, limit, offset)
 	} else if statusVenue == "true" && cityName == "" {
+		//get All Venue with status 2 /4
 		venues, err = c.venue.GetVenueByStatus(projectID, limit, offset)
 	} else if cityName != "all" && statusVenue == "true" {
+		//get Venue with cityNMe & status 2 /4
 		venues, err = c.venue.GetVenueByCityID(projectID, cityName, limit, offset)
 	} else {
 		user, ok := authpassport.GetUser(r)
@@ -147,6 +151,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 				VenuePhone:       venue.VenuePhone,
 				CreatedBy:        venue.CreatedBy,
 				LastUpdateBy:     venue.LastUpdateBy,
+				ShowStatus:       venue.ShowStatus,
 			},
 		})
 	}
