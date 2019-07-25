@@ -3,6 +3,7 @@ package venue
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"time"
 
 	"encoding/json"
@@ -221,28 +222,35 @@ func (c *core) getFromDBVenue(pid int64, showStatus string, cityName string, lim
 			WHERE
 				stats = 1 AND
 				project_id = ? `
-
+	log.Printf("%+v", showStatus)
+	log.Printf("%+v", cityName)
 	if showStatus == "true" {
 		if cityName == "all" {
-
-			query += `AND show_status = 1
+			query += ` AND show_status = 1
 				ORDER BY venue_name ASC
 				LIMIT ?, ?`
 			err = c.db.Select(&venues, query, pid, offset, limit)
 		} else {
-
-			query += `AND show_status = 1
-				And city = ?
+			query += ` AND city = ?
+				AND show_status = 1
 				ORDER BY venue_name ASC
 				LIMIT ?, ?`
 			err = c.db.Select(&venues, query, pid, cityName, offset, limit)
 		}
 
 	} else {
-		query +=
-			`ORDER BY venue_name ASC
-			LIMIT ?, ?`
-		err = c.db.Select(&venues, query, pid, offset, limit)
+		if cityName == "all" {
+			query +=
+				` ORDER BY venue_name ASC
+				LIMIT ?, ?`
+			err = c.db.Select(&venues, query, pid, offset, limit)
+		} else {
+			query +=
+				` AND city = ? 
+				ORDER BY venue_name ASC
+				LIMIT ?, ?`
+			err = c.db.Select(&venues, query, pid, cityName, offset, limit)
+		}
 	}
 	return
 }
