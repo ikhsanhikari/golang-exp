@@ -41,7 +41,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content, sumorder := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
+	content, sumorder, qrcodecontent := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
 	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
 	htmlEmail := c.handleGetHtmlBodyCert(sumorder.VenueName)
 	emailReq := email.EmailRequest{
@@ -56,6 +56,13 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 				Content:     content,
 				Filename:    "certificate.pdf",
 				Type:        "plain/text",
+				Disposition: "attachment",
+				ContentID:   "contentid-test",
+			},
+			{
+				Content:     qrcodecontent,
+				Filename:    "molalivearena_qr.png",
+				Type:        "image/png",
 				Disposition: "attachment",
 				ContentID:   "contentid-test",
 			},

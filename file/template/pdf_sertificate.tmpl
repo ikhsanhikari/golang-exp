@@ -34,8 +34,8 @@
             }
             .row {
                 position: absolute;
-                top: 800px;
-                left: 0;
+                top: 780px;
+                left: 100px;
                 width: 100%;
                 color: rgb(255, 255, 255);
             }
@@ -49,15 +49,15 @@
             font-size: 48px;
             font-family: cursive;
             position: absolute;
-            top: 420px;
+            top: 450px;
             left: 0;
             width: 100%;">{{ .VenueName }}</p>
         <div class="row">
                 <div class="columns1">
-                    <img src="data:image/png;base64,{{.QrBase64}}" width="100px" height="100px" align="right">
+                    <img src="data:image/png;base64,{{.QrBase64}}" width="151px" height="151px" align="right">
                 </div>
-                <div class="columns" style="color:#fff;">
-                    <p><br>{{ .VenueName }}<br>{{ .Address }}<br>{{ .City }} &nbsp;{{ .Province }}&nbsp;,&nbsp; {{ .Zip }}</p>
+                <div class="columns" style="color:#fff;font-size: 22px;">
+                    <p><br>{{ .Name }}<br>{{ .Address }}<br>{{ .City }} &nbsp;{{ .Province }}&nbsp;,&nbsp; {{ .Zip }}</p>
                 </div>
             </div>
         </div>
