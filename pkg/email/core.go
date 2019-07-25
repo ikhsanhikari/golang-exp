@@ -74,7 +74,7 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 }
 
 var (
-	input  = flag.String("i", "file/img/c.png", "Logo to be placed over QR code")
+	input  = flag.String("i", "file/img/mola.png", "Logo to be placed over QR code")
 	output = flag.String("o", "qr.png", "Output filename")
 	size   = flag.Int("size", 302, "Image size in pixels")
 )
