@@ -8,10 +8,12 @@ import (
 	"time"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
+	"git.sstv.io/lib/go/gojunkyard.git/util"
 	null "gopkg.in/guregu/null.v3"
 )
 
@@ -270,6 +272,13 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		err = c.venue.InsertVenueAvailable(params.City)
 	}
 
+	err = c.InsertLicense(venue.Id, venue.CreatedBy, venue.CreatedBy)
+	if err != nil {
+		c.reporter.Infof("[handlePostVenue] Failed post license, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed post license", http.StatusInternalServerError)
+		return
+	}
+
 	view.RenderJSONData(w, venue, http.StatusOK)
 }
 
@@ -462,4 +471,31 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 
 	view.RenderJSONData(w, res, http.StatusOK)
 	return
+}
+
+func (c *Controller) InsertLicense(venueID int64, createdBy string, buyerID string) error {
+	licenseNumberUUID := util.GenerateUUID()
+	layout := "2006-01-02T15:04:05.000Z"
+	str := "1999-01-01T11:45:26.371Z"
+	defaultTime, err := time.Parse(layout, str)
+	if err != nil {
+		fmt.Println(err)
+	}
+	license := license.License{
+		LicenseNumber: licenseNumberUUID,
+		OrderID:       venueID,
+		LicenseStatus: 1,
+		ActiveDate:    defaultTime,
+		ExpiredDate:   defaultTime,
+		ProjectID:     10,
+		CreatedBy:     createdBy,
+		BuyerID:       buyerID,
+	}
+
+	err = c.license.Insert(&license)
+	if err != nil {
+		return err
+	}
+
+	return nil
 }
