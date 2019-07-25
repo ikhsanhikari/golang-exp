@@ -16,13 +16,18 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64, uid string) (venues Venues, err error)
-	GetVenueByCity(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
+	GetVenueByCity(pid int64, cityName string, showStatus string, limit int, offset int) (venues Venues, err error)
 	GetVenueByStatus(pid int64, limit int, offset int) (venues Venues, err error)
 	GetVenueByCityID(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
-
+	GetVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error)
+	GetVenueAvailable() (venues VenueAvailables, err error)
+	GetCity(cityName string) (venues VenueAvailables, err error)
+	GetStatus(pid int64, id int64) (venue Venue, err error)
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
+	InsertVenueAvailable(cityName string) (err error)
 	Update(venue *Venue, uid string) (err error)
+	//UpdateStatus(venue *Venue) (err error)
 	Delete(pid int64, id int64, uid string) (err error)
 }
 
@@ -59,16 +64,12 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 			facilities,
 			longitude,
 			latitude,
-			people,
 			created_at,
 			updated_at,
 			deleted_at,
 			stats,
-			venue_category,
 			pic_name,
 			pic_contact_number,
-			venue_technician_name,
-			venue_technician_contact_number,
 			venue_phone,
 			project_id,
 			created_by,
@@ -82,7 +83,52 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 			stats = 1 AND
 			project_id = ? AND 
 			created_by = ? 
+		ORDER BY venue_name ASC
 	`, pid, uid)
+
+	return
+}
+
+func (c *core) GetStatus(pid int64, id int64) (venue Venue, err error) {
+	venue, err = c.getStatusFromDB(id, pid)
+	return
+}
+func (c *core) getStatusFromDB(id int64, pid int64) (venue Venue, err error) {
+	qs := `
+		SELECT
+			id,
+			venue_id,
+			venue_type,
+			venue_name,
+			address,
+			zip,
+			capacity,
+			facilities,
+			longitude,
+			latitude,
+			created_at,
+			updated_at,
+			deleted_at,
+			stats,
+			pic_name,
+			pic_contact_number,
+			venue_phone,
+			project_id,
+			created_by,
+			last_update_by,
+			province,
+			city,
+			pt_id,
+			show_status
+		FROM
+			mla_venues
+		WHERE
+			id = ? AND
+			project_id = ? AND 
+			deleted_at IS NULL
+		ORDER BY venue_name ASC `
+
+	err = c.db.Get(&venue, qs, id, pid)
 
 	return
 }
@@ -113,16 +159,12 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 			facilities,
 			longitude,
 			latitude,
-			people,
 			created_at,
 			updated_at,
 			deleted_at,
 			stats,
-			venue_category,
 			pic_name,
 			pic_contact_number,
-			venue_technician_name,
-			venue_technician_contact_number,
 			venue_phone,
 			project_id,
 			created_by,
@@ -136,57 +178,72 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 			id = ? AND
 			project_id = ? AND 
 	 		created_by = ? AND 
-			deleted_at IS NULL `
+			deleted_at IS NULL
+		ORDER BY venue_name ASC `
 
 	err = c.db.Get(&venue, qs, id, pid, uid)
 
 	return
 }
 
-func (c *core) GetVenueByCity(pid int64, cityName string, limit int, offset int) (venues Venues, err error) {
-	venues, err = c.getFromDBVenue(cityName, pid, limit, offset)
+func (c *core) GetVenueByCity(pid int64, cityName string, showStatus string, limit int, offset int) (venues Venues, err error) {
+	venues, err = c.getFromDBVenue(pid, showStatus, cityName, limit, offset)
 	return
 }
+func (c *core) getFromDBVenue(pid int64, showStatus string, cityName string, limit int, offset int) (venues Venues, err error) {
+	query := `SELECT
+				id,
+				venue_id,
+				venue_type,
+				venue_name,
+				address,
+				zip,
+				capacity,
+				facilities,
+				longitude,
+				latitude,
+				created_at,
+				updated_at,
+				deleted_at,
+				stats,
+				pic_name,
+				pic_contact_number,
+				venue_phone,
+				project_id,
+				created_by,
+				last_update_by,
+				province,
+				city,
+				pt_id,
+				show_status
+			FROM
+				mla_venues
+			WHERE
+				stats = 1 AND
+				project_id = ? `
 
-func (c *core) getFromDBVenue(cityName string, pid int64, limit int, offset int) (venues Venues, err error) {
-	err = c.db.Select(&venues, `
-		SELECT
-			id,
-			venue_id,
-			venue_type,
-			venue_name,
-			address,
-			zip,
-			capacity,
-			facilities,
-			longitude,
-			latitude,
-			people,
-			created_at,
-			updated_at,
-			deleted_at,
-			stats,
-			venue_category,
-			pic_name,
-			pic_contact_number,
-			venue_technician_name,
-			venue_technician_contact_number,
-			venue_phone,
-			project_id,
-			created_by,
-			last_update_by,
-			province,
-			city,
-			pt_id
-		FROM
-			mla_venues
-		WHERE
-			city = ? AND
-			stats = 1 AND
-			project_id = ?
-			LIMIT ?, ?; 
-	`, cityName, pid, offset, limit)
+	if showStatus == "true" {
+		if cityName == "all" {
 
+			query += `AND show_status = 1
+				ORDER BY venue_name ASC
+				LIMIT ?, ?`
+			err = c.db.Select(&venues, query, pid, offset, limit)
+		} else {
+
+			query += `AND show_status = 1
+				And city = ?
+				ORDER BY venue_name ASC
+				LIMIT ?, ?`
+			err = c.db.Select(&venues, query, pid, cityName, offset, limit)
+		}
+
+	} else {
+		query +=
+			`ORDER BY venue_name ASC
+			LIMIT ?, ?`
+		err = c.db.Select(&venues, query, pid, offset, limit)
+	}
 	return
 }
 
@@ -208,16 +265,12 @@ func (c *core) getFromDBVenueStatus(pid int64, limit int, offset int) (venues Ve
 			facilities,
 			longitude,
 			latitude,
-			people,
 			created_at,
 			updated_at,
 			deleted_at,
 			stats,
-			venue_category,
 			pic_name,
 			pic_contact_number,
-			venue_technician_name,
-			venue_technician_contact_number,
 			venue_phone,
 			project_id,
 			created_by,
@@ -231,7 +284,8 @@ func (c *core) getFromDBVenueStatus(pid int64, limit int, offset int) (venues Ve
 			stats = 2 OR
 			stats = 4 AND 
 			project_id = ?
-			LIMIT ?, ?; 
+		ORDER BY venue_name ASC	
+		LIMIT ?, ?
 	`, pid, offset, limit)
 
 	return
@@ -255,16 +309,12 @@ func (c *core) getFromDBVenueCityID(cityName string, pid int64, limit int, offse
 			facilities,
 			longitude,
 			latitude,
-			people,
 			created_at,
 			updated_at,
 			deleted_at,
 			stats,
-			venue_category,
 			pic_name,
 			pic_contact_number,
-			venue_technician_name,
-			venue_technician_contact_number,
 			venue_phone,
 			project_id,
 			created_by,
@@ -279,9 +329,62 @@ func (c *core) getFromDBVenueCityID(cityName string, pid int64, limit int, offse
 			stats = 4 AND 
 			city = ? AND
 			project_id = ?
-			LIMIT ?, ?; 
+		ORDER BY venue_name ASC		
+		LIMIT ?, ?
 	`, pid, cityName, offset, limit)
 
+	return
+}
+
+func (c *core) GetVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error) {
+	venues, err = c.getFromDBVenueGroupAvailable(pid)
+	return
+}
+
+func (c *core) getFromDBVenueGroupAvailable(pid int64) (venues VenueGroupAvailables, err error) {
+	err = c.db.Select(&venues, `
+		SELECT
+			city
+		FROM
+			mla_venues
+		WHERE		
+			project_id = ?
+		GROUP BY city
+		ORDER BY city ASC	
+	`, pid)
+
+	return
+}
+
+func (c *core) GetVenueAvailable() (venues VenueAvailables, err error) {
+	venues, err = c.getFromDBVenueAvailable()
+	return
+}
+
+func (c *core) getFromDBVenueAvailable() (venues VenueAvailables, err error) {
+	err = c.db.Select(&venues, `
+		SELECT
+			id,city_name
+		FROM
+			mla_venues_available
+		WHERE		
+			status = 1
+		ORDER BY city_name ASC	
+	`)
+
+	return
+}
+func (c *core) GetCity(cityName string) (venues VenueAvailables, err error) {
+	venues, err = c.getFromDBCity(cityName)
+	return
+}
+func (c *core) getFromDBCity(cityName string) (venue VenueAvailables, err error) {
+	query := `
+		select id, city_name
+		from mla_venues_available
+		where city_name = ?
+		ORDER BY city_name ASC`
+	err = c.db.Get(&venue, query, cityName)
 	return
 }
 
@@ -303,15 +406,11 @@ func (c *core) Insert(venue *Venue) (err error) {
 			facilities,
 			longitude,
 			latitude,
-			people,
 			created_at,
 			updated_at,
 			stats,
-			venue_category,
 			pic_name,
 			pic_contact_number,
-			venue_technician_name,
-			venue_technician_contact_number,
 			venue_phone,
 			project_id,
 			created_by,
@@ -340,11 +439,8 @@ func (c *core) Insert(venue *Venue) (err error) {
 			?,
 			?,
 			?,
-			?,
-			?,
-			?,
-			?,
-			?)`
+			?
+			)`
 	args := []interface{}{
 		venue.VenueId,
 		venue.VenueType,
@@ -355,15 +451,11 @@ func (c *core) Insert(venue *Venue) (err error) {
 		venue.Facilities,
 		venue.Longitude,
 		venue.Latitude,
-		venue.People,
 		venue.CreatedAt,
 		venue.UpdatedAt,
 		venue.Status,
-		venue.VenueCategory,
 		venue.PicName,
 		venue.PicContactNumber,
-		venue.VenueTechnicianName,
-		venue.VenueTechnicianContactNumber,
 		venue.VenuePhone,
 		venue.ProjectID,
 		venue.CreatedBy,
@@ -386,6 +478,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	if err != nil {
 		return err
 	}
+
 	//Add Logs
 	dataTrail := auditTrail.AuditTrail{
 		UserID:    venue.CreatedBy,
@@ -401,6 +494,34 @@ func (c *core) Insert(venue *Venue) (err error) {
 	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.CreatedBy)
 	_ = c.deleteCache(redisKey)
 
+	return
+}
+
+func (c *core) InsertVenueAvailable(cityName string) (err error) {
+	time := time.Now()
+	query := `
+		INSERT INTO mla_venues_available (
+			city_name,status,created_at
+		) VALUES (
+			?,
+			?,
+			?)`
+	args := []interface{}{
+		cityName, 1, time,
+	}
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	return
 }
 
@@ -420,18 +541,15 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 			facilities = ?,
 			longitude = ?,
 			latitude = ?,
-			people = ?,
 			updated_at = ?,
-			venue_category = ?,
 			pic_name = ?,
 			pic_contact_number = ?,
-			venue_technician_name = ?,
-			venue_technician_contact_number = ?,
 			venue_phone = ?,
 			last_update_by = ?,
 			province= ?,
 			city= ?,
-			pt_id = ?
+			pt_id = ?,
+			show_status = ?
 		WHERE
 			id = ? AND
 			project_id = 10 AND
@@ -447,18 +565,15 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 		venue.Facilities,
 		venue.Longitude,
 		venue.Latitude,
-		venue.People,
 		venue.UpdatedAt,
-		venue.VenueCategory,
 		venue.PicName,
 		venue.PicContactNumber,
-		venue.VenueTechnicianName,
-		venue.VenueTechnicianContactNumber,
 		venue.VenuePhone,
 		venue.LastUpdateBy,
 		venue.Province,
 		venue.City,
 		venue.PtID,
+		venue.ShowStatus,
 		venue.Id,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)

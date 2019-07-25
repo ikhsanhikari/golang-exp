@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"encoding/json"
 	"fmt"
-	"log"
 
 	"github.com/gomodule/redigo/redis"
 	"github.com/jmoiron/sqlx"
@@ -37,7 +36,6 @@ func (c *core) Select(pid int64) (provinces Provinces, err error) {
 }
 
 func (c *core) selectFromDB(pid int64) (provinces Provinces, err error) {
-	log.Printf("%+v", pid)
 	err = c.db.Select(&provinces, `
 		SELECT
 			province_id,
@@ -49,6 +47,7 @@ func (c *core) selectFromDB(pid int64) (provinces Provinces, err error) {
 			province
 		WHERE
 			project_id = ? 
+		ORDER BY province ASC
 	`, pid)
 	return
 }
@@ -79,6 +78,7 @@ func (c *core) getFromDB(id int64, pid int64) (province Province, err error) {
 		WHERE
 			province_id = ? 
 			AND project_id = ?
+		ORDER BY province ASC
 	`, id, pid)
 
 	return

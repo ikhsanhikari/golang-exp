@@ -117,7 +117,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/products/:venue_type", c.auth.MustAuthorize(c.handleGetAllByVenueType, "molanobar:products.read"))
 
 	router.POST("/orders", c.auth.MustAuthorize(c.handlePostOrder, "molanobar:orders.create"))
-	router.POST("/ordersbyagents", c.auth.MustAuthorize(c.handlePostOrderByAgent, "molanobar:orders.create"))
+	router.POST("/orders-by-agents", c.auth.MustAuthorize(c.handlePostOrderByAgent, "molanobar:orders.create"))
 	router.PATCH("/orders/:id", c.auth.MustAuthorize(c.handlePatchOrder, "molanobar:orders.update"))
 	router.PATCH("/orders-status/:id", c.auth.MustAuthorize(c.handleUpdateOrderStatusByID, "molanobar:orders.update"))
 	router.PATCH("/orders-open-payment-status/:id", c.auth.MustAuthorize(c.handleUpdateOpenPaymentStatusByID, "molanobar:orders.update"))
@@ -134,8 +134,11 @@ func (c *Controller) Register(router *router.Router) {
 
 	router.GET("/venues", c.auth.MustAuthorize(c.handleGetAllVenues, "molanobar:venues.read"))
 	router.GET("/venues/detail", c.handleGetAllVenues)
+	router.GET("/venues/available", c.handleGetAllVenuesAvailable)
+	router.GET("/venues/city_available", c.handleGetAllVenuesGroupAvailable)
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
 	router.PATCH("/venue/:id", c.auth.MustAuthorize(c.handlePatchVenue, "molanobar:venues.update"))
+	router.PATCH("/venues/show/:id", c.auth.MustAuthorize(c.handleShowStatusVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
 
 	router.GET("/installation", c.auth.MustAuthorize(c.handleGetAllInstallations, "molanobar:installations.read"))
@@ -181,6 +184,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/admins/:id", c.auth.MustAuthorize(c.handlePatchAdmin, "molanobar:admins.update"))
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
+	router.GET("/admins-check", c.auth.MustAuthorize(c.handleAdminsCheck, "molanobar:admins.read"))
 
 	//router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
 	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmailECert, "molanobar:email.ecert"))

@@ -1,6 +1,7 @@
 package controller
 
 import (
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -17,16 +18,23 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
 		return
 	}
-	userID, ok := user["sub"]
+	userID, ok := user["sub"].(string)
 	if !ok {
 		c.reporter.Errorf("[handlePostEmailECert] failed get userID")
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
 		return
 	}
 
-	// lakukan pengecekan userid harus admin
+	// cek admin
+	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostEmailECert] user is not exist")
+		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
+		return
+	}
 
 	var params reqEmail
+
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostEmailECert] id must be integer, err: %s", err.Error())
@@ -35,12 +43,13 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 	}
 	content, sumorder := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
 	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
+	htmlEmail := c.handleGetHtmlBodyCert(sumorder.VenueName)
 	emailReq := email.EmailRequest{
 		Subject: "Mola Live Arena E-Certificate",
 		To:      sumorder.CompanyEmail,
-		HTML:    "<h1>ISI PESAN !!!!!!!</h1>",
+		HTML:    htmlEmail,
 		From:    "no-reply@molalivearena.com",
-		Text:    "...",
+		Text:    " ",
 		Attachments: []email.Attachment{
 			{
 				Content:     content,
@@ -52,7 +61,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailLog("kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo", params.OrderID, emailReq.To, "ecert")
+	msg := c.handlePostEmailLog(userID, params.OrderID, emailReq.To, "ecert")
 	if msg == "0" {
 		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
 	}

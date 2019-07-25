@@ -18,7 +18,7 @@ type ICore interface {
 	Get(pid int64, id int64) (license License, err error)
 	Insert(license *License) (err error)
 	Update(license *License, buyerID string) (err error)
-	Delete(pid int64, id int64, buyerID string) (err error)
+	Delete(pid int64, id int64, buyerID string, licenseNumber string) (err error)
 	GetByBuyerId(pid int64, id string) (licenses Licenses, err error)
 }
 
@@ -324,10 +324,13 @@ func (c *core) Update(license *License, buyerID string) (err error) {
 	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:%d:licorder-id:%s", redisPrefix, license.ProjectID, license.LicenseNumber)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
-func (c *core) Delete(pid int64, id int64, buyerID string) (err error) {
+func (c *core) Delete(pid int64, id int64, buyerID string, licenseNumber string) (err error) {
 	now := time.Now()
 
 	query := `
@@ -360,7 +363,7 @@ func (c *core) Delete(pid int64, id int64, buyerID string) (err error) {
 
 	//Add Logs
 	dataAudit := auditTrail.AuditTrail{
-		UserID:    "uid",
+		UserID:    buyerID,
 		Query:     queryTrail,
 		TableName: "mla_license",
 	}
@@ -378,6 +381,9 @@ func (c *core) Delete(pid int64, id int64, buyerID string) (err error) {
 	_ = c.deleteCache(redisKey)
 
 	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
+	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:%d:licorder-id:%s", redisPrefix, pid, licenseNumber)
 	_ = c.deleteCache(redisKey)
 
 	return
