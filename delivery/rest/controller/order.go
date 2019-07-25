@@ -10,13 +10,11 @@ import (
 	"time"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-	"git.sstv.io/lib/go/gojunkyard.git/util"
 )
 
 func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
@@ -305,13 +303,6 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] failed post order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order details", http.StatusInternalServerError)
-		return
-	}
-
-	err = c.insertLicense(insertOrder.OrderID, insertOrder.CreatedBy, insertOrder.BuyerID)
-	if err != nil {
-		c.reporter.Infof("[handleUpdate Order Status] Failed post license, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed post license", http.StatusInternalServerError)
 		return
 	}
 
@@ -720,14 +711,6 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOrderStatus] failed update order status, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order status", http.StatusInternalServerError)
-		return
-	}
-
-	//insert license
-	err = c.insertLicense(getOrder.OrderID, getOrder.CreatedBy, getOrder.BuyerID)
-	if err != nil {
-		c.reporter.Infof("[handleUpdate Order Status] Failed post license, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed post license", http.StatusInternalServerError)
 		return
 	}
 
@@ -1787,31 +1770,4 @@ func (c *Controller) generateOrderNumber() (string, error) {
 		lastOrderNumber.Number = 0
 	}
 	return "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7), nil
-}
-
-func (c *Controller) insertLicense(orderID int64, createdBy, buyerID string) error {
-	licenseNumberUUID := util.GenerateUUID()
-	layout := "2006-01-02T15:04:05.000Z"
-	str := "1999-01-01T11:45:26.371Z"
-	defaultTime, err := time.Parse(layout, str)
-	if err != nil {
-		fmt.Println(err)
-	}
-	license := license.License{
-		LicenseNumber: licenseNumberUUID,
-		OrderID:       orderID,
-		LicenseStatus: 1,
-		ActiveDate:    defaultTime,
-		ExpiredDate:   defaultTime,
-		ProjectID:     10,
-		CreatedBy:     createdBy,
-		BuyerID:       buyerID,
-	}
-
-	err = c.license.Insert(&license)
-	if err != nil {
-		return err
-	}
-
-	return nil
 }
