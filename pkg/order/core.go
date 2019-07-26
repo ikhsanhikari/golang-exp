@@ -737,7 +737,7 @@ func (c *core) selectSumFromDBByID(orderID int64, pid int64, uid string) (sumord
 	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
 	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
 	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
-	left join mla_license license on orders.order_id = license.order_id
+	left join mla_license license on venues.id = license.venue_id
 	left join (select order_id, max(created_at) as last_sent_date 
 		from mla_email_log where deleted_at is null and email_type='ecert' 
 		and project_id= ? group by order_id) ecertsent 
@@ -814,7 +814,7 @@ func (c *core) getLicenseSumByID(licNumber string, pid int64) (licsum SummaryOrd
 	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
 	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
 	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
-	left join mla_license license on orders.order_id = license.order_id
+	left join mla_license license on venues.id = license.venue_id
 	left join (select order_id, max(created_at) as last_sent_date 
 		from mla_email_log where deleted_at is null and email_type='ecert' 
 		and project_id= ? group by order_id) ecertsent 
@@ -889,7 +889,7 @@ func (c *core) selectSumFromDBByUserID(pid int64, uid string) (sumorders Summary
 	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
 	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
 	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
-	left join mla_license license on orders.order_id = license.order_id
+	left join mla_license license on venues.id = license.venue_id
 	left join (select order_id, max(created_at) as last_sent_date 
 		from mla_email_log where deleted_at is null and email_type='ecert' 
 		and project_id= ? group by order_id) ecertsent 
@@ -964,7 +964,7 @@ func (c *core) selectSumFromDBByUserIDPagination(pid int64, uid string, limit in
 	left join mla_order_details installation on orders.order_id = installation.order_id and installation.item_type='installation'
 	left join mla_order_details room on orders.order_id = room.order_id and room.item_type='room'
 	left join mla_order_details aging on orders.order_id = aging.order_id and aging.item_type='aging'
-	left join mla_license license on orders.order_id = license.order_id
+	left join mla_license license on venues.id = license.venue_id
 	left join (select order_id, max(created_at) as last_sent_date 
 		from mla_email_log where deleted_at is null and email_type='ecert' 
 		and project_id= ? group by order_id) ecertsent 
@@ -1045,6 +1045,7 @@ func (c *core) clearRedis(projectID int64, uidUser, uidAdmin string, orderID, ve
 		redisKeys = append(redisKeys,
 			fmt.Sprintf("%s:%d:%s:orders:%d", redisPrefix, projectID, uidUser, orderID),
 			fmt.Sprintf("%s:%d:%s:sumorder-id:%d", redisPrefix, projectID, uidUser, orderID),
+			fmt.Sprintf("%s:%d:licorder-id:*", redisPrefix, projectID),
 		)
 	}
 

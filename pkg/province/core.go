@@ -44,7 +44,7 @@ func (c *core) selectFromDB(pid int64) (provinces Provinces, err error) {
 			app_id,
 			project_id
 		FROM
-			province
+			mla_province
 		WHERE
 			project_id = ? 
 		ORDER BY province ASC
@@ -74,7 +74,7 @@ func (c *core) getFromDB(id int64, pid int64) (province Province, err error) {
 			app_id,
 			project_id
 		FROM
-			province
+			mla_province
 		WHERE
 			province_id = ? 
 			AND project_id = ?

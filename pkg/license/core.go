@@ -70,7 +70,7 @@ func (c *core) selectFromDB(pid int64) (license Licenses, err error) {
 		SELECT
 			id,
 			license_number,
-			order_id,
+			venue_id,
 			license_status,
 			active_date,
 			expired_date,
@@ -111,7 +111,7 @@ func (c *core) getFromDB(pid int64, id int64) (license License, err error) {
 	SELECT
 		id,
 		license_number,
-		order_id,
+		venue_id,
 		license_status,
 		active_date,
 		expired_date,
@@ -151,7 +151,7 @@ func (c *core) getByBuyerIdFromDB(pid int64, buyerID string) (licenses Licenses,
 	SELECT
 		id,
 		license_number,
-		order_id,
+		venue_id,
 		license_status,
 		active_date,
 		expired_date,
@@ -183,7 +183,7 @@ func (c *core) Insert(license *License) (err error) {
 	query := `
 		INSERT INTO mla_license (
 			license_number,
-			order_id,
+			venue_id,
 			license_status,
 			active_date,
 			expired_date,
@@ -268,7 +268,7 @@ func (c *core) Update(license *License, buyerID string) (err error) {
 		UPDATE
 			mla_license
 		SET
-			order_id= ?,
+			venue_id= ?,
 			license_status = ?,
 			active_date= ?,
 			expired_date= ?,

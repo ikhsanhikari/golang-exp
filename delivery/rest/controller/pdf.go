@@ -5,9 +5,8 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"net/http"
+	"strings"
 
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
@@ -108,7 +107,7 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
 	return b64InvoicePdf
 }
 
-func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (string, order.SummaryOrder) {
+func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (string, order.SummaryOrder, string) {
 
 	t := "pdf_sertificate.tmpl"
 	pdf := "sertificate.pdf"
@@ -116,21 +115,22 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, userID)
 	if err != nil {
 		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
-		return "0", sumorder
+		return "0", sumorder, "0"
 	}
 	if sumorder.LicenseNumber == "" {
 		c.reporter.Errorf("[handleSertificatePDF] License number not found, err: %s", err.Error())
-		return "0", sumorder
+		return "0", sumorder, "0"
 	}
 
 	b64Png, backBase64 := c.email.GetBase64Png(sumorder.LicenseNumber)
 	if b64Png == "0" && backBase64 == "0" {
 		c.reporter.Errorf("[handleSertificatePDF] Error base64 from image")
-		return "0", sumorder
+		return "0", sumorder, "0"
 	}
 
 	templateData := map[string]interface{}{
-		"VenueName":  sumorder.VenueName,
+		"VenueName":  strings.ToUpper(sumorder.VenueName),
+		"Name":       strings.Title(sumorder.VenueName),
 		"Address":    sumorder.VenueAddress,
 		"Zip":        sumorder.VenueZip,
 		"City":       sumorder.VenueCity,
@@ -139,7 +139,7 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 		"Background": backBase64,
 	}
 	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
-	return b64SertificatePdf, sumorder
+	return b64SertificatePdf, sumorder, b64Png
 
 }
 
@@ -308,9 +308,4 @@ func (c *Controller) handleGetHtmlBodyCert(venueName string) string {
 
 	return buff.String()
 
-}
-
-func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
-	a, _ := c.handleGetDataSertificate(150, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
-	view.RenderJSONData(w, a, http.StatusOK)
 }
