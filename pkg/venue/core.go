@@ -610,6 +610,12 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, uid)
 	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:%d", redisPrefix, venue.ProjectID, uid, venue.Id)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, venue.ProjectID, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, venue.ProjectID)
+	_ = c.deleteCache(redisKey)
 
 	return
 }
@@ -646,7 +652,7 @@ func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 	}
 	//Add Logs
 	dataTrail := auditTrail.AuditTrail{
-		UserID:    "uid",
+		UserID:    uid,
 		Query:     queryTrail,
 		TableName: "mla_venues",
 	}
@@ -656,9 +662,15 @@ func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, 10, id)
+	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, 10, uid)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, pid, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:%d", redisPrefix, pid, uid, id)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, pid, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)
 	return
 }

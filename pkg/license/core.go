@@ -324,7 +324,7 @@ func (c *core) Update(license *License, buyerID string) (err error) {
 	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:%d:licorder-id:%s", redisPrefix, license.ProjectID, license.LicenseNumber)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:%s", redisPrefix, license.ProjectID, license.LicenseNumber)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -383,7 +383,7 @@ func (c *core) Delete(pid int64, id int64, buyerID string, licenseNumber string)
 	redisKey = fmt.Sprintf("%s:license-by-buyer-id:%s", redisPrefix, buyerID)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:%d:licorder-id:%s", redisPrefix, pid, licenseNumber)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:%s", redisPrefix, pid, licenseNumber)
 	_ = c.deleteCache(redisKey)
 
 	return
