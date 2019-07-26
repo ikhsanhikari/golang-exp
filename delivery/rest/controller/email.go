@@ -44,7 +44,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
 	htmlEmail := c.handleGetHtmlBodyCert(sumorder.VenueName)
 	emailReq := email.EmailRequest{
-		Subject: "Mola Live Arena E-Certificate",
+		Subject: "Selamat! Keanggotaan Mola Live Arena sudah aktif.",
 		To:      sumorder.CompanyEmail,
 		HTML:    htmlEmail,
 		From:    "no-reply@molalivearena.com",

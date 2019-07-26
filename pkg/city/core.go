@@ -45,7 +45,7 @@ func (c *core) selectFromDB(pid int64) (cities Cities, err error) {
 			app_id,
 			project_id
 		FROM
-			city
+			mla_city
 		WHERE
 			project_id = ? 
 		ORDER BY city ASC
