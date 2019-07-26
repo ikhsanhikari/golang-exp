@@ -200,8 +200,4 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/province", c.handleGetAllProvinces)
 	router.GET("/province/:id", c.handleGetProvincesByID)
 
-	//router.GET("/pdf", c.handleBaseSertificatePdf)
-
-	//router.GET("/pdf", c.handleGetPdf1) //,"molanobar:email.ecert"))
-
 }
