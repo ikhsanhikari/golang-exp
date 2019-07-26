@@ -5,10 +5,8 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"net/http"
 	"strings"
 
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
@@ -114,7 +112,7 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 	t := "pdf_sertificate.tmpl"
 	pdf := "sertificate.pdf"
 
-	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo") //userID)
+	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, userID)
 	if err != nil {
 		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
 		return "0", sumorder, "0"
@@ -310,9 +308,4 @@ func (c *Controller) handleGetHtmlBodyCert(venueName string) string {
 
 	return buff.String()
 
-}
-
-func (c *Controller) handleGetPdf1(w http.ResponseWriter, r *http.Request) {
-	a, _, _ := c.handleGetDataSertificate(150, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
-	view.RenderJSONData(w, a, http.StatusOK)
 }
