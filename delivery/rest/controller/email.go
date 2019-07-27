@@ -68,7 +68,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailLog(userID, params.VenueID, emailReq.To, "ecert")
+	msg := c.handlePostEmailEcertLog(userID, params.VenueID, emailReq.To, "ecert")
 	if msg == "0" {
 		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
 	}

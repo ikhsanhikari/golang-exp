@@ -29,6 +29,8 @@ func (c *core) Insert(emailLog *EmailLog) (err error) {
 		INSERT INTO mla_email_log (
 			sender_uid,
 			order_id,
+			venue_id,
+			company_id,
 			to_email,
 			email_type,
 			created_at,
@@ -40,6 +42,8 @@ func (c *core) Insert(emailLog *EmailLog) (err error) {
 		) VALUES (
 			:sender_uid,
 			:order_id,
+			:venue_id,
+			:company_id,
 			:to_email,
 			:email_type,
 			:created_at,
