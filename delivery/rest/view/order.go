@@ -74,12 +74,14 @@ type SumVenueAttributes struct {
 	VenueLatitude         float64     `db:"venue_latitude"`
 	VenueCategory         int64       `db:"venue_category"`
 	VenueShowStatus       int64       `db:"venue_show_status"`
+	CompanyID             null.Int    `db:"company_id"`
 	CompanyName           string      `db:"company_name"`
 	CompanyAddress        string      `db:"company_address"`
 	CompanyCity           string      `db:"company_city"`
 	CompanyProvince       string      `db:"company_province"`
 	CompanyZip            string      `db:"company_zip"`
 	CompanyEmail          string      `db:"company_email"`
+	EcertLastSent         null.Time   `db:"ecert_last_sent"`
 	LicenseNumber         string      `db:"license_number"`
 	LicenseActiveDate     null.Time   `db:"license_active_date"`
 	LicenseExpiredDate    null.Time   `db:"license_expired_date"`

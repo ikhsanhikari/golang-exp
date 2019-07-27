@@ -709,9 +709,11 @@ func (c *core) getSummaryVenueFromDBByVenueID(venueID, pid int64, uid string) (s
 		COALESCE(venues.latitude,0) as venue_latitude,
 		COALESCE(venues.venue_category,0) as venue_category,
 		COALESCE(venues.show_status,0) as venue_show_status,
+		emaillog.created_at as ecert_last_sent,
 		COALESCE(license.license_number,'') as license_number,
 		license.active_date as license_active_date,
 		license.expired_date as license_expired_date,
+		comp.id as company_id,
 		COALESCE(comp.name,'') as company_name,
 		COALESCE(comp.address,'') as company_address,
 		COALESCE(comp.city,'') as company_city,
@@ -737,6 +739,9 @@ func (c *core) getSummaryVenueFromDBByVenueID(venueID, pid int64, uid string) (s
 		mla_venues venues
 	left join mla_license license on venues.id = license.venue_id
 	left join mla_company comp on comp.id = venues.pt_id
+	left join (select venue_id, max(created_at) as created_at from mla_email_log 
+		where deleted_at is null and project_id=? and email_type='ecert' group by venue_id) emaillog 
+		on venues.id = emaillog.venue_id
 	left join (select * from mla_orders where venue_id= ? and deleted_at is null and project_id = ?
 		and created_at = (SELECT max(created_at) FROM mla_orders where venue_id = ?) order by order_id LIMIT 1) orders on venues.id = orders.venue_id
 	where
@@ -745,7 +750,7 @@ func (c *core) getSummaryVenueFromDBByVenueID(venueID, pid int64, uid string) (s
 		venues.deleted_at IS NULL AND
 		venues.id = ?
 	limit 1
-	`, venueID, pid, venueID, pid, uid, venueID)
+	`, pid, venueID, pid, venueID, pid, uid, venueID)
 	return
 }
 
@@ -780,9 +785,11 @@ func (c *core) selectSummaryVenuesFromDBByUserID(pid int64, uid string) (sumvenu
 		COALESCE(venues.latitude,0) as venue_latitude,
 		COALESCE(venues.venue_category,0) as venue_category,
 		COALESCE(venues.show_status,0) as venue_show_status,
+		emaillog.created_at as ecert_last_sent,
 		COALESCE(license.license_number,'') as license_number,
 		license.active_date as license_active_date,
 		license.expired_date as license_expired_date,
+		comp.id as company_id,
 		COALESCE(comp.name,'') as company_name,
 		COALESCE(comp.address,'') as company_address,
 		COALESCE(comp.city,'') as company_city,
@@ -808,6 +815,9 @@ func (c *core) selectSummaryVenuesFromDBByUserID(pid int64, uid string) (sumvenu
 		mla_venues venues
 	left join mla_license license on venues.id = license.venue_id
 	left join mla_company comp on comp.id = venues.pt_id
+	left join (select venue_id, max(created_at) as created_at from mla_email_log 
+		where deleted_at is null and project_id=? and email_type='ecert' group by venue_id) emaillog 
+		on venues.id = emaillog.venue_id
 	left join (select t.*
 		from mla_orders t
 		inner join (select venue_id, max(created_at) as created_at from mla_orders where deleted_at is null and project_id=? group by venue_id)
@@ -817,7 +827,7 @@ func (c *core) selectSummaryVenuesFromDBByUserID(pid int64, uid string) (sumvenu
 		venues.project_id = ? AND
 		venues.created_by = ? AND
 		venues.deleted_at IS NULL
-	`, pid, pid, uid)
+	`, pid, pid, pid, uid)
 	return
 }
 
