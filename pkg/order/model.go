@@ -53,6 +53,7 @@ type SummaryVenue struct {
 	VenueProvince         string    `db:"venue_province"`
 	VenueZip              string    `db:"venue_zip"`
 	VenueCapacity         int64     `db:"venue_capacity"`
+	VenueFacilities       string    `db:"venue_facilities"`
 	VenueLongitude        float64   `db:"venue_longitude"`
 	VenueLatitude         float64   `db:"venue_latitude"`
 	VenueCategory         int64     `db:"venue_category"`
@@ -69,6 +70,12 @@ type SummaryVenue struct {
 	LastOrderID           null.Int  `db:"last_order_id"`
 	LastOrderNumber       string    `db:"last_order_number"`
 	LastOrderTotalPrice   float64   `db:"last_order_total_price"`
+	LastRoomID            null.Int  `db:"last_room_id"`
+	LastRoomQuantity      null.Int  `db:"last_room_quantity"`
+	LastAgingID           null.Int  `db:"last_aging_id"`
+	LastDeviceID          null.Int  `db:"last_device_id"`
+	LastProductID         null.Int  `db:"last_product_id"`
+	LastInstallationID    null.Int  `db:"last_installation_id"`
 	LastOrderCreatedAt    null.Time `db:"last_order_created_at"`
 	LastOrderPaidAt       null.Time `db:"last_order_paid_at"`
 	LastOrderFailedAt     null.Time `db:"last_order_failed_at"`
