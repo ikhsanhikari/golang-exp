@@ -6,7 +6,6 @@ import (
 	"net/http"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 )
@@ -41,7 +40,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content, sumorder, qrcodecontent := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
+	/*content, sumorder, qrcodecontent := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
 	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
 	htmlEmail := c.handleGetHtmlBodyCert(sumorder.VenueName)
 	emailReq := email.EmailRequest{
@@ -76,7 +75,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
 		view.RenderJSONData(w, false, http.StatusOK)
 		return
-	}
+	}*/
 
 	view.RenderJSONData(w, true, http.StatusOK)
 }

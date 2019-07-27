@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"encoding/base64"
 	"fmt"
-	"strings"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
@@ -108,9 +107,10 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
 }
 
 func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (string, order.SummaryOrder, string) {
+	var sumorder order.SummaryOrder
 
-	t := "pdf_sertificate.tmpl"
-	pdf := "sertificate.pdf"
+	/* t := "pdf_sertificate.tmpl"
+	 pdf := "sertificate.pdf"
 
 	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, userID)
 	if err != nil {
@@ -139,7 +139,8 @@ func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (str
 		"Background": backBase64,
 	}
 	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
-	return b64SertificatePdf, sumorder, b64Png
+	return b64SertificatePdf, sumorder, b64Png*/
+	return "", sumorder, ""
 
 }
 

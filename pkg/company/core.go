@@ -172,7 +172,7 @@ func (c *core) Insert(company *Company) (err error) {
 	//fmt.Println(res)
 	company.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID,company.CreatedBy)
+	redisKey := fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, company.CreatedBy)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -203,7 +203,13 @@ func (c *core) Update(company *Company, uid string) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, company.ProjectID, company.CreatedBy, company.ID)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID,uid)
+	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, company.ProjectID, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, company.ProjectID, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, company.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -228,6 +234,12 @@ func (c *core) Delete(id int64, pid int64, userID string) (err error) {
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, pid, userID)
 	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, pid, userID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, pid, userID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, pid)
+	_ = c.deleteCache(redisKey)
 	return
 }
 
@@ -248,7 +260,6 @@ func (c *core) getFromCache(key string) (company Company, err error) {
 	err = json.Unmarshal(b, &company)
 	return
 }
-
 
 func (c *core) setToCache(key string, expired int, data []byte) (err error) {
 	conn := c.redis.Get()
