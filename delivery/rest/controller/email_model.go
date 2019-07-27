@@ -1,5 +1,5 @@
 package controller
 
 type reqEmail struct {
-	OrderID int64 `json:"orderId"`
+	VenueID int64 `json:"venueId"`
 }
