@@ -48,6 +48,9 @@ type SummaryVenue struct {
 	VenueID               int64     `db:"venue_id"`
 	VenueName             string    `db:"venue_name"`
 	VenueType             int64     `db:"venue_type"`
+	VenuePhone            string    `db:"venue_phone"`
+	VenuePicName          string    `db:"venue_pic_name"`
+	VenuePicContactNumber string    `db:"venue_pic_contact_number"`
 	VenueAddress          string    `db:"venue_address"`
 	VenueCity             string    `db:"venue_city"`
 	VenueProvince         string    `db:"venue_province"`
