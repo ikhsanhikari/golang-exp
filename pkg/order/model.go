@@ -45,36 +45,45 @@ type LastOrderNumber struct {
 }
 
 type SummaryVenue struct {
-	VenueID            int64     `db:"venue_id"`
-	VenueName          string    `db:"venue_name"`
-	VenueType          int64     `db:"venue_type"`
-	VenueAddress       string    `db:"venue_address"`
-	VenueCity          string    `db:"venue_city"`
-	VenueProvince      string    `db:"venue_province"`
-	VenueZip           string    `db:"venue_zip"`
-	VenueCapacity      int64     `db:"venue_capacity"`
-	VenueLongitude     float64   `db:"venue_longitude"`
-	VenueLatitude      float64   `db:"venue_latitude"`
-	VenueCategory      int64     `db:"venue_category"`
-	VenueShowStatus    int64     `db:"venue_show_status"`
-	CompanyName        string    `db:"company_name"`
-	CompanyAddress     string    `db:"company_address"`
-	CompanyCity        string    `db:"company_city"`
-	CompanyProvince    string    `db:"company_province"`
-	CompanyZip         string    `db:"company_zip"`
-	CompanyEmail       string    `db:"company_email"`
-	LicenseNumber      string    `db:"license_number"`
-	LicenseActiveDate  null.Time `db:"license_active_date"`
-	LicenseExpiredDate null.Time `db:"license_expired_date"`
+	VenueID               int64     `db:"venue_id"`
+	VenueName             string    `db:"venue_name"`
+	VenueType             int64     `db:"venue_type"`
+	VenueAddress          string    `db:"venue_address"`
+	VenueCity             string    `db:"venue_city"`
+	VenueProvince         string    `db:"venue_province"`
+	VenueZip              string    `db:"venue_zip"`
+	VenueCapacity         int64     `db:"venue_capacity"`
+	VenueLongitude        float64   `db:"venue_longitude"`
+	VenueLatitude         float64   `db:"venue_latitude"`
+	VenueCategory         int64     `db:"venue_category"`
+	VenueShowStatus       int64     `db:"venue_show_status"`
+	CompanyName           string    `db:"company_name"`
+	CompanyAddress        string    `db:"company_address"`
+	CompanyCity           string    `db:"company_city"`
+	CompanyProvince       string    `db:"company_province"`
+	CompanyZip            string    `db:"company_zip"`
+	CompanyEmail          string    `db:"company_email"`
+	LicenseNumber         string    `db:"license_number"`
+	LicenseActiveDate     null.Time `db:"license_active_date"`
+	LicenseExpiredDate    null.Time `db:"license_expired_date"`
+	LastOrderID           null.Int  `db:"last_order_id"`
+	LastOrderNumber       string    `db:"last_order_number"`
+	LastOrderTotalPrice   float64   `db:"last_order_total_price"`
+	LastOrderCreatedAt    null.Time `db:"last_order_created_at"`
+	LastOrderPaidAt       null.Time `db:"last_order_paid_at"`
+	LastOrderFailedAt     null.Time `db:"last_order_failed_at"`
+	LastOrderEmail        string    `db:"last_order_email"`
+	LastOrderStatus       int64     `db:"last_order_status"`
+	LastOpenPaymentStatus int64     `db:"last_open_payment_status"`
 }
 
 type SummaryVenues []SummaryVenue
 
 type SummaryOrder struct {
-	OrderID           int64     `db:"order_id"`
+	OrderID           null.Int  `db:"order_id"`
 	OrderNumber       string    `db:"order_number"`
 	OrderTotalPrice   float64   `db:"order_total_price"`
-	OrderCreatedAt    time.Time `db:"order_created_at"`
+	OrderCreatedAt    null.Time `db:"order_created_at"`
 	OrderPaidAt       null.Time `db:"order_paid_at"`
 	OrderFailedAt     null.Time `db:"order_failed_at"`
 	OrderEmail        string    `db:"order_email"`

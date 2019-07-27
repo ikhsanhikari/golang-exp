@@ -712,18 +712,29 @@ func (c *core) getSummaryVenueFromDBByVenueID(venueID, pid int64, uid string) (s
 		COALESCE(comp.city,'') as company_city,
 		COALESCE(comp.province,'') as company_province,
 		COALESCE(comp.zip,'') as company_zip,
-		COALESCE(comp.email,'') as company_email
+		COALESCE(comp.email,'') as company_email,
+		orders.order_id as last_order_id,
+		COALESCE(orders.order_number,'') as last_order_number,
+		COALESCE(orders.total_price,0) as last_order_total_price,
+		orders.created_at as last_order_created_at,
+		orders.paid_at as last_order_paid_at,
+		orders.failed_at as last_order_failed_at,
+		COALESCE(orders.email,'') as last_order_email,
+		COALESCE(orders.status,0) as last_order_status,
+		COALESCE(orders.open_payment_status,0) as last_open_payment_status
 	from
 		mla_venues venues
 	left join mla_license license on venues.id = license.venue_id
 	left join mla_company comp on comp.id = venues.pt_id
+	left join (select * from mla_orders where venue_id= ? and deleted_at is null and project_id = ?
+		and created_at = (SELECT max(created_at) FROM mla_orders where venue_id = ?) order by order_id LIMIT 1) orders on venues.id = orders.venue_id
 	where
 		venues.project_id = ? AND
 		venues.created_by = ? AND
 		venues.deleted_at IS NULL AND
 		venues.id = ?
 	limit 1
-	`, pid, uid, venueID)
+	`, venueID, pid, venueID, pid, uid, venueID)
 	return
 }
 
@@ -761,16 +772,30 @@ func (c *core) selectSummaryVenuesFromDBByUserID(pid int64, uid string) (sumvenu
 		COALESCE(comp.city,'') as company_city,
 		COALESCE(comp.province,'') as company_province,
 		COALESCE(comp.zip,'') as company_zip,
-		COALESCE(comp.email,'') as company_email
+		COALESCE(comp.email,'') as company_email,
+		orders.order_id as last_order_id,
+		COALESCE(orders.order_number,'') as last_order_number,
+		COALESCE(orders.total_price,0) as last_order_total_price,
+		orders.created_at as last_order_created_at,
+		orders.paid_at as last_order_paid_at,
+		orders.failed_at as last_order_failed_at,
+		COALESCE(orders.email,'') as last_order_email,
+		COALESCE(orders.status,0) as last_order_status,
+		COALESCE(orders.open_payment_status,0) as last_open_payment_status
 	from
 		mla_venues venues
 	left join mla_license license on venues.id = license.venue_id
 	left join mla_company comp on comp.id = venues.pt_id
+	left join (select t.*
+		from mla_orders t
+		inner join (select venue_id, max(created_at) as created_at from mla_orders where deleted_at is null and project_id=? group by venue_id)
+		tm on t.venue_id = tm.venue_id and t.created_at = tm.created_at) orders
+		on venues.id = orders.venue_id
 	where
 		venues.project_id = ? AND
 		venues.created_by = ? AND
 		venues.deleted_at IS NULL
-	`, pid, uid)
+	`, pid, pid, uid)
 	return
 }
 
