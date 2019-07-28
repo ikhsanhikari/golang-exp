@@ -81,6 +81,8 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	limit := 9
 	offset := 1
 	if showStatus != "true" {
+		showStatus = "true"
+	} else {
 		showStatus = "false"
 	}
 	if limitVal != "" {
