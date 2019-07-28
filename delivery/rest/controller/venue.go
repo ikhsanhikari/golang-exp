@@ -80,7 +80,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	var err error
 	limit := 9
 	offset := 1
-	if showStatus != "true" {
+	if showStatus != "false" {
 		showStatus = "true"
 	} else {
 		showStatus = "false"
