@@ -70,8 +70,7 @@ func (c *core) selectFromDB(pid int64, userID string) (companies Companies, err 
 }
 
 func (c *core) Get(id int64, pid int64, userID string) (company Company, err error) {
-	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, pid,userID, id)
-
+	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, pid, userID, id)
 	company, err = c.getFromCache(redisKey)
 	if err != nil {
 		company, err = c.getFromDB(id, pid, userID)
@@ -201,7 +200,7 @@ func (c *core) Update(company *Company, uid string) (err error) {
 			status = 	1
 	`, company)
 
-	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, company.ProjectID, company.CreatedBy, company.ID)
+	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, company.ProjectID, uid, company.ID)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, uid)
 	_ = c.deleteCache(redisKey)
