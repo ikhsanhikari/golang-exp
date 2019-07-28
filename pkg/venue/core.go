@@ -3,7 +3,6 @@ package venue
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"time"
 
 	"encoding/json"
@@ -222,8 +221,6 @@ func (c *core) getFromDBVenue(pid int64, showStatus string, cityName string, lim
 			WHERE
 				stats = 1 AND
 				project_id = ? `
-	log.Printf("%+v", showStatus)
-	log.Printf("%+v", cityName)
 	if showStatus == "true" {
 		if cityName == "all" {
 			query += ` AND show_status = 1
