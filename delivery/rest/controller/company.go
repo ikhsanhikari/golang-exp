@@ -15,6 +15,7 @@ import (
 )
 
 func (c *Controller) handleGetAllCompanies(w http.ResponseWriter, r *http.Request) {
+	var userid string
 	user, ok := authpassport.GetUser(r)
 	if !ok {
 		c.reporter.Errorf("[handleGetAllCompanies] failed get user")
@@ -23,12 +24,12 @@ func (c *Controller) handleGetAllCompanies(w http.ResponseWriter, r *http.Reques
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetAllCompanies] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userid = ""
+	} else {
+		userid = fmt.Sprintf("%v", userID)
 	}
 
-	companies, err := c.company.Select(10, fmt.Sprintf("%v", userID))
+	companies, err := c.company.Select(10, userid)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllCompanies] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get company", http.StatusInternalServerError)
