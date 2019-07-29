@@ -42,29 +42,35 @@ func (c *core) Select(pid int64, userID string) (companies Companies, err error)
 }
 
 func (c *core) selectFromDB(pid int64, userID string) (companies Companies, err error) {
-	err = c.db.Select(&companies, `
-		SELECT
-			id,
-			name,
-			address,
-			city,
-			province,
-			zip,
-			email,
-			npwp,
-			created_at,
-			updated_at,
-			deleted_at,
-			project_id,
-			created_by,
-			last_update_by
-		FROM
-			mla_company
-		WHERE
-			created_by = ? AND 
-			project_id = ? AND
-			deleted_at IS NULL
-	`, userID, pid)
+	 query := `
+	SELECT
+		id,
+		name,
+		address,
+		city,
+		province,
+		zip,
+		email,
+		npwp,
+		created_at,
+		updated_at,
+		deleted_at,
+		project_id,
+		created_by,
+		last_update_by
+	FROM
+		mla_company
+	WHERE
+		project_id = ? AND
+		deleted_at IS NULL
+	`
+	if userID == "" {
+		err = c.db.Select(&companies, query, pid)
+	} else {
+		query = query + `AND created_by = ?`
+		err = c.db.Select(&companies, query, pid, userID)
+	}
+	
 
 	return
 }
