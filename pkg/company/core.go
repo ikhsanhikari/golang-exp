@@ -70,8 +70,7 @@ func (c *core) selectFromDB(pid int64, userID string) (companies Companies, err 
 }
 
 func (c *core) Get(id int64, pid int64, userID string) (company Company, err error) {
-	redisKey := fmt.Sprintf("%s:%d:company:%d", redisPrefix, pid, id)
-
+	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, pid, userID, id)
 	company, err = c.getFromCache(redisKey)
 	if err != nil {
 		company, err = c.getFromDB(id, pid, userID)
@@ -172,7 +171,7 @@ func (c *core) Insert(company *Company) (err error) {
 	//fmt.Println(res)
 	company.ID, err = res.LastInsertId()
 
-	redisKey := fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID,company.CreatedBy)
+	redisKey := fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, company.CreatedBy)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -201,9 +200,15 @@ func (c *core) Update(company *Company, uid string) (err error) {
 			status = 	1
 	`, company)
 
-	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, company.ProjectID, company.CreatedBy, company.ID)
+	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, company.ProjectID, uid, company.ID)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID,uid)
+	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, company.ProjectID, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, company.ProjectID, uid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, company.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -224,9 +229,15 @@ func (c *core) Delete(id int64, pid int64, userID string) (err error) {
 			project_id = ?
 	`, now, id, userID, pid)
 
-	redisKey := fmt.Sprintf("%s:%d:%s:company", redisPrefix, pid, userID)
+	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, pid, userID, id)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, pid, userID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, pid, userID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, pid, userID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)
 	return
 }
@@ -248,7 +259,6 @@ func (c *core) getFromCache(key string) (company Company, err error) {
 	err = json.Unmarshal(b, &company)
 	return
 }
-
 
 func (c *core) setToCache(key string, expired int, data []byte) (err error) {
 	conn := c.redis.Get()

@@ -49,44 +49,6 @@ type OrderAttributes struct {
 	OpenPaymentStatus int16     `json:"open_payment_status"`
 }
 
-type SumOrderAttributes struct {
-	OrderNumber        string    `db:"order_number"`
-	OrderTotalPrice    float64   `db:"order_total_price"`
-	OrderCreatedAt     time.Time `db:"order_created_at"`
-	OrderPaidAt        null.Time `db:"order_paid_at"`
-	OrderFailedAt      null.Time `db:"order_failed_at"`
-	OrderEmail         string    `db:"order_email"`
-	CompanyName        string    `db:"company_name"`
-	CompanyAddress     string    `db:"company_address"`
-	CompanyCity        string    `db:"company_city"`
-	CompanyProvince    string    `db:"company_province"`
-	CompanyZip         string    `db:"company_zip"`
-	CompanyEmail       string    `db:"company_email"`
-	VenueID            int64     `db:"venue_id"`
-	VenueName          string    `db:"venue_name"`
-	VenueType          int64     `db:"venue_type"`
-	VenueAddress       string    `db:"venue_address"`
-	VenueProvince      string    `db:"venue_province"`
-	VenueZip           string    `db:"venue_zip"`
-	VenueCapacity      int64     `db:"venue_capacity"`
-	VenueLongitude     float64   `db:"venue_longitude"`
-	VenueLatitude      float64   `db:"venue_latitude"`
-	VenueCategory      int64     `db:"venue_category"`
-	VenueShowStatus    int64     `db:"venue_show_status"`
-	DeviceName         string    `db:"device_name"`
-	ProductName        string    `db:"product_name"`
-	InstallationName   string    `db:"installation_name"`
-	RoomName           string    `db:"room_name"`
-	RoomQty            int64     `db:"room_qty"`
-	AgingName          string    `db:"aging_name"`
-	OrderStatus        int64     `db:"order_status"`
-	OpenPaymentStatus  int64     `db:"open_payment_status"`
-	LicenseNumber      string    `db:"license_number"`
-	LicenseActiveDate  null.Time `db:"license_active_date"`
-	LicenseExpiredDate null.Time `db:"license_expired_date"`
-	EcertLastSentDate  null.Time `db:"ecert_last_sent_date"`
-}
-
 type PaymentAttributes struct {
 	URL string `json:"url"`
 }
@@ -94,4 +56,67 @@ type PaymentAttributes struct {
 type CalculatePriceAttributes struct {
 	TotalPrice float64     `json:"total_price"`
 	Details    interface{} `json:"details"`
+}
+
+type SumVenueAttributes struct {
+	VenueName             string      `db:"venue_name"`
+	VenueType             int64       `db:"venue_type"`
+	VenueAddress          string      `db:"venue_address"`
+	VenuePhone            string      `db:"venue_phone"`
+	VenuePicName          string      `db:"venue_pic_name"`
+	VenuePicContactNumber string      `db:"venue_pic_contact_number"`
+	VenueCity             string      `db:"venue_city"`
+	VenueProvince         string      `db:"venue_province"`
+	VenueZip              string      `db:"venue_zip"`
+	VenueCapacity         int64       `db:"venue_capacity"`
+	VenueFacilities       string      `db:"venue_facilities"`
+	VenueLongitude        float64     `db:"venue_longitude"`
+	VenueLatitude         float64     `db:"venue_latitude"`
+	VenueCategory         int64       `db:"venue_category"`
+	VenueShowStatus       int64       `db:"venue_show_status"`
+	CompanyID             null.Int    `db:"company_id"`
+	CompanyName           string      `db:"company_name"`
+	CompanyAddress        string      `db:"company_address"`
+	CompanyCity           string      `db:"company_city"`
+	CompanyProvince       string      `db:"company_province"`
+	CompanyZip            string      `db:"company_zip"`
+	CompanyEmail          string      `db:"company_email"`
+	EcertLastSent         null.Time   `db:"ecert_last_sent"`
+	LicenseNumber         string      `db:"license_number"`
+	LicenseActiveDate     null.Time   `db:"license_active_date"`
+	LicenseExpiredDate    null.Time   `db:"license_expired_date"`
+	LastOrderID           null.Int    `db:"last_order_id"`
+	LastOrderNumber       string      `db:"last_order_number"`
+	LastOrderTotalPrice   float64     `db:"last_order_total_price"`
+	LastRoomID            null.Int    `db:"last_room_id"`
+	LastRoomQuantity      null.Int    `db:"last_room_quantity"`
+	LastAgingID           null.Int    `db:"last_aging_id"`
+	LastDeviceID          null.Int    `db:"last_device_id"`
+	LastProductID         null.Int    `db:"last_product_id"`
+	LastInstallationID    null.Int    `db:"last_installation_id"`
+	LastOrderCreatedAt    null.Time   `db:"last_order_created_at"`
+	LastOrderPaidAt       null.Time   `db:"last_order_paid_at"`
+	LastOrderFailedAt     null.Time   `db:"last_order_failed_at"`
+	LastOrderEmail        string      `db:"last_order_email"`
+	LastOrderStatus       int64       `db:"last_order_status"`
+	Orders                interface{} `json:"orders"`
+}
+
+type SumOrderAttributes struct {
+	OrderID           null.Int  `db:"order_id"`
+	OrderNumber       string    `db:"order_number"`
+	OrderTotalPrice   float64   `db:"order_total_price"`
+	OrderCreatedAt    null.Time `db:"order_created_at"`
+	OrderPaidAt       null.Time `db:"order_paid_at"`
+	OrderFailedAt     null.Time `db:"order_failed_at"`
+	OrderEmail        string    `db:"order_email"`
+	DeviceName        string    `db:"device_name"`
+	ProductName       string    `db:"product_name"`
+	InstallationName  string    `db:"installation_name"`
+	RoomName          string    `db:"room_name"`
+	RoomQty           int64     `db:"room_qty"`
+	AgingName         string    `db:"aging_name"`
+	OrderStatus       int64     `db:"order_status"`
+	OpenPaymentStatus int64     `db:"open_payment_status"`
+	EcertLastSentDate null.Time `db:"ecert_last_sent_date"`
 }

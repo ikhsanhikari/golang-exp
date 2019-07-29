@@ -107,39 +107,40 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
 	return b64InvoicePdf
 }
 
-func (c *Controller) handleGetDataSertificate(orderid int64, userID string) (string, order.SummaryOrder, string) {
+func (c *Controller) handleGetDataSertificate(venueid int64, userID string) (string, order.SummaryVenue, string) {
+	var sumvenue order.SummaryVenue
 
 	t := "pdf_sertificate.tmpl"
 	pdf := "sertificate.pdf"
 
-	sumorder, err := c.order.SelectSummaryOrderByID(orderid, 10, userID)
+	sumvenue, err := c.order.GetSummaryVenueByVenueID(venueid, 10, userID)
 	if err != nil {
 		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
-		return "0", sumorder, "0"
+		return "0", sumvenue, "0"
 	}
-	if sumorder.LicenseNumber == "" {
+	if sumvenue.LicenseNumber == "" {
 		c.reporter.Errorf("[handleSertificatePDF] License number not found, err: %s", err.Error())
-		return "0", sumorder, "0"
+		return "0", sumvenue, "0"
 	}
 
-	b64Png, backBase64 := c.email.GetBase64Png(sumorder.LicenseNumber)
+	b64Png, backBase64 := c.email.GetBase64Png(sumvenue.LicenseNumber)
 	if b64Png == "0" && backBase64 == "0" {
 		c.reporter.Errorf("[handleSertificatePDF] Error base64 from image")
-		return "0", sumorder, "0"
+		return "0", sumvenue, "0"
 	}
 
 	templateData := map[string]interface{}{
-		"VenueName":  strings.ToUpper(sumorder.VenueName),
-		"Name":       strings.Title(sumorder.VenueName),
-		"Address":    sumorder.VenueAddress,
-		"Zip":        sumorder.VenueZip,
-		"City":       sumorder.VenueCity,
-		"Province":   sumorder.VenueProvince,
+		"VenueName":  strings.ToUpper(sumvenue.VenueName),
+		"Name":       strings.Title(sumvenue.VenueName),
+		"Address":    sumvenue.VenueAddress,
+		"Zip":        sumvenue.VenueZip,
+		"City":       sumvenue.VenueCity,
+		"Province":   sumvenue.VenueProvince,
 		"QrBase64":   b64Png,
 		"Background": backBase64,
 	}
 	b64SertificatePdf := c.handleBasePdf(templateData, t, pdf, "Landscape")
-	return b64SertificatePdf, sumorder, b64Png
+	return b64SertificatePdf, sumvenue, b64Png
 
 }
 
