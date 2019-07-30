@@ -3,6 +3,7 @@ package controller
 import (
 	"database/sql"
 	"fmt"
+	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -78,7 +79,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	projectID := int64(10)
 	var venues venue.Venues
 	var err error
-	limit := 9
+	limitBase := 9
 	offset := 1
 	if showStatus != "false" {
 		showStatus = "true"
@@ -86,14 +87,14 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		showStatus = "false"
 	}
 	if limitVal != "" {
-		limit, err = strconv.Atoi(limitVal)
+		limitBase, err = strconv.Atoi(limitVal)
 	}
 	if offsetVal != "" {
 		offset, err = strconv.Atoi(offsetVal)
 	}
 	offset = offset - 1
-	offset = limit * offset
-	limit = limit + 1
+	offset = limitBase * offset
+	limit := limitBase + 1
 
 	if cityName != "" && statusVenue != "true" {
 		//get Venue with cityName
@@ -126,50 +127,46 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
 		return
 	}
-
+	log.Printf("%+v", limitBase)
 	res := make([]view.DataResponse, 0, len(venues))
-	for _, venue := range venues {
-		res = append(res, view.DataResponse{
-			Type: "venues",
-			ID:   venue.Id,
-			Attributes: view.VenueAttributes{
-				Id:               venue.Id,
-				VenueId:          venue.VenueId,
-				VenueType:        venue.VenueType,
-				VenueName:        venue.VenueName,
-				Address:          venue.Address,
-				City:             venue.City,
-				Province:         venue.Province,
-				Zip:              venue.Zip,
-				Capacity:         venue.Capacity,
-				Facilities:       venue.Facilities,
-				PtID:             venue.PtID,
-				CreatedAt:        venue.CreatedAt,
-				UpdatedAt:        venue.UpdatedAt,
-				DeletedAt:        venue.DeletedAt,
-				Longitude:        venue.Longitude,
-				Latitude:         venue.Latitude,
-				Status:           venue.Status,
-				PicName:          venue.PicName,
-				PicContactNumber: venue.PicContactNumber,
-				VenuePhone:       venue.VenuePhone,
-				CreatedBy:        venue.CreatedBy,
-				LastUpdateBy:     venue.LastUpdateBy,
-				ShowStatus:       venue.ShowStatus,
-			},
-		})
+	for num, venue := range venues {
+		if num < limitBase {
+			res = append(res, view.DataResponse{
+				Type: "venues",
+				ID:   venue.Id,
+				Attributes: view.VenueAttributes{
+					Id:               venue.Id,
+					VenueId:          venue.VenueId,
+					VenueType:        venue.VenueType,
+					VenueName:        venue.VenueName,
+					Address:          venue.Address,
+					City:             venue.City,
+					Province:         venue.Province,
+					Zip:              venue.Zip,
+					Capacity:         venue.Capacity,
+					Facilities:       venue.Facilities,
+					PtID:             venue.PtID,
+					CreatedAt:        venue.CreatedAt,
+					UpdatedAt:        venue.UpdatedAt,
+					DeletedAt:        venue.DeletedAt,
+					Longitude:        venue.Longitude,
+					Latitude:         venue.Latitude,
+					Status:           venue.Status,
+					PicName:          venue.PicName,
+					PicContactNumber: venue.PicContactNumber,
+					VenuePhone:       venue.VenuePhone,
+					CreatedBy:        venue.CreatedBy,
+					LastUpdateBy:     venue.LastUpdateBy,
+					ShowStatus:       venue.ShowStatus,
+				},
+			})
+		}
 	}
 	var hasNext bool
 	hasNext = false
-	limit = limit - 1
-
-	if len(res) > limit {
+	if len(res) > limitBase {
 		hasNext = true
-		//view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 	}
-	//else {
-	//view.RenderJSONData(w, res, http.StatusOK)
-	//}
 	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 
 }
