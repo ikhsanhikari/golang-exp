@@ -53,14 +53,14 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		Attachments: []email.Attachment{
 			{
 				Content:     content,
-				Filename:    "certificate.pdf",
+				Filename:    "membership.pdf",
 				Type:        "plain/text",
 				Disposition: "attachment",
 				ContentID:   "contentid-test",
 			},
 			{
 				Content:     qrcodecontent,
-				Filename:    "molalivearena_qr.png",
+				Filename:    "MolaLiveArena.png",
 				Type:        "image/png",
 				Disposition: "attachment",
 				ContentID:   "contentid-test",
