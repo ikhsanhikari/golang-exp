@@ -127,7 +127,9 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		view.RenderJSONError(w, "Failed get Venues", http.StatusInternalServerError)
 		return
 	}
-	log.Printf("%+v", limitBase)
+
+	var hasNext bool
+	hasNext = false
 	res := make([]view.DataResponse, 0, len(venues))
 	for num, venue := range venues {
 		if num < limitBase {
@@ -161,12 +163,11 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 				},
 			})
 		}
+		if num >= limitBase {
+			hasNext = true
+		}
 	}
-	var hasNext bool
-	hasNext = false
-	if len(res) > limitBase {
-		hasNext = true
-	}
+	log.Printf("%+v", hasNext)
 	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 
 }
