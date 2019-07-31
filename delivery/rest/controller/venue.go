@@ -3,7 +3,6 @@ package controller
 import (
 	"database/sql"
 	"fmt"
-	"log"
 	"net/http"
 	"strconv"
 	"time"
@@ -167,7 +166,6 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 			hasNext = true
 		}
 	}
-	log.Printf("%+v", hasNext)
 	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 
 }
