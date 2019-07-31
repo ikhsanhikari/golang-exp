@@ -66,6 +66,8 @@ func (c *Controller) handleGetCompanyByID(w http.ResponseWriter, r *http.Request
 	var (
 		_id     = router.GetParam(r, "id")
 		id, err = strconv.ParseInt(_id, 10, 64)
+		isAdmin = false
+		userid  = ""
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleGetCompanyByID] invalid parameter, err: %s", err.Error())
@@ -81,12 +83,13 @@ func (c *Controller) handleGetCompanyByID(w http.ResponseWriter, r *http.Request
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetCompanyByID] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userid = ""
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
 	}
 
-	company, err := c.company.Get(id, 10, fmt.Sprintf("%v", userID))
+	company, err := c.company.Get(id, 10, userid, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleGetCompanyByID] company not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
@@ -136,14 +139,24 @@ func (c *Controller) handleDeleteCompany(w http.ResponseWriter, r *http.Request)
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
+	var userid string
+	var isAdmin = false
+	var params reqCompany
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleDeleteCompany] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		err = form.Bind(&params, r)
+		if err != nil {
+			c.reporter.Warningf("[handleDeleteCompany] form binding, err: %s", err.Error())
+			view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+			return
+		}
+		userid = params.CreatedBy
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
 	}
 
-	_, err = c.company.Get(id, 10, fmt.Sprintf("%v", userID))
+	comp, err := c.company.Get(id, 10, userid, isAdmin)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteCompany] Company not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
@@ -156,7 +169,7 @@ func (c *Controller) handleDeleteCompany(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = c.company.Delete(id, 10, fmt.Sprintf("%v", userID))
+	err = c.company.Delete(id, 10, userid, comp.CreatedBy, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteCompany] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete Company", http.StatusInternalServerError)
@@ -168,6 +181,7 @@ func (c *Controller) handleDeleteCompany(w http.ResponseWriter, r *http.Request)
 
 func (c *Controller) handlePostCompany(w http.ResponseWriter, r *http.Request) {
 	var params reqCompany
+	var userid string
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostCompany] id must be integer, err: %s", err.Error())
@@ -184,9 +198,9 @@ func (c *Controller) handlePostCompany(w http.ResponseWriter, r *http.Request) {
 
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostCompany] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userid = params.CreatedBy
+	} else {
+		userid = fmt.Sprintf("%v", userID)
 	}
 
 	company := company.Company{
@@ -198,7 +212,7 @@ func (c *Controller) handlePostCompany(w http.ResponseWriter, r *http.Request) {
 		Zip:       params.Zip,
 		Email:     params.Email,
 		Npwp:      params.Npwp,
-		CreatedBy: fmt.Sprintf("%v", userID),
+		CreatedBy: userid,
 	}
 
 	err = c.company.Insert(&company)
@@ -225,12 +239,6 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handlePatchCompany] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
-	}
 
 	var params reqCompany
 	err = form.Bind(&params, r)
@@ -240,7 +248,17 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = c.company.Get(id, 10, fmt.Sprintf("%v", userID))
+	var isAdmin = false
+	var userid string
+	userID, ok := user["sub"]
+	if !ok {
+		userid = params.LastUpdateBy
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
+	}
+
+	comp, err := c.company.Get(id, 10, userid, isAdmin)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchCompany] Company not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
@@ -261,9 +279,10 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		Zip:          params.Zip,
 		Email:        params.Email,
 		Npwp:         params.Npwp,
-		LastUpdateBy: fmt.Sprintf("%v", userID),
+		CreatedBy:    comp.CreatedBy,
+		LastUpdateBy: userid,
 	}
-	err = c.company.Update(&company, fmt.Sprintf("%v", userID))
+	err = c.company.Update(&company, userid, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchCompany] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update Company", http.StatusInternalServerError)

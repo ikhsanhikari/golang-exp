@@ -26,9 +26,9 @@ type ICore interface {
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
 	InsertVenueAvailable(cityName string) (err error)
-	Update(venue *Venue, uid string) (err error)
+	Update(venue *Venue, uid string, isAdmin bool) (err error)
 	//UpdateStatus(venue *Venue) (err error)
-	Delete(pid int64, id int64, uid string) (err error)
+	Delete(pid int64, id int64, uid string, created_by string, isAdmin bool) (err error)
 }
 
 // core contains db client
@@ -52,7 +52,7 @@ func (c *core) Select(pid int64, uid string) (venues Venues, err error) {
 }
 
 func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
-	err = c.db.Select(&venue, `
+	query := `
 		SELECT
 			id,
 			venue_id,
@@ -81,11 +81,15 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 			mla_venues
 		WHERE
 			stats = 1 AND
-			project_id = ? AND 
-			created_by = ? 
-		ORDER BY venue_name ASC
-	`, pid, uid)
-
+			project_id = ? 
+	`
+	if uid == "" {
+		query = query + ` ORDER BY venue_name ASC`
+		err = c.db.Select(&venue, query, pid)
+	} else {
+		query = query + `AND created_by = ? ORDER BY venue_name ASC`
+		err = c.db.Select(&venue, query, pid, uid)
+	}
 	return
 }
 
@@ -134,7 +138,7 @@ func (c *core) getStatusFromDB(id int64, pid int64) (venue Venue, err error) {
 }
 
 func (c *core) Get(pid int64, id int64, uid string) (venue Venue, err error) {
-	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, pid, id)
+	redisKey := fmt.Sprintf("%s:%d:%s:venue:%d", redisPrefix, pid, uid, id)
 
 	venue, err = c.getFromCache(redisKey)
 	if err != nil {
@@ -177,12 +181,15 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 		WHERE
 			id = ? AND
 			project_id = ? AND 
-	 		created_by = ? AND 
 			deleted_at IS NULL
-		ORDER BY venue_name ASC `
-
-	err = c.db.Get(&venue, qs, id, pid, uid)
-
+		`
+	if uid == "" {
+		qs = qs + ` ORDER BY venue_name ASC `
+		err = c.db.Get(&venue, qs, id, pid)
+	} else {
+		qs = qs + ` AND created_by = ? ORDER BY venue_name ASC `
+		err = c.db.Get(&venue, qs, id, pid, uid)
+	}
 	return
 }
 
@@ -498,6 +505,8 @@ func (c *core) Insert(venue *Venue) (err error) {
 
 	redisKey := fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.CreatedBy)
 	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d::venue", redisPrefix, venue.ProjectID)
+	_ = c.deleteCache(redisKey)
 
 	return
 }
@@ -530,7 +539,7 @@ func (c *core) InsertVenueAvailable(cityName string) (err error) {
 	return
 }
 
-func (c *core) Update(venue *Venue, uid string) (err error) {
+func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
 	venue.UpdatedAt = time.Now()
 	venue.ProjectID = 10
 	query := `
@@ -581,6 +590,10 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 		venue.ShowStatus,
 		venue.Id,
 	}
+	if isAdmin == false {
+		query = query + ` AND created_by = ?`
+		args = append(args,  venue.CreatedBy)
+	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -603,13 +616,17 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, venue.ProjectID, venue.Id)
+	redisKey := fmt.Sprintf("%s:%d:%s:venue:%d", redisPrefix, venue.ProjectID, venue.CreatedBy, venue.Id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, uid)
+	redisKey = fmt.Sprintf("%s:%d::venue:%d", redisPrefix, venue.ProjectID, venue.Id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:%d", redisPrefix, venue.ProjectID, uid, venue.Id)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, venue.ProjectID, venue.CreatedBy)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, venue.ProjectID, uid)
+	redisKey = fmt.Sprintf("%s:%d::venue", redisPrefix, venue.ProjectID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:%d", redisPrefix, venue.ProjectID, venue.CreatedBy, venue.Id)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, venue.ProjectID, venue.CreatedBy)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, venue.ProjectID)
 	_ = c.deleteCache(redisKey)
@@ -617,7 +634,7 @@ func (c *core) Update(venue *Venue, uid string) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64, id int64, uid string) (err error) {
+func (c *core) Delete(pid int64, id int64, uid string, created_by string, isAdmin bool) (err error) {
 	now := time.Now()
 
 	query := `
@@ -625,17 +642,21 @@ func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 			mla_venues
 		SET
 			deleted_at = ?,
-			stats = 0
+			stats = 0,
+			last_update_by = ?
 		WHERE
 			id = ? AND
 			stats = 1 AND 
-			last_update_by = ? AND 
 			project_id = 10
 	`
 	args := []interface{}{
 		now,
-		id,
 		uid,
+		id,
+	}
+	if isAdmin == false {
+		query = query + ` AND created_by = ?`
+		args = append(args,  created_by)
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
@@ -659,13 +680,17 @@ func (c *core) Delete(pid int64, id int64, uid string) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:venue:%d", redisPrefix, pid, id)
+	redisKey := fmt.Sprintf("%s:%d:%s:venue:%d", redisPrefix, pid, created_by, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, pid, uid)
+	redisKey = fmt.Sprintf("%s:%d::venue:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:%d", redisPrefix, pid, uid, id)
+	redisKey = fmt.Sprintf("%s:%d:%s:venue", redisPrefix, pid, created_by)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, pid, uid)
+	redisKey = fmt.Sprintf("%s:%d::venue", redisPrefix, pid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:%d", redisPrefix, pid, created_by, id)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, pid, created_by)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)
