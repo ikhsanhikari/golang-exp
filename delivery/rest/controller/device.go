@@ -2,41 +2,19 @@ package controller
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
 
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
 
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
-
-	//Test Email Function
-	// content := c.handleBasePdf(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
-	// emailReq := email.EmailRequest{
-	// 	Subject: "subject is nothing !!!",
-	// 	To:      "ikhsanhikari29@gmail.com",
-	// 	HTML:    "<h1>ISI PESAN !!!!!!!</h1>",
-	// 	From:    "no-reply@molalivearena.com",
-	// 	Text:    "Empty Text ........",
-	// 	Attachments: []email.Attachment{
-	// 		{
-	// 			Content:     content,
-	// 			Filename:    "invoice.pdf",
-	// 			Type:        "plain/text",
-	// 			Disposition: "attachment",
-	// 			ContentID:   "contentid-test",
-	// 		},
-	// 	},
-	// }
-	// errEmail := c.email.Send(emailReq)
-	// if errEmail != nil {
-	// 	c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
-	// }
-	//End Test Email Function
 
 	devices, err := c.device.Select(10)
 	if err != nil {
@@ -98,8 +76,26 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 }
 
 func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
+
+	// request param
 	var params reqDevice
 	err := form.Bind(&params, r)
+
+	//checking if userID nil, it will be request
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePostDevice] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	var uid = ""
+	if !ok {
+		uid = params.CreatedBy
+	} else {
+		uid = fmt.Sprintf("%v", userID)
+	}
+
 	if err != nil {
 		c.reporter.Warningf("[handlePostDevice] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -111,7 +107,7 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 		Info:      params.Info,
 		Price:     params.Price,
 		ProjectID: 10,
-		CreatedBy: params.CreatedBy,
+		CreatedBy: uid,
 	}
 
 	err = c.device.Insert(&device)
