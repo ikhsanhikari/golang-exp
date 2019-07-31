@@ -7,6 +7,7 @@ import (
 
 	rest "git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/controller"
 	admin "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
+	agent "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/agent"
 	aging "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	auditTrail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/audit_trail"
 	city "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/city"
@@ -159,6 +160,9 @@ func main() {
 	coreEmailLog := emailLog.Init(db, redis)
 	reporter.Infoln("/pkg/email_log successfully initialized")
 
+	coreAgent := agent.Init(db, redis)
+	reporter.Infoln("/pkg/agent successfully initialized")
+
 	var (
 		server = webserver.New(&cfg.Webserver)
 		rest   = rest.New(
@@ -184,6 +188,7 @@ func main() {
 			coreCity,
 			coreProvince,
 			coreEmailLog,
+			coreAgent,
 		)
 	)
 	rest.Register(server.Router())

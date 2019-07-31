@@ -4,6 +4,7 @@ import (
 	"net/http"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/admin"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/agent"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/aging"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/city"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
@@ -55,6 +56,7 @@ type Controller struct {
 	city           city.ICore
 	province       province.ICore
 	emailLog       email_log.ICore
+	agent          agent.ICore
 }
 
 // New ...
@@ -81,6 +83,7 @@ func New(
 	city city.ICore,
 	province province.ICore,
 	emailLog email_log.ICore,
+	agent agent.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -105,6 +108,7 @@ func New(
 		city:           city,
 		province:       province,
 		emailLog:       emailLog,
+		agent:          agent,
 	}
 }
 
@@ -185,6 +189,13 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/admins/:id", c.auth.MustAuthorize(c.handleDeleteAdmin, "molanobar:admins.delete"))
 	router.GET("/admins/:userId", c.auth.MustAuthorize(c.handleGetAllAdminsByUserID, "molanobar:admins.read"))
 	router.GET("/admins-check", c.auth.MustAuthorize(c.handleAdminsCheck, "molanobar:admins.read"))
+
+	router.GET("/agents", c.auth.MustAuthorize(c.handleGetAllAgents, "molanobar:agents.read"))
+	router.POST("/agents", c.auth.MustAuthorize(c.handlePostAgent, "molanobar:agents.create"))
+	router.PATCH("/agents/:id", c.auth.MustAuthorize(c.handlePatchAgent, "molanobar:agents.update"))
+	router.DELETE("/agents/:id", c.auth.MustAuthorize(c.handleDeleteAgent, "molanobar:agents.delete"))
+	router.GET("/agents/:userId", c.auth.MustAuthorize(c.handleGetAllAgentsByUserID, "molanobar:agents.read"))
+	router.GET("/agents-check", c.auth.MustAuthorize(c.handleAgentsCheck, "molanobar:agents.read"))
 
 	//router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
 	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmailECert, "molanobar:email.ecert"))

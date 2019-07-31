@@ -5,8 +5,8 @@ import "gopkg.in/guregu/null.v3"
 
 type LicenseAttributes struct {
 	LicenseNumber string    `json:"licenseNumber"`
-	OrderID       int64    `json:"orderId"`
-	LicenseStatus int8    `json:"licenseStatus"`
+	OrderID       int64     `json:"venueId"`
+	LicenseStatus int8      `json:"licenseStatus"`
 	ActiveDate    time.Time `json:"activeDate"`
 	ExpiredDate   time.Time `json:"expiredDate"`
 	Status        int8      `json:"status"`

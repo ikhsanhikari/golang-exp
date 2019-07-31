@@ -77,21 +77,24 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 	showStatus := getParam.Get("show")
 	projectID := int64(10)
 	var venues venue.Venues
+	var userid string
 	var err error
-	limit := 9
+	limitBase := 9
 	offset := 1
-	if showStatus != "true" {
+	if showStatus != "false" {
+		showStatus = "true"
+	} else {
 		showStatus = "false"
 	}
 	if limitVal != "" {
-		limit, err = strconv.Atoi(limitVal)
+		limitBase, err = strconv.Atoi(limitVal)
 	}
 	if offsetVal != "" {
 		offset, err = strconv.Atoi(offsetVal)
 	}
 	offset = offset - 1
-	offset = limit * offset
-	limit = limit + 1
+	offset = limitBase * offset
+	limit := limitBase + 1
 
 	if cityName != "" && statusVenue != "true" {
 		//get Venue with cityName
@@ -111,12 +114,11 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		}
 		userID, ok := user["sub"]
 		if !ok {
-			c.reporter.Errorf("[handleGetAllVenues] failed get userID")
-			view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-			return
+			userid = ""
+		} else {
+			userid = fmt.Sprintf("%v", userID)
 		}
-
-		venues, err = c.venue.Select(10, fmt.Sprintf("%v", userID))
+		venues, err = c.venue.Select(10, userid)
 	}
 
 	if err != nil {
@@ -125,76 +127,87 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	res := make([]view.DataResponse, 0, len(venues))
-	for _, venue := range venues {
-		res = append(res, view.DataResponse{
-			Type: "venues",
-			ID:   venue.Id,
-			Attributes: view.VenueAttributes{
-				Id:               venue.Id,
-				VenueId:          venue.VenueId,
-				VenueType:        venue.VenueType,
-				VenueName:        venue.VenueName,
-				Address:          venue.Address,
-				City:             venue.City,
-				Province:         venue.Province,
-				Zip:              venue.Zip,
-				Capacity:         venue.Capacity,
-				Facilities:       venue.Facilities,
-				PtID:             venue.PtID,
-				CreatedAt:        venue.CreatedAt,
-				UpdatedAt:        venue.UpdatedAt,
-				DeletedAt:        venue.DeletedAt,
-				Longitude:        venue.Longitude,
-				Latitude:         venue.Latitude,
-				Status:           venue.Status,
-				PicName:          venue.PicName,
-				PicContactNumber: venue.PicContactNumber,
-				VenuePhone:       venue.VenuePhone,
-				CreatedBy:        venue.CreatedBy,
-				LastUpdateBy:     venue.LastUpdateBy,
-				ShowStatus:       venue.ShowStatus,
-			},
-		})
-	}
 	var hasNext bool
 	hasNext = false
-	limit = limit - 1
-
-	if len(res) > limit {
-		hasNext = true
-		//view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
+	res := make([]view.DataResponse, 0, len(venues))
+	for num, venue := range venues {
+		if num < limitBase {
+			res = append(res, view.DataResponse{
+				Type: "venues",
+				ID:   venue.Id,
+				Attributes: view.VenueAttributes{
+					Id:               venue.Id,
+					VenueId:          venue.VenueId,
+					VenueType:        venue.VenueType,
+					VenueName:        venue.VenueName,
+					Address:          venue.Address,
+					City:             venue.City,
+					Province:         venue.Province,
+					Zip:              venue.Zip,
+					Capacity:         venue.Capacity,
+					Facilities:       venue.Facilities,
+					PtID:             venue.PtID,
+					CreatedAt:        venue.CreatedAt,
+					UpdatedAt:        venue.UpdatedAt,
+					DeletedAt:        venue.DeletedAt,
+					Longitude:        venue.Longitude,
+					Latitude:         venue.Latitude,
+					Status:           venue.Status,
+					PicName:          venue.PicName,
+					PicContactNumber: venue.PicContactNumber,
+					VenuePhone:       venue.VenuePhone,
+					CreatedBy:        venue.CreatedBy,
+					LastUpdateBy:     venue.LastUpdateBy,
+					ShowStatus:       venue.ShowStatus,
+				},
+			})
+		}
+		if num >= limitBase {
+			hasNext = true
+		}
 	}
-	//else {
-	//view.RenderJSONData(w, res, http.StatusOK)
-	//}
 	view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 
 }
 
 // Handle delete
 func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleDeleteVenue] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handleDeleteVenue] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
-	}
-
 	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	if err != nil {
 		c.reporter.Warningf("[handleDeleteVenue] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleDeleteVenue] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	var userid string
+	var isAdmin = false
+	var params reqVenue
+	var venues venue.Venue
+	userID, ok := user["sub"]
+	if !ok {
+		err = form.Bind(&params, r)
+		if err != nil {
+			c.reporter.Warningf("[handleDeleteCompany] form binding, err: %s", err.Error())
+			view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+			return
+		}
+		userid = params.CreatedBy
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
+	}
 
-	_, err = c.venue.Get(10, id, fmt.Sprintf("%v", userID))
+	if isAdmin == true {
+		venues, err = c.venue.Get(10, id, "")
+	} else {
+		venues, err = c.venue.Get(10, id, userid)
+	}
+
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteVenue] Venue not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
@@ -207,7 +220,7 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.venue.Delete(10, id, fmt.Sprintf("%v", userID))
+	err = c.venue.Delete(10, id, userid, venues.CreatedBy, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteVenue] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete Venue", http.StatusInternalServerError)
@@ -224,19 +237,21 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handlePostVenue] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
-	}
 
 	var params reqVenue
+	var userid string
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostVenue] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
+	}
+
+	userID, ok := user["sub"]
+	if !ok {
+		userid = params.CreatedBy
+	} else {
+		userid = fmt.Sprintf("%v", userID)
 	}
 
 	venue := venue.Venue{
@@ -258,7 +273,7 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		VenueTechnicianName:          params.VenueTechnicianName,
 		VenueTechnicianContactNumber: params.VenueTechnicianContactNumber,
 		VenuePhone:                   params.VenuePhone,
-		CreatedBy:                    fmt.Sprintf("%v", userID),
+		CreatedBy:                    userid,
 	}
 
 	err = c.venue.Insert(&venue)
@@ -296,12 +311,6 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handlePatchVenue] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
-	}
 
 	var params reqVenue
 	err = form.Bind(&params, r)
@@ -311,7 +320,24 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.venue.Get(10, id, fmt.Sprintf("%v", userID))
+	var isAdmin = false
+	var userid string
+	var venues venue.Venue
+
+	userID, ok := user["sub"]
+	if !ok {
+		userid = params.LastUpdateBy
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
+	}
+
+	if isAdmin == true {
+		venues, err = c.venue.Get(10, id, "")
+	} else {
+		venues, err = c.venue.Get(10, id, userid)
+	}
+
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchVenue] Venue not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
@@ -345,9 +371,10 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		VenueTechnicianName:          params.VenueTechnicianName,
 		VenueTechnicianContactNumber: params.VenueTechnicianContactNumber,
 		VenuePhone:                   params.VenuePhone,
-		LastUpdateBy:                 fmt.Sprintf("%v", userID),
+		CreatedBy:                    venues.CreatedBy,
+		LastUpdateBy:                 userid,
 	}
-	err = c.venue.Update(&venue, fmt.Sprintf("%v", userID))
+	err = c.venue.Update(&venue, userid, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchVenue] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update Venue", http.StatusInternalServerError)
@@ -376,7 +403,8 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 			PicName:          params.PicName,
 			PicContactNumber: params.PicContactNumber,
 			VenuePhone:       params.VenuePhone,
-			LastUpdateBy:     fmt.Sprintf("%v", userID),
+			CreatedBy:        venue.CreatedBy,
+			LastUpdateBy:     userid,
 		},
 	}
 
@@ -396,12 +424,16 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
+	var isAdmin = false
+	var userid string
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePatchVenue] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userid = ""
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
 	}
+
 	venues, err := c.venue.GetStatus(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteVenue] Venue not found, err: %s", err.Error())
@@ -433,10 +465,11 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 		PicName:          venues.PicName,
 		PicContactNumber: venues.PicContactNumber,
 		VenuePhone:       venues.VenuePhone,
-		LastUpdateBy:     fmt.Sprintf("%v", userID),
+		CreatedBy:        userid,
+		LastUpdateBy:     userid,
 		ShowStatus:       status,
 	}
-	err = c.venue.Update(&venue, fmt.Sprintf("%v", userID))
+	err = c.venue.Update(&venue, userid, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchVenue] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update Venue", http.StatusInternalServerError)
@@ -464,7 +497,7 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 			PicName:          venues.PicName,
 			PicContactNumber: venues.PicContactNumber,
 			VenuePhone:       venues.VenuePhone,
-			LastUpdateBy:     fmt.Sprintf("%v", userID),
+			LastUpdateBy:     userid,
 			ShowStatus:       status,
 		},
 	}
@@ -479,7 +512,7 @@ func (c *Controller) InsertLicense(venueID int64, createdBy string, buyerID stri
 	str := "1999-01-01T11:45:26.371Z"
 	defaultTime, err := time.Parse(layout, str)
 	if err != nil {
-		fmt.Println(err)
+		c.reporter.Warningf("[handleInsertLicense] Error insert license, err: %s", err.Error())
 	}
 	license := license.License{
 		LicenseNumber: licenseNumberUUID,
