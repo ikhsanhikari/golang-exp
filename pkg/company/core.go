@@ -15,11 +15,11 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64, userID string) (companies Companies, err error)
-	Get(id int64, pid int64, userID string) (company Company, err error)
+	Get(id int64, pid int64, userID string, isAdmin bool) (company Company, err error)
 	GetByOrderID(orderd int64, pid int64) (companyEmail CompanyEmail, err error)
 	Insert(company *Company) (err error)
-	Update(company *Company, uid string) (err error)
-	Delete(id int64, pid int64, userID string) (err error)
+	Update(company *Company, uid string, isAdmin bool) (err error)
+	Delete(id int64, pid int64, userID string, created_by string, isAdmin bool) (err error)
 }
 
 // core contains db client
@@ -42,7 +42,7 @@ func (c *core) Select(pid int64, userID string) (companies Companies, err error)
 }
 
 func (c *core) selectFromDB(pid int64, userID string) (companies Companies, err error) {
-	 query := `
+	query := `
 	SELECT
 		id,
 		name,
@@ -69,17 +69,15 @@ func (c *core) selectFromDB(pid int64, userID string) (companies Companies, err 
 	} else {
 		query = query + `AND created_by = ?`
 		err = c.db.Select(&companies, query, pid, userID)
-	}
-	
-
+	} 
 	return
 }
 
-func (c *core) Get(id int64, pid int64, userID string) (company Company, err error) {
+func (c *core) Get(id int64, pid int64, userID string, isAdmin bool) (company Company, err error) {
 	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, pid, userID, id)
 	company, err = c.getFromCache(redisKey)
 	if err != nil {
-		company, err = c.getFromDB(id, pid, userID)
+		company, err = c.getFromDB(id, pid, userID, isAdmin)
 		if err != sql.ErrNoRows {
 			byt, _ := jsoniter.ConfigFastest.Marshal(company)
 			_ = c.setToCache(redisKey, 300, byt)
@@ -87,8 +85,8 @@ func (c *core) Get(id int64, pid int64, userID string) (company Company, err err
 	}
 	return
 }
-func (c *core) getFromDB(id int64, pid int64, userID string) (company Company, err error) {
-	err = c.db.Get(&company, `
+func (c *core) getFromDB(id int64, pid int64, userID string, isAdmin bool) (company Company, err error) {
+	query := `
 		SELECT
 			id,
 			name,
@@ -108,10 +106,15 @@ func (c *core) getFromDB(id int64, pid int64, userID string) (company Company, e
 			mla_company
 		WHERE
 			id = ? 
-			AND created_by = ?
 			AND project_id = ?
 			AND deleted_at IS NULL
-	`, id, userID, pid)
+	`
+	if isAdmin == true {
+		err = c.db.Get(&company, query, id, pid)
+	} else {
+		query = query + `AND created_by = ?`
+		err = c.db.Get(&company, query, id, pid, userID)
+	}
 
 	return
 }
@@ -174,45 +177,55 @@ func (c *core) Insert(company *Company) (err error) {
 			:last_update_by
 		)
 	`, company)
-	//fmt.Println(res)
 	company.ID, err = res.LastInsertId()
 
 	redisKey := fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, company.CreatedBy)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d::company", redisPrefix, company.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Update(company *Company, uid string) (err error) {
+func (c *core) Update(company *Company, uid string, isAdmin bool) (err error) {
 	company.UpdatedAt = time.Now()
 	company.ProjectID = 10
+	query := `
+	UPDATE
+		mla_company
+	SET
+		name = :name,
+		address = :address,
+		city = :city,
+		province = :province,
+		zip = :zip,
+		email = :email,
+		npwp = :npwp,
+		updated_at = :updated_at,
+		last_update_by = :last_update_by
+	WHERE
+		id = :id AND 
+		project_id = 10 AND 
+		status = 1
+	`
+	var redisKey string
+	if isAdmin == false {
+		query = query + ` AND created_by = :created_by`
+	}
 
-	_, err = c.db.NamedExec(`
-		UPDATE
-			mla_company
-		SET
-			name = :name,
-			address = :address,
-			city = :city,
-			province = :province,
-			zip = :zip,
-			email = :email,
-			npwp = :npwp,
-			updated_at = :updated_at,
-			last_update_by = :last_update_by
-		WHERE
-			id = :id AND 
-			project_id = 10 AND 
-			status = 	1
-	`, company)
+	_, err = c.db.NamedExec(query, company)
 
-	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, company.ProjectID, uid, company.ID)
+	redisKey = fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, company.ProjectID, company.CreatedBy, company.ID)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, uid)
+	redisKey = fmt.Sprintf("%s:%d::company:%d", redisPrefix, company.ProjectID, company.ID)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, company.ProjectID, uid)
+	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, company.ProjectID, company.CreatedBy)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, company.ProjectID, uid)
+	redisKey = fmt.Sprintf("%s:%d::company", redisPrefix, company.ProjectID)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, company.ProjectID, company.CreatedBy)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, company.ProjectID, company.CreatedBy)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, company.ProjectID)
 	_ = c.deleteCache(redisKey)
@@ -220,28 +233,39 @@ func (c *core) Update(company *Company, uid string) (err error) {
 	return
 }
 
-func (c *core) Delete(id int64, pid int64, userID string) (err error) {
+func (c *core) Delete(id int64, pid int64, userID string, created_by string, isAdmin bool) (err error) {
 	now := time.Now()
-
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
 			mla_company
 		SET
 			deleted_at = ? ,
-			status = 0
+			status = 0, 
+			last_update_by = ?
 		WHERE
 			id = ? AND 
-			last_update_by = ? AND
-			project_id = ?
-	`, now, id, userID, pid)
+			status = 1 AND
+			project_id = ? `
 
-	redisKey := fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, pid, userID, id)
+	var redisKey string
+	if isAdmin == true {
+		_, err = c.db.Exec(query, now, userID, id, pid)
+	} else {
+		query = query + `AND created_by = ?`
+		_, err = c.db.Exec(query, now, userID, id, pid, userID)
+
+	}
+	redisKey = fmt.Sprintf("%s:%d:%s:company:%d", redisPrefix, pid, created_by, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, pid, userID)
+	redisKey = fmt.Sprintf("%s:%d::company:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, pid, userID)
+	redisKey = fmt.Sprintf("%s:%d:%s:company", redisPrefix, pid, created_by)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, pid, userID)
+	redisKey = fmt.Sprintf("%s:%d::company", redisPrefix, pid)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue-id:*", redisPrefix, pid, created_by)
+	_ = c.deleteCache(redisKey)
+	redisKey = fmt.Sprintf("%s:%d:%s:sumvenue", redisPrefix, pid, created_by)
 	_ = c.deleteCache(redisKey)
 	redisKey = fmt.Sprintf("%s:%d:sumvenue-licnumber:*", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)

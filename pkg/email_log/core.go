@@ -54,7 +54,6 @@ func (c *core) Insert(emailLog *EmailLog) (err error) {
 			:status
 		)
 	`, emailLog)
-	//fmt.Println(res)
 
 	return
 }
