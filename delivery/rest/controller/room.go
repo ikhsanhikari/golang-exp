@@ -2,11 +2,13 @@ package controller
 
 import (
 	"database/sql"
+	"fmt"
 	"net/http"
 	"strconv"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -25,14 +27,14 @@ func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
 			Type: "rooms",
 			ID:   room.ID,
 			Attributes: view.RoomAttributes{
-				Name:        room.Name,
-				Description: room.Description,
-				Price:       room.Price,
-				Status:      room.Status,
-				ProjectID:   room.ProjectID,
-				CreatedAt:   room.CreatedAt,
-				UpdatedAt:   room.UpdatedAt,
-				CreatedBy:		room.CreatedBy,
+				Name:         room.Name,
+				Description:  room.Description,
+				Price:        room.Price,
+				Status:       room.Status,
+				ProjectID:    room.ProjectID,
+				CreatedAt:    room.CreatedAt,
+				UpdatedAt:    room.UpdatedAt,
+				CreatedBy:    room.CreatedBy,
 				LastUpdateBy: room.LastUpdateBy,
 			},
 		})
@@ -80,12 +82,29 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//checking if userID nil, it will be request
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePostDevice] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	var uid = ""
+	if !ok {
+		//is User
+		uid = params.CreatedBy
+	} else {
+		//is Admin
+		uid = fmt.Sprintf("%v", userID)
+	}
+
 	room := room.Room{
 		Name:        params.Name,
 		Description: params.Description,
 		Price:       params.Price,
 		ProjectID:   10,
-		CreatedBy: 		params.CreatedBy,
+		CreatedBy:   uid,
 	}
 
 	err = c.room.Insert(&room)
@@ -128,11 +147,11 @@ func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 	}
 
 	room := room.Room{
-		ID:          id,
-		Name:        params.Name,
-		Description: params.Description,
-		Price:       params.Price,
-		ProjectID:   10,
+		ID:           id,
+		Name:         params.Name,
+		Description:  params.Description,
+		Price:        params.Price,
+		ProjectID:    10,
 		LastUpdateBy: params.LastUpdateBy,
 	}
 	err = c.room.Update(&room)

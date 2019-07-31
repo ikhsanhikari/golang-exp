@@ -5,8 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
+	"fmt"
+
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -122,6 +125,23 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	//checking if userID nil, it will be request
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePostDevice] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	var uid = ""
+	if !ok {
+		//is User
+		uid = params.CreatedBy
+	} else {
+		//is Admin
+		uid = fmt.Sprintf("%v", userID)
+	}
+
 	product := product.Product{
 		ProductName:  params.ProductName,
 		Description:  params.Description,
@@ -132,7 +152,7 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
 		ProjectID:    10,
-		CreatedBy:    params.CreatedBy,
+		CreatedBy:    uid,
 	}
 
 	err = c.product.Insert(&product)
@@ -188,7 +208,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		LastUpdateBy: params.LastUpdateBy,
 	}
 	venueTypeID, err := strconv.ParseInt(productParam.VenueTypeID, 10, 64)
-	err = c.product.Update(&product,venueTypeID)
+	err = c.product.Update(&product, venueTypeID)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchProduct] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update product", http.StatusInternalServerError)
