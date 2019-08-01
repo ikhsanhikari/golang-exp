@@ -50,6 +50,7 @@ type Venues []Venue
 type VenueAvailable struct {
 	Id       int64  `db:"id"`
 	CityName string `db:"city_name"`
+	Status   int64  `db:"status"`
 }
 type VenueAvailables []VenueAvailable
 
