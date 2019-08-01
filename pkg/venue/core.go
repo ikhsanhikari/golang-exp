@@ -361,6 +361,8 @@ func (c *core) getFromDBVenueGroupAvailable(pid int64) (venues VenueGroupAvailab
 			mla_venues
 		WHERE		
 			project_id = ?
+		AND	
+			show_status = 1
 		GROUP BY city
 		ORDER BY city ASC	
 	`, pid)
@@ -592,7 +594,7 @@ func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
 	}
 	if isAdmin == false {
 		query = query + ` AND created_by = ?`
-		args = append(args,  venue.CreatedBy)
+		args = append(args, venue.CreatedBy)
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
@@ -656,7 +658,7 @@ func (c *core) Delete(pid int64, id int64, uid string, created_by string, isAdmi
 	}
 	if isAdmin == false {
 		query = query + ` AND created_by = ?`
-		args = append(args,  created_by)
+		args = append(args, created_by)
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
