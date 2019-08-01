@@ -162,14 +162,14 @@ func (c *Controller) handlePatchAdmin(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) handleAdminsCheck(w http.ResponseWriter, r *http.Request) {
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get user")
+		c.reporter.Errorf("[handleAdminsCheck] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
 
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get userID")
+		c.reporter.Errorf("[handleAdminsCheck] failed get userID")
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}

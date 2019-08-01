@@ -734,27 +734,54 @@ func (c *core) getSummaryVenueFromDBByVenueID(venueID, pid int64, uid string) (s
 		venues.id as venue_id,
 		COALESCE(venues.venue_name,'') as venue_name,
 		COALESCE(venues.venue_type,0) as venue_type,
+		COALESCE(venues.venue_phone,'') as venue_phone,
+        COALESCE(venues.pic_name,'') as venue_pic_name,
+		COALESCE(venues.pic_contact_number,'') as venue_pic_contact_number,
 		COALESCE(venues.address,'') as venue_address,
 		COALESCE(venues.city,'') as venue_city,
 		COALESCE(venues.province,'') as venue_province,
 		COALESCE(venues.zip,'') as venue_zip,
 		COALESCE(venues.capacity,0) as venue_capacity,
+		COALESCE(venues.facilities,'') as venue_facilities,
 		COALESCE(venues.longitude,0) as venue_longitude,
 		COALESCE(venues.latitude,0) as venue_latitude,
 		COALESCE(venues.venue_category,0) as venue_category,
 		COALESCE(venues.show_status,0) as venue_show_status,
+		emaillog.created_at as ecert_last_sent,
+		COALESCE(license.license_number,'') as license_number,
 		license.active_date as license_active_date,
 		license.expired_date as license_expired_date,
+		comp.id as company_id,
 		COALESCE(comp.name,'') as company_name,
 		COALESCE(comp.address,'') as company_address,
 		COALESCE(comp.city,'') as company_city,
 		COALESCE(comp.province,'') as company_province,
 		COALESCE(comp.zip,'') as company_zip,
-		COALESCE(comp.email,'') as company_email
+		COALESCE(comp.email,'') as company_email,
+		orders.order_id as last_order_id,
+		COALESCE(orders.order_number,'') as last_order_number,
+		COALESCE(orders.total_price,0) as last_order_total_price,
+		orders.room_id as last_room_id,
+        orders.room_quantity as last_room_quantity,
+        orders.aging_id as last_aging_id,
+        orders.device_id as last_device_id,
+        orders.product_id as last_product_id,
+        orders.installation_id as last_installation_id,
+		orders.created_at as last_order_created_at,
+		orders.paid_at as last_order_paid_at,
+		orders.failed_at as last_order_failed_at,
+		COALESCE(orders.email,'') as last_order_email,
+		COALESCE(orders.status,0) as last_order_status,
+		COALESCE(orders.open_payment_status,0) as last_open_payment_status
 	from
 		mla_venues venues
 	left join mla_license license on venues.id = license.venue_id
 	left join mla_company comp on comp.id = venues.pt_id
+	left join (select venue_id, max(created_at) as created_at from mla_email_log 
+		where deleted_at is null and project_id=? and email_type='ecert' group by venue_id) emaillog 
+		on venues.id = emaillog.venue_id
+	left join (select * from mla_orders where venue_id= ? and deleted_at is null and project_id = ?
+		and created_at = (SELECT max(created_at) FROM mla_orders where venue_id = ?) order by order_id LIMIT 1) orders on venues.id = orders.venue_id
 	where
 		venues.project_id = ? AND
 		venues.deleted_at IS NULL AND
@@ -794,27 +821,57 @@ func (c *core) selectSummaryVenuesFromDBByUserID(pid int64, uid string) (sumvenu
 		venues.id as venue_id,
 		COALESCE(venues.venue_name,'') as venue_name,
 		COALESCE(venues.venue_type,0) as venue_type,
+		COALESCE(venues.venue_phone,'') as venue_phone,
+        COALESCE(venues.pic_name,'') as venue_pic_name,
+		COALESCE(venues.pic_contact_number,'') as venue_pic_contact_number,
 		COALESCE(venues.address,'') as venue_address,
 		COALESCE(venues.city,'') as venue_city,
 		COALESCE(venues.province,'') as venue_province,
 		COALESCE(venues.zip,'') as venue_zip,
 		COALESCE(venues.capacity,0) as venue_capacity,
+		COALESCE(venues.facilities,'') as venue_facilities,
 		COALESCE(venues.longitude,0) as venue_longitude,
 		COALESCE(venues.latitude,0) as venue_latitude,
 		COALESCE(venues.venue_category,0) as venue_category,
 		COALESCE(venues.show_status,0) as venue_show_status,
+		emaillog.created_at as ecert_last_sent,
+		COALESCE(license.license_number,'') as license_number,
 		license.active_date as license_active_date,
 		license.expired_date as license_expired_date,
+		comp.id as company_id,
 		COALESCE(comp.name,'') as company_name,
 		COALESCE(comp.address,'') as company_address,
 		COALESCE(comp.city,'') as company_city,
 		COALESCE(comp.province,'') as company_province,
 		COALESCE(comp.zip,'') as company_zip,
-		COALESCE(comp.email,'') as company_email
+		COALESCE(comp.email,'') as company_email,
+		orders.order_id as last_order_id,
+		COALESCE(orders.order_number,'') as last_order_number,
+		COALESCE(orders.total_price,0) as last_order_total_price,
+		orders.room_id as last_room_id,
+        orders.room_quantity as last_room_quantity,
+        orders.aging_id as last_aging_id,
+        orders.device_id as last_device_id,
+        orders.product_id as last_product_id,
+        orders.installation_id as last_installation_id,
+		orders.created_at as last_order_created_at,
+		orders.paid_at as last_order_paid_at,
+		orders.failed_at as last_order_failed_at,
+		COALESCE(orders.email,'') as last_order_email,
+		COALESCE(orders.status,0) as last_order_status,
+		COALESCE(orders.open_payment_status,0) as last_open_payment_status
 	from
 		mla_venues venues
 	left join mla_license license on venues.id = license.venue_id
 	left join mla_company comp on comp.id = venues.pt_id
+	left join (select venue_id, max(created_at) as created_at from mla_email_log 
+		where deleted_at is null and project_id=? and email_type='ecert' group by venue_id) emaillog 
+		on venues.id = emaillog.venue_id
+	left join (select t.*
+		from mla_orders t
+		inner join (select venue_id, max(created_at) as created_at from mla_orders where deleted_at is null and project_id=? group by venue_id)
+		tm on t.venue_id = tm.venue_id and t.created_at = tm.created_at) orders
+		on venues.id = orders.venue_id
 	where
 		venues.project_id = ? AND
 		venues.deleted_at IS NULL `
@@ -908,33 +965,63 @@ func (c *core) getSummaryVenueFromDBByLicenseNumber(licNumber string, pid int64)
 		venues.id as venue_id,
 		COALESCE(venues.venue_name,'') as venue_name,
 		COALESCE(venues.venue_type,0) as venue_type,
+		COALESCE(venues.venue_phone,'') as venue_phone,
+		COALESCE(venues.pic_name,'') as venue_pic_name,
+		COALESCE(venues.pic_contact_number,'') as venue_pic_contact_number,
 		COALESCE(venues.address,'') as venue_address,
 		COALESCE(venues.city,'') as venue_city,
 		COALESCE(venues.province,'') as venue_province,
 		COALESCE(venues.zip,'') as venue_zip,
 		COALESCE(venues.capacity,0) as venue_capacity,
+		COALESCE(venues.facilities,'') as venue_facilities,
 		COALESCE(venues.longitude,0) as venue_longitude,
 		COALESCE(venues.latitude,0) as venue_latitude,
 		COALESCE(venues.venue_category,0) as venue_category,
 		COALESCE(venues.show_status,0) as venue_show_status,
+		emaillog.created_at as ecert_last_sent,
+		COALESCE(license.license_number,'') as license_number,
 		license.active_date as license_active_date,
 		license.expired_date as license_expired_date,
+		comp.id as company_id,
 		COALESCE(comp.name,'') as company_name,
 		COALESCE(comp.address,'') as company_address,
 		COALESCE(comp.city,'') as company_city,
 		COALESCE(comp.province,'') as company_province,
 		COALESCE(comp.zip,'') as company_zip,
-		COALESCE(comp.email,'') as company_email
+		COALESCE(comp.email,'') as company_email,
+		orders.order_id as last_order_id,
+		COALESCE(orders.order_number,'') as last_order_number,
+		COALESCE(orders.total_price,0) as last_order_total_price,
+		orders.room_id as last_room_id,
+		orders.room_quantity as last_room_quantity,
+		orders.aging_id as last_aging_id,
+		orders.device_id as last_device_id,
+		orders.product_id as last_product_id,
+		orders.installation_id as last_installation_id,
+		orders.created_at as last_order_created_at,
+		orders.paid_at as last_order_paid_at,
+		orders.failed_at as last_order_failed_at,
+		COALESCE(orders.email,'') as last_order_email,
+		COALESCE(orders.status,0) as last_order_status,
+		COALESCE(orders.open_payment_status,0) as last_open_payment_status
 	from
 		mla_venues venues
-	left join mla_license license on venues.id = license.venue_id
+		left join mla_license license on venues.id = license.venue_id
 	left join mla_company comp on comp.id = venues.pt_id
+	left join (select venue_id, max(created_at) as created_at from mla_email_log 
+		where deleted_at is null and project_id=? and email_type='ecert' group by venue_id) emaillog 
+		on venues.id = emaillog.venue_id
+	left join (select t.*
+		from mla_orders t
+		inner join (select venue_id, max(created_at) as created_at from mla_orders where deleted_at is null and project_id=? group by venue_id)
+		tm on t.venue_id = tm.venue_id and t.created_at = tm.created_at) orders
+		on venues.id = orders.venue_id
 	where
 		license.license_number = ? AND
 		license.project_id = ? AND
 		license.deleted_at IS NULL
 	limit 1
-	`, licNumber, pid)
+	`, pid, pid, licNumber, pid)
 	return
 }
 

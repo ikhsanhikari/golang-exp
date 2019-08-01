@@ -6,6 +6,7 @@ import (
 	"net/http"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 )
@@ -40,26 +41,26 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	/*content, sumorder, qrcodecontent := c.handleGetDataSertificate(params.OrderID, fmt.Sprintf("%s", userID))
+	content, sumvenue, qrcodecontent := c.handleGetDataSertificate(params.VenueID, fmt.Sprintf("%s", userID))
 	// content := c.handleGetDataInvoice(214, "kDQ2IAaHPZ8MTkqNS24zJPKu9MSLBo")
-	htmlEmail := c.handleGetHtmlBodyCert(sumorder.VenueName)
+	htmlEmail := c.handleGetHtmlBodyCert(sumvenue.VenueName)
 	emailReq := email.EmailRequest{
 		Subject: "Selamat! Keanggotaan Mola Live Arena sudah aktif.",
-		To:      sumorder.CompanyEmail,
+		To:      sumvenue.CompanyEmail,
 		HTML:    htmlEmail,
 		From:    "no-reply@molalivearena.com",
 		Text:    " ",
 		Attachments: []email.Attachment{
 			{
 				Content:     content,
-				Filename:    "certificate.pdf",
+				Filename:    "membership.pdf",
 				Type:        "plain/text",
 				Disposition: "attachment",
 				ContentID:   "contentid-test",
 			},
 			{
 				Content:     qrcodecontent,
-				Filename:    "molalivearena_qr.png",
+				Filename:    "MolaLiveArena.png",
 				Type:        "image/png",
 				Disposition: "attachment",
 				ContentID:   "contentid-test",
@@ -67,7 +68,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailLog(userID, params.OrderID, emailReq.To, "ecert")
+	msg := c.handlePostEmailEcertLog(userID, params.VenueID, emailReq.To, "ecert")
 	if msg == "0" {
 		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
 	}
@@ -75,7 +76,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
 		view.RenderJSONData(w, false, http.StatusOK)
 		return
-	}*/
+	}
 
 	view.RenderJSONData(w, true, http.StatusOK)
 }

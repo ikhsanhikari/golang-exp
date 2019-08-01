@@ -2,6 +2,7 @@
     <head>
         <base href="http://www.example.com/">
         <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.4.0/css/bootstrap.min.css">
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Didact+Gothic'">
         <style>
             body {
                 margin: 0;
@@ -45,21 +46,33 @@
         <div class="containerbg">
             <img src="data:image/png;base64,{{.Background}}" class="imgBg">
         </div>
-        <p align="center" style="color: rgb(255, 255, 255);
-            font-size: 48px;
-            font-family: cursive;
+            <p align="center" style="color: rgb(255, 255, 255);
+            font-size: 82px;
+            font-family:'Century Gothic','Futura','Didact Gothic',san-serif;
             position: absolute;
-            top: 450px;
+            top: 380px;
             left: 0;
             width: 100%;">{{ .VenueName }}</p>
-        <div class="row">
-                <div class="columns1">
-                    <img src="data:image/png;base64,{{.QrBase64}}" width="151px" height="151px" align="right">
-                </div>
-                <div class="columns" style="color:#fff;font-size: 22px;">
-                    <p><br>{{ .Name }}<br>{{ .Address }}<br>{{ .City }} &nbsp;{{ .Province }}&nbsp;,&nbsp; {{ .Zip }}</p>
-                </div>
-            </div>
+        <div>
+            <p align="center" style="color: rgb(255, 255, 255);
+                font-size: 24px;font-family: 'Century Gothic','Futura','Didact Gothic',san-serif;
+                position: absolute;top: 560px;left: 0;width: 100%;">Selamat atas Keanggotaan <b>Mola Live Arena</b> !<br>
+                Nama Perusahaan serta Lokasi Venue anda Sudah Ter-Registrasi di sistem kami,<br><br>
+                <b>MOLA Live Arena</b> terkait Premier League Football Competition <b>Musim 2019/2020</b> dan konten MOLA TV lainnya<br>
+                untuk penggunaan di Corporate & Commercial Area.<br><br>
+                Masa berlaku Keanggotaan <b>Mola Live Arena</b> ini sesuai dengan masa berlaku paket berlangganan<br>
+                yang dibayarkan.
+            </p>
+        </div>
+       <div><p align="center" style="color: rgb(255, 255, 255);
+            font-size: 16px;
+            font-family: 'Century Gothic','Futura','Didact Gothic',san-serif;
+            position: absolute;
+            top: 900px;
+            left: 0;
+            width: 100%;">Catatan: Keanggotaan dapat dibatalkan apabila perusahaan atau Venue tidak melakukan perpanjangan masa berlangganan.<br>
+            Harap cetak QR Code, digunting dan ditempel pada stiker resmi MOLA Live Arena.</p>
+        </div>
         </div>
     </body>
 </html>
