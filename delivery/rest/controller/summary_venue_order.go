@@ -33,9 +33,6 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 	userID, ok := user["sub"]
 	if !ok {
 		userID = ""
-		// c.reporter.Errorf("[handleGetOrderByID] failed get userID")
-		// view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		// return
 	}
 
 	sumvenue, err := c.order.GetSummaryVenueByVenueID(id, projectID, fmt.Sprintf("%v", userID))
@@ -45,37 +42,37 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	sumorders, err := c.order.SelectSummaryOrdersByVenueID(id, projectID, fmt.Sprintf("%v", userID))
-	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handleGetSumOrderByVenueID] failed get sum orders, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
-		return
-	}
-
-	orders := make([]view.SumOrderAttributes, 0, len(sumorders))
-	for _, sumorder := range sumorders {
-		orders = append(orders, view.SumOrderAttributes{
-			OrderID:           sumorder.OrderID,
-			OrderNumber:       sumorder.OrderNumber,
-			OrderTotalPrice:   sumorder.OrderTotalPrice,
-			OrderCreatedAt:    sumorder.OrderCreatedAt,
-			OrderPaidAt:       sumorder.OrderPaidAt,
-			OrderFailedAt:     sumorder.OrderFailedAt,
-			OrderEmail:        sumorder.OrderEmail,
-			DeviceName:        sumorder.DeviceName,
-			ProductName:       sumorder.ProductName,
-			InstallationName:  sumorder.InstallationName,
-			RoomName:          sumorder.RoomName,
-			RoomQty:           sumorder.RoomQty,
-			AgingName:         sumorder.AgingName,
-			OrderStatus:       sumorder.OrderStatus,
-			OpenPaymentStatus: sumorder.OpenPaymentStatus,
-			EcertLastSentDate: sumorder.EcertLastSentDate},
-		)
-	}
-
 	var res view.DataResponseOrder
 	if sumvenue.VenueID != 0 {
+		sumorders, err := c.order.SelectSummaryOrdersByVenueID(id, projectID, fmt.Sprintf("%v", userID))
+		if err != nil && err != sql.ErrNoRows {
+			c.reporter.Errorf("[handleGetSumOrderByVenueID] failed get sum orders, err: %s", err.Error())
+			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
+			return
+		}
+
+		orders := make([]view.SumOrderAttributes, 0, len(sumorders))
+		for _, sumorder := range sumorders {
+			orders = append(orders, view.SumOrderAttributes{
+				OrderID:           sumorder.OrderID,
+				OrderNumber:       sumorder.OrderNumber,
+				OrderTotalPrice:   sumorder.OrderTotalPrice,
+				OrderCreatedAt:    sumorder.OrderCreatedAt,
+				OrderPaidAt:       sumorder.OrderPaidAt,
+				OrderFailedAt:     sumorder.OrderFailedAt,
+				OrderEmail:        sumorder.OrderEmail,
+				DeviceName:        sumorder.DeviceName,
+				ProductName:       sumorder.ProductName,
+				InstallationName:  sumorder.InstallationName,
+				RoomName:          sumorder.RoomName,
+				RoomQty:           sumorder.RoomQty,
+				AgingName:         sumorder.AgingName,
+				OrderStatus:       sumorder.OrderStatus,
+				OpenPaymentStatus: sumorder.OpenPaymentStatus,
+				EcertLastSentDate: sumorder.EcertLastSentDate},
+			)
+		}
+
 		res = view.DataResponseOrder{
 			ID:   sumvenue.VenueID,
 			Type: "summary_venue_order",
@@ -122,9 +119,7 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
 	}
 	// harus diganti dengan pengecekan user checker
 	fmt.Println(userID)
@@ -136,37 +131,37 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 		return
 	}
 
-	sumorders, err := c.order.SelectSummaryOrdersByLicenseNumber(_id, projectID)
-	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get sum orders, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
-		return
-	}
-
-	orders := make([]view.SumOrderAttributes, 0, len(sumorders))
-	for _, sumorder := range sumorders {
-		orders = append(orders, view.SumOrderAttributes{
-			OrderID:           sumorder.OrderID,
-			OrderNumber:       sumorder.OrderNumber,
-			OrderTotalPrice:   sumorder.OrderTotalPrice,
-			OrderCreatedAt:    sumorder.OrderCreatedAt,
-			OrderPaidAt:       sumorder.OrderPaidAt,
-			OrderFailedAt:     sumorder.OrderFailedAt,
-			OrderEmail:        sumorder.OrderEmail,
-			DeviceName:        sumorder.DeviceName,
-			ProductName:       sumorder.ProductName,
-			InstallationName:  sumorder.InstallationName,
-			RoomName:          sumorder.RoomName,
-			RoomQty:           sumorder.RoomQty,
-			AgingName:         sumorder.AgingName,
-			OrderStatus:       sumorder.OrderStatus,
-			OpenPaymentStatus: sumorder.OpenPaymentStatus,
-			EcertLastSentDate: sumorder.EcertLastSentDate},
-		)
-	}
-
 	var res view.DataResponseOrder
 	if sumvenue.VenueID != 0 {
+		sumorders, err := c.order.SelectSummaryOrdersByLicenseNumber(_id, projectID)
+		if err != nil && err != sql.ErrNoRows {
+			c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get sum orders, err: %s", err.Error())
+			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
+			return
+		}
+
+		orders := make([]view.SumOrderAttributes, 0, len(sumorders))
+		for _, sumorder := range sumorders {
+			orders = append(orders, view.SumOrderAttributes{
+				OrderID:           sumorder.OrderID,
+				OrderNumber:       sumorder.OrderNumber,
+				OrderTotalPrice:   sumorder.OrderTotalPrice,
+				OrderCreatedAt:    sumorder.OrderCreatedAt,
+				OrderPaidAt:       sumorder.OrderPaidAt,
+				OrderFailedAt:     sumorder.OrderFailedAt,
+				OrderEmail:        sumorder.OrderEmail,
+				DeviceName:        sumorder.DeviceName,
+				ProductName:       sumorder.ProductName,
+				InstallationName:  sumorder.InstallationName,
+				RoomName:          sumorder.RoomName,
+				RoomQty:           sumorder.RoomQty,
+				AgingName:         sumorder.AgingName,
+				OrderStatus:       sumorder.OrderStatus,
+				OpenPaymentStatus: sumorder.OpenPaymentStatus,
+				EcertLastSentDate: sumorder.EcertLastSentDate},
+			)
+		}
+
 		res = view.DataResponseOrder{
 			ID:   sumvenue.VenueID,
 			Type: "summary_venue_order",
@@ -228,19 +223,18 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
 	}
+
 	if pagination == "true" {
-		sumvenues, err = c.order.SelectSummaryVenuesByUserID(projectID, fmt.Sprintf("%v", userID))
+		sumvenues, err = c.order.SelectSummaryVenuesByUserID(projectID, userID.(string))
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetSumOrdersByUserIDPagination] failed get sum venues, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum venues", http.StatusInternalServerError)
 			return
 		}
 	} else {
-		sumvenues, err = c.order.SelectSummaryVenuesByUserID(projectID, fmt.Sprintf("%v", userID))
+		sumvenues, err = c.order.SelectSummaryVenuesByUserID(projectID, userID.(string))
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum venues, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum venues", http.StatusInternalServerError)
@@ -251,7 +245,7 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 	res := make([]view.DataResponseOrder, 0, len(sumvenues))
 	for _, sumvenue := range sumvenues {
 
-		sumorders, err := c.order.SelectSummaryOrdersByVenueID(sumvenue.VenueID, projectID, fmt.Sprintf("%v", userID))
+		sumorders, err := c.order.SelectSummaryOrdersByVenueID(sumvenue.VenueID, projectID, userID.(string))
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum order, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)

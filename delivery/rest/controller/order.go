@@ -12,13 +12,25 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
 
 func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
-	projectID := int64(10)
+	var (
+		params    reqOrder
+		projectID = int64(10)
+		isAdmin   = false
+	)
+
+	err := form.Bind(&params, r)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrder] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
 
 	user, ok := authpassport.GetUser(r)
 	if !ok {
@@ -28,20 +40,22 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePostOrder] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		if params.UserID == "" {
+			c.reporter.Errorf("[handlePostOrder] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
 	}
 
-	var params reqOrder
-	err := form.Bind(&params, r)
-	if err != nil {
-		c.reporter.Errorf("[handlePostOrder] invalid parameter, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
+	var venue venue.Venue
+	if isAdmin {
+		venue, err = c.venue.Get(projectID, params.VenueID, "")
+	} else {
+		venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
 	}
-
-	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
+	venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -108,7 +122,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	//insert order
 	insertOrder := order.Order{
 		OrderNumber:    orderNumber,
-		BuyerID:        fmt.Sprintf("%v", userID),
+		BuyerID:        userID.(string),
 		VenueID:        params.VenueID,
 		DeviceID:       params.DeviceID,
 		ProductID:      params.ProductID,
@@ -120,13 +134,13 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		TotalPrice:     totalPrice,
 		PaymentFee:     params.PaymentFee,
 		Status:         0,
-		CreatedBy:      fmt.Sprintf("%v", userID),
-		LastUpdateBy:   fmt.Sprintf("%v", userID),
+		CreatedBy:      userID.(string),
+		LastUpdateBy:   userID.(string),
 		ProjectID:      projectID,
 		Email:          params.Email,
 	}
 
-	err = c.order.Insert(&insertOrder)
+	err = c.order.Insert(&insertOrder, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrder] failed post order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order", http.StatusInternalServerError)
@@ -134,7 +148,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//insert order details
-	err = c.insertOrderDetail(insertOrder, device, product, installation, room, aging)
+	err = c.insertOrderDetail(insertOrder, device, product, installation, room, aging, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrder] failed post order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order details", http.StatusInternalServerError)
@@ -178,31 +192,12 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Request) {
-	projectID := int64(10)
+	var (
+		params    reqOrder
+		projectID = int64(10)
+		isAdmin   = false
+	)
 
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handlePostOrderByAgent] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-
-	userID, ok := user["sub"]
-	if !ok {
-		c.reporter.Errorf("[handlePostOrderByAgent] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
-	}
-
-	//check admin
-	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
-	if isExist == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePostOrderByAgent] user is not exist")
-		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
-		return
-	}
-
-	var params reqOrder
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] invalid parameter, err: %s", err.Error())
@@ -210,7 +205,39 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePostOrderByAgent] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		if params.UserID == "" {
+			c.reporter.Errorf("[handlePostOrderByAgent] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
+	}
+
+	//check admin
+	if !isAdmin {
+		_, isExist := c.admin.Check(userID.(string))
+		if isExist == sql.ErrNoRows {
+			c.reporter.Errorf("[handlePostOrderByAgent] user is not exist")
+			view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
+			return
+		}
+	}
+
+	var venue venue.Venue
+	if isAdmin {
+		venue, err = c.venue.Get(projectID, params.VenueID, "")
+	} else {
+		venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrderByAgent] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -274,7 +301,7 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 	insertOrder := order.Order{
 		OrderNumber:    orderNumber,
-		BuyerID:        fmt.Sprintf("%v", userID),
+		BuyerID:        userID.(string),
 		VenueID:        params.VenueID,
 		DeviceID:       params.DeviceID,
 		ProductID:      params.ProductID,
@@ -286,20 +313,20 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		TotalPrice:     totalPrice,
 		PaymentFee:     params.PaymentFee,
 		Status:         4,
-		CreatedBy:      fmt.Sprintf("%v", userID),
-		LastUpdateBy:   fmt.Sprintf("%v", userID),
+		CreatedBy:      userID.(string),
+		LastUpdateBy:   userID.(string),
 		ProjectID:      projectID,
 		Email:          params.Email,
 	}
 
-	err = c.order.Insert(&insertOrder)
+	err = c.order.Insert(&insertOrder, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] failed post order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order", http.StatusInternalServerError)
 		return
 	}
 
-	err = c.insertOrderDetail(insertOrder, device, product, installation, room, aging)
+	err = c.insertOrderDetail(insertOrder, device, product, installation, room, aging, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderByAgent] failed post order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed post order details", http.StatusInternalServerError)
@@ -343,8 +370,11 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id     = router.GetParam(r, "id")
-		id, err = strconv.ParseInt(_id, 10, 64)
+		_id       = router.GetParam(r, "id")
+		id, err   = strconv.ParseInt(_id, 10, 64)
+		params    reqUserID
+		projectID = int64(10)
+		isAdmin   = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrderForPayment] invalid parameter, err: %s", err.Error())
@@ -360,17 +390,22 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePatchOrderForPayment] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		_ = form.Bind(&params, r)
+		if params.UserID == "" {
+			c.reporter.Errorf("[handlePatchOrderForPayment] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
 	}
 
 	//check open payment status
-	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
-	if err == sql.ErrNoRows {
-		c.reporter.Errorf("[handlePatchOrderForPayment] order not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
-		return
+	var getOrder order.Order
+	if isAdmin {
+		getOrder, err = c.order.Get(id, projectID, "")
+	} else {
+		getOrder, err = c.order.Get(id, projectID, userID.(string))
 	}
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrderForPayment] Failed get order, err: %s", err.Error())
@@ -407,7 +442,7 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 		ProjectID:    getOrder.ProjectID,
 		Status:       1,
 		CreatedBy:    getOrder.CreatedBy,
-		LastUpdateBy: fmt.Sprintf("%v", userID),
+		LastUpdateBy: userID.(string),
 		PendingAt:    getOrder.PendingAt,
 		PaidAt:       getOrder.PaidAt,
 		FailedAt:     getOrder.FailedAt,
@@ -415,7 +450,7 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 		BuyerID:      getOrder.BuyerID,
 	}
 
-	err = c.order.UpdateOrderStatus(&updateStatus)
+	err = c.order.UpdateOrderStatus(&updateStatus, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrderForPayment] failed update status order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order", http.StatusInternalServerError)
@@ -469,7 +504,16 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		_id       = router.GetParam(r, "id")
 		id, err   = strconv.ParseInt(_id, 10, 64)
 		projectID = int64(10)
+		isAdmin   = false
 	)
+	if err != nil {
+		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	//validasi request body
+	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -484,13 +528,22 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handlePatchOrder] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		if params.UserID == "" {
+			c.reporter.Errorf("[handlePatchOrder] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
 	}
 
 	//validasi order
-	getOrder, err := c.order.Get(id, projectID, fmt.Sprintf("%v", userID))
+	var getOrder order.Order
+	if isAdmin {
+		getOrder, err = c.order.Get(id, projectID, "")
+	} else {
+		getOrder, err = c.order.Get(id, projectID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -502,16 +555,13 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//validasi request body
-	err = form.Bind(&params, r)
-	if err != nil {
-		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
-
 	//validasi foreign key
-	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
+	var venue venue.Venue
+	if isAdmin {
+		venue, err = c.venue.Get(projectID, params.VenueID, "")
+	} else {
+		venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -565,7 +615,11 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//validasi order detail
-	_, err = c.orderDetail.Get(id, projectID, userID.(string))
+	if isAdmin {
+		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, "")
+	} else {
+		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order details not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order details not found", http.StatusNotFound)
@@ -573,7 +627,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Failed get order details, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get order detail", http.StatusInternalServerError)
+		view.RenderJSONError(w, "Failed get order details", http.StatusInternalServerError)
 		return
 	}
 
@@ -596,11 +650,11 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		ProjectID:      projectID,
 		Status:         getOrder.Status,
 		CreatedBy:      getOrder.CreatedBy,
-		LastUpdateBy:   fmt.Sprintf("%v", userID),
+		LastUpdateBy:   userID.(string),
 		Email:          params.Email,
 	}
 
-	err = c.order.Update(&updateOrder)
+	err = c.order.Update(&updateOrder, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrder] failed update order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order", http.StatusInternalServerError)
@@ -608,7 +662,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//update order details
-	err = c.updateOrderDetail(updateOrder, device, product, installation, room, aging)
+	err = c.updateOrderDetail(updateOrder, device, product, installation, room, aging, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrder] failed update order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order details", http.StatusInternalServerError)
@@ -653,10 +707,19 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		params  reqUpdateOrderStatus
-		_id     = router.GetParam(r, "id")
-		id, err = strconv.ParseInt(_id, 10, 64)
+		params    reqUpdateOrderStatus
+		_id       = router.GetParam(r, "id")
+		id, err   = strconv.ParseInt(_id, 10, 64)
+		projectID = int64(10)
+		isAdmin   = false
 	)
+	if err != nil {
+		c.reporter.Errorf("[handleUpdateOrderStatus] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOrderStatus] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -665,16 +728,27 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 
 	user, ok := authpassport.GetUser(r)
 	if !ok {
-		c.reporter.Errorf("[handleUpdateStatusOrder] failed get user")
+		c.reporter.Errorf("[handleUpdateOrderStatus] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		userID = ""
+		if params.UserID == "" {
+			c.reporter.Errorf("[handleUpdateOrderStatus] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
 	}
 
-	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
+	var getOrder order.Order
+	if isAdmin {
+		getOrder, err = c.order.Get(id, projectID, "")
+	} else {
+		getOrder, err = c.order.Get(id, projectID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleUpdateOrderStatus] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -686,20 +760,13 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 		return
 	}
 
-	err = form.Bind(&params, r)
-	if err != nil {
-		c.reporter.Errorf("[handleUpdateOrderStatus] invalid parameter, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
-
 	//update status order
 	updateStatus := order.Order{
 		OrderID:      id,
-		ProjectID:    10,
+		ProjectID:    projectID,
 		Status:       params.Status,
 		CreatedBy:    getOrder.CreatedBy,
-		LastUpdateBy: fmt.Sprintf("%v", userID),
+		LastUpdateBy: userID.(string),
 		PendingAt:    getOrder.PendingAt,
 		PaidAt:       getOrder.PaidAt,
 		FailedAt:     getOrder.FailedAt,
@@ -707,7 +774,7 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 		BuyerID:      getOrder.BuyerID,
 	}
 
-	err = c.order.UpdateOrderStatus(&updateStatus)
+	err = c.order.UpdateOrderStatus(&updateStatus, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOrderStatus] failed update order status, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update order status", http.StatusInternalServerError)
@@ -752,9 +819,11 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 
 func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		params  reqUpdateOpenPaymentStatus
-		_id     = router.GetParam(r, "id")
-		id, err = strconv.ParseInt(_id, 10, 64)
+		params    reqUpdateOpenPaymentStatus
+		_id       = router.GetParam(r, "id")
+		id, err   = strconv.ParseInt(_id, 10, 64)
+		projectID = int64(10)
+		isAdmin   = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] invalid parameter, err: %s", err.Error())
@@ -783,9 +852,15 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 			return
 		}
 		userID = params.UserID
+		isAdmin = true
 	}
 
-	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
+	var getOrder order.Order
+	if isAdmin {
+		getOrder, err = c.order.Get(id, projectID, "")
+	} else {
+		getOrder, err = c.order.Get(id, projectID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -799,15 +874,15 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 
 	updateStatus := order.Order{
 		OrderID:           id,
-		ProjectID:         10,
+		ProjectID:         projectID,
 		OpenPaymentStatus: params.OpenPaymentStatus,
 		CreatedBy:         getOrder.CreatedBy,
-		LastUpdateBy:      fmt.Sprintf("%v", userID),
+		LastUpdateBy:      userID.(string),
 		VenueID:           getOrder.VenueID,
 		BuyerID:           getOrder.BuyerID,
 	}
 
-	err = c.order.UpdateOpenPaymentStatus(&updateStatus)
+	err = c.order.UpdateOpenPaymentStatus(&updateStatus, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] failed update open payment status, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update open payment status", http.StatusInternalServerError)
@@ -851,8 +926,11 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 
 func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id     = router.GetParam(r, "id")
-		id, err = strconv.ParseInt(_id, 10, 64)
+		_id       = router.GetParam(r, "id")
+		id, err   = strconv.ParseInt(_id, 10, 64)
+		params    reqUserID
+		projectID = int64(10)
+		isAdmin   = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteOrder] invalid parameter, err: %s", err.Error())
@@ -868,13 +946,23 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleDeleteOrder] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		_ = form.Bind(&params, r)
+		if params.UserID == "" {
+			c.reporter.Errorf("[handleDelete] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
 	}
 
 	//validasi order
-	getOrder, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
+	var getOrder order.Order
+	if isAdmin {
+		getOrder, err = c.order.Get(id, projectID, "")
+	} else {
+		getOrder, err = c.order.Get(id, projectID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleDeleteOrder] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
@@ -887,7 +975,11 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//validasi order detail
-	orderDetails, err := c.orderDetail.Get(id, 10, userID.(string))
+	if isAdmin {
+		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, "")
+	} else {
+		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, userID.(string))
+	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order details not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Order details not found", http.StatusNotFound)
@@ -898,25 +990,20 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "Failed get order detail", http.StatusInternalServerError)
 		return
 	}
-	if len(orderDetails) != 5 {
-		c.reporter.Errorf("[handlePatchOrder] Failed get all order details")
-		view.RenderJSONError(w, "Failed get all order details", http.StatusInternalServerError)
-		return
-	}
 
 	//delete order
 	deleteOrder := order.Order{
 		OrderID:      id,
-		ProjectID:    10,
+		ProjectID:    projectID,
 		CreatedBy:    getOrder.CreatedBy,
-		LastUpdateBy: fmt.Sprintf("%v", userID),
+		LastUpdateBy: userID.(string),
 		BuyerID:      getOrder.BuyerID,
 		VenueID:      getOrder.VenueID,
 		Status:       getOrder.Status,
 		PaidAt:       getOrder.PaidAt,
 	}
 
-	err = c.order.Delete(&deleteOrder)
+	err = c.order.Delete(&deleteOrder, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteOrder] failed delete order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete order", http.StatusInternalServerError)
@@ -924,7 +1011,7 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	}
 
 	//delete order details
-	err = c.deleteOrderDetail(deleteOrder)
+	err = c.deleteOrderDetail(deleteOrder, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteOrder] failed delete order details, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete order details", http.StatusInternalServerError)
@@ -947,9 +1034,7 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetAllOrder] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
 	}
 
 	orders, err := c.order.Select(10, fmt.Sprintf("%v", userID))
@@ -1088,9 +1173,7 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetAllOrdersByVenueID] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
 	}
 
 	orders, err := c.order.SelectByVenueID(venueID, 10, fmt.Sprintf("%v", userID))
@@ -1156,9 +1239,7 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetAllOrdersByBuyerID] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
 	}
 
 	orders, err := c.order.SelectByBuyerID(buyerID, 10, fmt.Sprintf("%v", userID))
@@ -1225,9 +1306,7 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleGetAllOrdersByPaidDate] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
 	}
 
 	orders, err := c.order.SelectByPaidDate(paidDate, 10, fmt.Sprintf("%v", userID))
@@ -1301,9 +1380,7 @@ func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Re
 	}
 	userID, ok := user["sub"]
 	if !ok {
-		c.reporter.Errorf("[handleCalculateOrderPrice] failed get userID")
-		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
-		return
+		userID = ""
 	}
 
 	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
@@ -1381,99 +1458,136 @@ func leftPadLen(s string, padStr string, overallLen int) string {
 }
 
 func isOrderValid(venueType, venueCapacity, agingID, deviceID, productID, installationID, roomID, roomQuantity int64) bool {
-	if roomQuantity == 0 {
-		if venueType > 0 && venueType <= 4 && roomID == 0 {
+	if roomID == 0 && roomQuantity == 0 {
+		if venueType > 0 && venueType <= 4 {
 			if venueCapacity == 1 {
-				if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
-					return true
-				} else if agingID == 2 && deviceID == 1 && productID == 2 && installationID == 2 {
-					return true
-				} else if agingID == 3 && deviceID == 1 && productID == 3 && installationID == 3 {
-					return true
-				} else if agingID == 1 && deviceID == 2 && productID == 4 && installationID == 4 {
-					return true
-				} else if agingID == 1 && deviceID == 3 && productID == 9 && installationID == 9 {
-					return true
-				} else if agingID == 1 && deviceID == 4 && productID == 10 && installationID == 10 {
-					return true
-				} else {
-					return false
+				if agingID == 1 {
+					if deviceID == 1 {
+						if productID == 1 && installationID == 1 {
+							return true
+						}
+					} else if deviceID == 2 {
+						if productID == 4 && installationID == 4 {
+							return true
+						}
+					} else if deviceID == 3 {
+						if productID == 9 && installationID == 9 {
+							return true
+						}
+					} else if deviceID == 4 {
+						if productID == 10 && installationID == 10 {
+							return true
+						}
+					}
+				} else if agingID == 2 {
+					if deviceID == 1 && productID == 2 && installationID == 2 {
+						return true
+					}
+				} else if agingID == 3 {
+					if deviceID == 1 && productID == 3 && installationID == 3 {
+						return true
+					}
 				}
-			} else if venueCapacity == 2 {
-				if agingID == 1 && deviceID == 1 && productID == 5 && installationID == 5 {
-					return true
-				} else if agingID == 1 && deviceID == 2 && productID == 6 && installationID == 6 {
-					return true
-				} else if agingID == 1 && deviceID == 3 && productID == 11 && installationID == 11 {
-					return true
-				} else if agingID == 1 && deviceID == 4 && productID == 12 && installationID == 12 {
-					return true
-				} else {
-					return false
+			} else if venueCapacity == 2 && agingID == 1 {
+				if deviceID == 1 {
+					if productID == 5 && installationID == 5 {
+						return true
+					}
+				} else if deviceID == 2 {
+					if productID == 6 && installationID == 6 {
+						return true
+					}
+				} else if deviceID == 3 {
+					if productID == 11 && installationID == 11 {
+						return true
+					}
+				} else if deviceID == 4 {
+					if productID == 12 && installationID == 12 {
+						return true
+					}
 				}
-			} else {
-				return false
 			}
-		} else if (venueType == 5 || venueType == 6) && roomID == 0 {
+		} else if venueType == 5 || venueType == 6 {
 			if venueCapacity == 1 {
-				if agingID == 1 && deviceID == 1 && productID == 1 && installationID == 1 {
-					return true
-				} else if agingID == 2 && deviceID == 1 && productID == 2 && installationID == 2 {
-					return true
-				} else if agingID == 3 && deviceID == 1 && productID == 3 && installationID == 3 {
-					return true
-				} else if agingID == 1 && deviceID == 2 && productID == 4 && installationID == 4 {
-					return true
-				} else if agingID == 1 && deviceID == 3 && productID == 9 && installationID == 9 {
-					return true
-				} else if agingID == 1 && deviceID == 4 && productID == 10 && installationID == 10 {
-					return true
-				} else {
-					return false
+				if agingID == 1 {
+					if deviceID == 1 {
+						if productID == 1 && installationID == 1 {
+							return true
+						}
+					} else if deviceID == 2 {
+						if productID == 4 && installationID == 4 {
+							return true
+						}
+					} else if deviceID == 3 {
+						if productID == 9 && installationID == 9 {
+							return true
+						}
+					} else if deviceID == 4 {
+						if productID == 10 && installationID == 10 {
+							return true
+						}
+					}
+				} else if agingID == 2 {
+					if deviceID == 1 && productID == 2 && installationID == 2 {
+						return true
+					}
+				} else if agingID == 3 {
+					if deviceID == 1 && productID == 3 && installationID == 3 {
+						return true
+					}
 				}
-			} else {
-				return false
 			}
-		} else if venueType >= 7 && venueType <= 11 && roomID == 0 {
-			if venueCapacity == 2 {
-				if agingID == 1 && deviceID == 1 && productID == 5 && installationID == 5 {
-					return true
-				} else if agingID == 1 && deviceID == 2 && productID == 6 && installationID == 6 {
-					return true
-				} else if agingID == 1 && deviceID == 3 && productID == 11 && installationID == 11 {
-					return true
-				} else if agingID == 1 && deviceID == 4 && productID == 12 && installationID == 12 {
-					return true
-				} else {
-					return false
+		} else if venueType >= 7 && venueType <= 11 {
+			if venueCapacity == 2 && agingID == 1 {
+				if deviceID == 1 {
+					if productID == 5 && installationID == 5 {
+						return true
+					}
+				} else if deviceID == 2 {
+					if productID == 6 && installationID == 6 {
+						return true
+					}
+				} else if deviceID == 3 {
+					if productID == 11 && installationID == 11 {
+						return true
+					}
+				} else if deviceID == 4 {
+					if productID == 12 && installationID == 12 {
+						return true
+					}
 				}
-			} else {
-				return false
 			}
-		} else {
-			return false
 		}
 	} else {
-		if venueType >= 12 && venueType <= 14 && venueCapacity == 0 && agingID == 1 && roomID == 1 {
-			if deviceID == 1 && productID == 7 && installationID == 7 {
-				return true
-			} else if deviceID == 3 && productID == 13 && installationID == 13 {
-				return true
-			} else {
-				return false
+		if venueCapacity == 0 && agingID == 1 {
+			if venueType >= 12 && venueType <= 14 {
+				if roomID == 1 {
+					if deviceID == 1 {
+						if productID == 7 && installationID == 7 {
+							return true
+						}
+					} else if deviceID == 3 {
+						if productID == 13 && installationID == 13 {
+							return true
+						}
+					}
+				}
+			} else if venueType >= 15 && venueType <= 18 {
+				if roomID == 2 {
+					if deviceID == 1 {
+						if productID == 8 && installationID == 8 {
+							return true
+						}
+					} else if deviceID == 3 {
+						if productID == 14 && installationID == 14 {
+							return true
+						}
+					}
+				}
 			}
-		} else if venueType >= 15 && venueType <= 18 && venueCapacity == 0 && agingID == 1 && roomID == 2 {
-			if deviceID == 1 && productID == 8 && installationID == 8 {
-				return true
-			} else if deviceID == 3 && productID == 14 && installationID == 14 {
-				return true
-			} else {
-				return false
-			}
-		} else {
-			return false
 		}
 	}
+	return false
 }
 
 func (c *Controller) calculateTotalPrice(venueType int64, productPrice, installationPrice, roomPrice, roomQuantity float64) float64 {
