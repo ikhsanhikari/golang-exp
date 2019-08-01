@@ -146,8 +146,13 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 		view.RenderJSONError(w, "failed get userID", http.StatusInternalServerError)
 		return
 	}
-	// harus diganti dengan pengecekan user checker
-	fmt.Println(userID)
+	// pengecekan user checker
+	_, isExist := c.agent.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetLicenseByIDForChecker] user is not authorized")
+		view.RenderJSONError(w, "user is not authorized", http.StatusUnauthorized)
+		return
+	}
 
 	sumvenue, err := c.order.GetSummaryVenueByLicenseNumber(_id, projectID)
 	if err != nil && err != sql.ErrNoRows {
