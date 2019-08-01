@@ -284,7 +284,7 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 	}
 	_, err = c.venue.GetCity(params.City)
 	if err == sql.ErrNoRows {
-		err = c.venue.InsertVenueAvailable(params.City)
+		err = c.venue.InsertVenueAvailable(params.City, 0)
 	}
 
 	err = c.InsertLicense(venue.Id, venue.CreatedBy, venue.CreatedBy)
@@ -474,6 +474,25 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 		c.reporter.Errorf("[handlePatchVenue] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update Venue", http.StatusInternalServerError)
 		return
+	}
+	venuesAvailable, err := c.venue.GetCity(venues.City)
+	var vaStatus int64
+	for _, venuesAvailables := range venuesAvailable {
+		vaStatus = venuesAvailables.Status
+	}
+	if status == 1 {
+		if vaStatus == 0 {
+			err = c.venue.UpdateStatusVenueAvailable(venues.City, 1)
+		}
+	} else {
+		_, err := c.venue.GetVenueByCity(10, venues.City, "true", 9, 0)
+		if err == sql.ErrNoRows {
+			if vaStatus == 1 {
+				err = c.venue.UpdateStatusVenueAvailable(venues.City, 0)
+			}
+		} else {
+			err = c.venue.UpdateStatusVenueAvailable(venues.City, 1)
+		}
 	}
 	res := view.DataResponse{
 		ID:   id,
