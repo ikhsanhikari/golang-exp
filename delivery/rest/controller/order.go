@@ -2,7 +2,6 @@ package controller
 
 import (
 	"database/sql"
-	"fmt"
 	"math"
 	"net/http"
 	"strconv"
@@ -55,7 +54,6 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	} else {
 		venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
 	}
-	venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
@@ -948,7 +946,7 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		_ = form.Bind(&params, r)
 		if params.UserID == "" {
-			c.reporter.Errorf("[handleDelete] invalid parameter, failed get userID")
+			c.reporter.Errorf("[handleDeleteOrder] invalid parameter, failed get userID")
 			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
 			return
 		}
@@ -1026,6 +1024,8 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) {
+	var projectID = int64(10)
+
 	user, ok := authpassport.GetUser(r)
 	if !ok {
 		c.reporter.Errorf("[handleGetAllOrder] failed get user")
@@ -1037,7 +1037,7 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 		userID = ""
 	}
 
-	orders, err := c.order.Select(10, fmt.Sprintf("%v", userID))
+	orders, err := c.order.Select(projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrders] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
@@ -1088,8 +1088,9 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 
 func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id     = router.GetParam(r, "id")
-		id, err = strconv.ParseInt(_id, 10, 64)
+		_id       = router.GetParam(r, "id")
+		id, err   = strconv.ParseInt(_id, 10, 64)
+		projectID = int64(10)
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleGetOrderByID] invalid parameter, err: %s", err.Error())
@@ -1108,7 +1109,7 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 		userID = ""
 	}
 
-	order, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
+	order, err := c.order.Get(id, projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetOrderByID] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
@@ -1158,6 +1159,7 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 	var (
 		_venueID     = router.GetParam(r, "venue_id")
 		venueID, err = strconv.ParseInt(_venueID, 10, 64)
+		projectID    = int64(10)
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByVenueID] invalid parameter, err: %s", err.Error())
@@ -1176,7 +1178,7 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 		userID = ""
 	}
 
-	orders, err := c.order.SelectByVenueID(venueID, 10, fmt.Sprintf("%v", userID))
+	orders, err := c.order.SelectByVenueID(venueID, projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByVenueID] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -1228,7 +1230,8 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 
 func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Request) {
 	var (
-		buyerID = router.GetParam(r, "buyer_id")
+		buyerID   = router.GetParam(r, "buyer_id")
+		projectID = int64(10)
 	)
 
 	user, ok := authpassport.GetUser(r)
@@ -1242,7 +1245,7 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 		userID = ""
 	}
 
-	orders, err := c.order.SelectByBuyerID(buyerID, 10, fmt.Sprintf("%v", userID))
+	orders, err := c.order.SelectByBuyerID(buyerID, projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByBuyerID] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -1296,6 +1299,7 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 	var (
 		_paidDate = router.GetParam(r, "paid_date")
 		paidDate  = _paidDate[:10]
+		projectID = int64(10)
 	)
 
 	user, ok := authpassport.GetUser(r)
@@ -1309,7 +1313,7 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 		userID = ""
 	}
 
-	orders, err := c.order.SelectByPaidDate(paidDate, 10, fmt.Sprintf("%v", userID))
+	orders, err := c.order.SelectByPaidDate(paidDate, projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByPaidDate] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -1383,7 +1387,7 @@ func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Re
 		userID = ""
 	}
 
-	venue, err := c.venue.Get(projectID, params.VenueID, fmt.Sprintf("%v", userID))
+	venue, err := c.venue.Get(projectID, params.VenueID, userID.(string))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleCalculateOrderPrice] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
