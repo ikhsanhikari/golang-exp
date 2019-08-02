@@ -405,6 +405,11 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 	} else {
 		getOrder, err = c.order.Get(id, projectID, userID.(string))
 	}
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePatchOrderForPayment] order not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Order not found", http.StatusNotFound)
+		return
+	}
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrderForPayment] Failed get order, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get order", http.StatusInternalServerError)

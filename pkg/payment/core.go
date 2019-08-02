@@ -34,7 +34,7 @@ func (c *core) Pay(id string, paymentMethodID int64) (payment *Payment, err erro
 		"id":                id,
 	})
 
-	var url = c.apiBaseURL + "/api/v2/payments/api/v1/dopay_molanobar?app_id=molalivearena"
+	var url = c.apiBaseURL + "/api/v1/dopay_molanobar?app_id=molalivearena"
 
 	request, err := http.NewRequest("POST", url, bytes.NewBuffer(body))
 	if err != nil {
