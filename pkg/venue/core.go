@@ -25,9 +25,9 @@ type ICore interface {
 	GetStatus(pid int64, id int64) (venue Venue, err error)
 	Get(pid int64, id int64, uid string) (venue Venue, err error)
 	Insert(venue *Venue) (err error)
-	InsertVenueAvailable(cityName string) (err error)
+	InsertVenueAvailable(cityName string, status int64) (err error)
 	Update(venue *Venue, uid string, isAdmin bool) (err error)
-	//UpdateStatus(venue *Venue) (err error)
+	UpdateStatusVenueAvailable(cityName string, status int64) (err error)
 	Delete(pid int64, id int64, uid string, created_by string, isAdmin bool) (err error)
 }
 
@@ -366,7 +366,18 @@ func (c *core) getFromDBVenueGroupAvailable(pid int64) (venues VenueGroupAvailab
 		GROUP BY city
 		ORDER BY city ASC	
 	`, pid)
+	return
+}
 
+func (c *core) UpdateStatusVenueAvailable(cityName string, status int64) (err error) {
+	_, err = c.db.Exec(`
+			UPDATE
+				mla_venues_available
+			SET
+				status = ?	
+			WHERE		
+				city_name = ?
+		`, status, cityName)
 	return
 }
 
@@ -394,11 +405,11 @@ func (c *core) GetCity(cityName string) (venues VenueAvailables, err error) {
 }
 func (c *core) getFromDBCity(cityName string) (venue VenueAvailables, err error) {
 	query := `
-		select id, city_name
+		select id, city_name,status
 		from mla_venues_available
 		where city_name = ?
 		ORDER BY city_name ASC`
-	err = c.db.Get(&venue, query, cityName)
+	err = c.db.Select(&venue, query, cityName)
 	return
 }
 
@@ -513,7 +524,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 	return
 }
 
-func (c *core) InsertVenueAvailable(cityName string) (err error) {
+func (c *core) InsertVenueAvailable(cityName string, status int64) (err error) {
 	time := time.Now()
 	query := `
 		INSERT INTO mla_venues_available (
@@ -523,7 +534,7 @@ func (c *core) InsertVenueAvailable(cityName string) (err error) {
 			?,
 			?)`
 	args := []interface{}{
-		cityName, 1, time,
+		cityName, status, time,
 	}
 	tx, err := c.db.Beginx()
 	if err != nil {

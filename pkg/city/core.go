@@ -80,7 +80,7 @@ func (c *core) getFromDB(id int64, pid int64) (city City, err error) {
 			app_id,
 			project_id
 		FROM
-			city
+			mla_city
 		WHERE
 			city_id = ? 
 			AND project_id = ?
@@ -99,7 +99,7 @@ func (c *core) getFromDBProvince(id int64, pid int64) (cities Cities, err error)
 			app_id,
 			project_id
 		FROM
-			city
+			mla_city
 		WHERE
 			province_id = ? 
 			AND project_id = ?
