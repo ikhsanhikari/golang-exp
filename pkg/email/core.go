@@ -101,7 +101,7 @@ func (c *core) GetBase64Png(licenseNum string) (string, string) {
 	png := qr.Bytes()
 	b64Png := base64.StdEncoding.EncodeToString(png)
 
-	file, err = os.Open("file/img/background.png") // a QR code image
+	file, err = os.Open("file/img/background1.png") // a QR code image
 
 	if err != nil {
 		return "0", "0"
