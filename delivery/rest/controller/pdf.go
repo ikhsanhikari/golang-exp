@@ -70,7 +70,7 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
 		return "0"
 	}
 
-	orderDetail, err := c.orderDetail.Get(id, 10, fmt.Sprintf("%v", userID))
+	orderDetail, err := c.orderDetail.GetFromDBByOrderID(id, 10, fmt.Sprintf("%v", userID))
 	if err == sql.ErrNoRows {
 		c.reporter.Warningf("[handlePatchPDF] orderDetail not found, err: %s", err.Error())
 		return "0"

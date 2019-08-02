@@ -14,10 +14,10 @@ import (
 
 // ICore is the interface
 type ICore interface {
-	Insert(orderDetail *OrderDetail) (err error)
-	Update(orderDetail *OrderDetail) (err error)
-	Delete(orderDetail *OrderDetail) (err error)
-	Get(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error)
+	Insert(orderDetail *OrderDetail, isAdmin bool) (err error)
+	Update(orderDetail *OrderDetail, isAdmin bool) (err error)
+	Delete(orderDetail *OrderDetail, isAdmin bool) (err error)
+	GetFromDBByOrderID(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error)
 }
 
 // core contains db client
@@ -29,7 +29,7 @@ type core struct {
 
 const redisPrefix = "molanobar-v1"
 
-func (c *core) Insert(orderDetail *OrderDetail) (err error) {
+func (c *core) Insert(orderDetail *OrderDetail, isAdmin bool) (err error) {
 	orderDetail.CreatedAt = time.Now()
 	orderDetail.UpdatedAt = orderDetail.CreatedAt
 	orderDetail.Status = 1
@@ -49,18 +49,7 @@ func (c *core) Insert(orderDetail *OrderDetail) (err error) {
 			last_update_by,
 			project_id
 		) VALUES (
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?
+			?,?,?,?,?,?,?,?,?,?,?,?
 		)`
 
 	args := []interface{}{
@@ -100,13 +89,12 @@ func (c *core) Insert(orderDetail *OrderDetail) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, orderDetail.ProjectID, orderDetail.CreatedBy, orderDetail.OrderID)
-	_ = c.deleteCache(redisKey)
+	c.clearRedis(orderDetail.CreatedBy, orderDetail.ProjectID, orderDetail.OrderID, isAdmin)
 
 	return
 }
 
-func (c *core) Update(orderDetail *OrderDetail) (err error) {
+func (c *core) Update(orderDetail *OrderDetail, isAdmin bool) (err error) {
 	orderDetail.UpdatedAt = time.Now()
 
 	query := `
@@ -121,7 +109,7 @@ func (c *core) Update(orderDetail *OrderDetail) (err error) {
 			last_update_by = ?
 		WHERE
 			order_id = ? AND
-			item_type like ? AND
+			item_type = ? AND
 			project_id = ? AND
 			status = 1`
 	args := []interface{}{
@@ -135,7 +123,8 @@ func (c *core) Update(orderDetail *OrderDetail) (err error) {
 		orderDetail.ItemType,
 		orderDetail.ProjectID,
 	}
-	if orderDetail.LastUpdateBy != "" {
+
+	if !isAdmin {
 		query += ` AND created_by = ? `
 		args = append(args, orderDetail.CreatedBy)
 	}
@@ -161,13 +150,13 @@ func (c *core) Update(orderDetail *OrderDetail) (err error) {
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, orderDetail.ProjectID, orderDetail.CreatedBy, orderDetail.OrderID)
-	_ = c.deleteCache(redisKey)
+
+	c.clearRedis(orderDetail.CreatedBy, orderDetail.ProjectID, orderDetail.OrderID, isAdmin)
 
 	return
 }
 
-func (c *core) Delete(orderDetail *OrderDetail) (err error) {
+func (c *core) Delete(orderDetail *OrderDetail, isAdmin bool) (err error) {
 	orderDetail.DeletedAt = null.TimeFrom(time.Now())
 
 	query := `
@@ -188,7 +177,8 @@ func (c *core) Delete(orderDetail *OrderDetail) (err error) {
 		orderDetail.OrderID,
 		orderDetail.ProjectID,
 	}
-	if orderDetail.LastUpdateBy != "" {
+
+	if !isAdmin {
 		query += ` AND created_by = ? `
 		args = append(args, orderDetail.CreatedBy)
 	}
@@ -215,25 +205,24 @@ func (c *core) Delete(orderDetail *OrderDetail) (err error) {
 		return err
 	}
 
-	redisKey := fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, orderDetail.ProjectID, orderDetail.CreatedBy, orderDetail.OrderID)
-	_ = c.deleteCache(redisKey)
+	c.clearRedis(orderDetail.CreatedBy, orderDetail.ProjectID, orderDetail.OrderID, isAdmin)
 
 	return
 }
 
-func (c *core) Get(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error) {
+func (c *core) GetByOrderID(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error) {
 	redisKey := fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, pid, uid, orderID)
 
 	orderDetails, err = c.selectFromCache()
 	if err != nil {
-		orderDetails, err = c.GetFromDB(orderID, pid, uid)
+		orderDetails, err = c.GetFromDBByOrderID(orderID, pid, uid)
 		byt, _ := jsoniter.ConfigFastest.Marshal(orderDetails)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) GetFromDB(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error) {
+func (c *core) GetFromDBByOrderID(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error) {
 	qs := `
 		SELECT
 			id,
@@ -303,4 +292,20 @@ func (c *core) deleteCache(key string) error {
 
 	_, err := conn.Do("DEL", key)
 	return err
+}
+
+func (c *core) clearRedis(userID string, projectID, orderID int64, isAdmin bool) {
+	redisKeys := []string{
+		fmt.Sprintf("%s:%d:%s:order-details:%d", redisPrefix, projectID, userID, orderID),
+	}
+
+	if isAdmin {
+		redisKeys = append(redisKeys,
+			fmt.Sprintf("%s:%d::order-details:%d", redisPrefix, projectID, orderID),
+		)
+	}
+
+	for _, redisKey := range redisKeys {
+		_ = c.deleteCache(redisKey)
+	}
 }
