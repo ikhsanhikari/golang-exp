@@ -245,8 +245,8 @@ func (c *core) UpdateOrderStatus(order *Order, isAdmin bool) (err error) {
 			deleted_at IS NULL`
 
 	args := []interface{}{
-		order.UpdatedAt,
 		order.Status,
+		order.UpdatedAt,
 		order.LastUpdateBy,
 		order.PendingAt,
 		order.PaidAt,
