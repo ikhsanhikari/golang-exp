@@ -102,11 +102,11 @@ func (c *Controller) handleGetVenueByID(w http.ResponseWriter, r *http.Request) 
 	}
 	if err != nil {
 		c.reporter.Errorf("[handleGetVenueByID] venue not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
+		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
 		return
 	}
 	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handleGetVenueByID] failed get company, err: %s", err.Error())
+		c.reporter.Errorf("[handleGetVenueByID] failed get Venue, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get venue", http.StatusInternalServerError)
 		return
 	}
@@ -267,7 +267,7 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		err = form.Bind(&params, r)
 		if err != nil {
-			c.reporter.Warningf("[handleDeleteCompany] form binding, err: %s", err.Error())
+			c.reporter.Warningf("[handleDeleteVenue] form binding, err: %s", err.Error())
 			view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 			return
 		}
