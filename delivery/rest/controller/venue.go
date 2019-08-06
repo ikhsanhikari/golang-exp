@@ -68,6 +68,81 @@ func (c *Controller) handleGetAllVenuesGroupAvailable(w http.ResponseWriter, r *
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetVenueByID(w http.ResponseWriter, r *http.Request) {
+	var (
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		isAdmin = false
+		userid  = ""
+	)
+	if err != nil {
+		c.reporter.Errorf("[handleGetVenueByID] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetVenueByID] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	var venue venue.Venue
+	userID, ok := user["sub"]
+	if !ok {
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
+	}
+
+	if isAdmin == true {
+		venue, err = c.venue.Get(10, id, "")
+	} else {
+		venue, err = c.venue.Get(10, id, userid)
+	}
+	if err != nil {
+		c.reporter.Errorf("[handleGetVenueByID] venue not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetVenueByID] failed get Venue, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get venue", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponse{
+		Type: "venue",
+		ID:   venue.Id,
+		Attributes: view.VenueAttributes{
+			Id:               venue.Id,
+			VenueId:          venue.VenueId,
+			VenueType:        venue.VenueType,
+			VenueName:        venue.VenueName,
+			Address:          venue.Address,
+			City:             venue.City,
+			Province:         venue.Province,
+			Zip:              venue.Zip,
+			Capacity:         venue.Capacity,
+			Facilities:       venue.Facilities,
+			PtID:             venue.PtID,
+			CreatedAt:        venue.CreatedAt,
+			UpdatedAt:        venue.UpdatedAt,
+			DeletedAt:        venue.DeletedAt,
+			Longitude:        venue.Longitude,
+			Latitude:         venue.Latitude,
+			Status:           venue.Status,
+			PicName:          venue.PicName,
+			PicContactNumber: venue.PicContactNumber,
+			VenuePhone:       venue.VenuePhone,
+			CreatedBy:        venue.CreatedBy,
+			LastUpdateBy:     venue.LastUpdateBy,
+			ShowStatus:       venue.ShowStatus,
+		},
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) {
 	getParam := r.URL.Query()
 	cityName := getParam.Get("city")
@@ -192,7 +267,7 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		err = form.Bind(&params, r)
 		if err != nil {
-			c.reporter.Warningf("[handleDeleteCompany] form binding, err: %s", err.Error())
+			c.reporter.Warningf("[handleDeleteVenue] form binding, err: %s", err.Error())
 			view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 			return
 		}
