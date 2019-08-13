@@ -21,6 +21,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/subscription"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
@@ -57,6 +58,7 @@ type Controller struct {
 	province       province.ICore
 	emailLog       email_log.ICore
 	agent          agent.ICore
+	subscription   subscription.ICore
 }
 
 // New ...
@@ -84,6 +86,7 @@ func New(
 	province province.ICore,
 	emailLog email_log.ICore,
 	agent agent.ICore,
+	subscription subscription.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -109,6 +112,7 @@ func New(
 		province:       province,
 		emailLog:       emailLog,
 		agent:          agent,
+		subscription:   subscription,
 	}
 }
 
@@ -211,5 +215,10 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/cities/:id", c.handleGetCityByID)
 	router.GET("/province", c.handleGetAllProvinces)
 	router.GET("/province/:id", c.handleGetProvincesByID)
+
+	router.GET("/subscriptions", c.auth.MustAuthorize(c.handleGetAllSubscriptions, "molanobar:subscriptions.read"))
+	router.POST("/subscriptions", c.auth.MustAuthorize(c.handlePostSubscription, "molanobar:subscriptions.create"))
+	router.PATCH("/subscriptions/:id", c.auth.MustAuthorize(c.handlePatchSubscription, "molanobar:subscriptions.update"))
+	router.DELETE("/subscriptions/:id", c.auth.MustAuthorize(c.handleDeleteSubscription, "molanobar:subscriptions.delete"))
 
 }
