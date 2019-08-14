@@ -7,6 +7,7 @@ type SubscriptionAttributes struct {
 	PackageDuration int64     `json:"packageDuration"`
 	BoxSerialNumber string    `json:"boxSerialNumber"`
 	SmartCardNumber string    `json:"smartCardNumber"`
+	OrderID         string    `json:"orderId"`
 	Status          int8      `json:"status"`
 	CreatedAt       time.Time `json:"createdAt"`
 	UpdatedAt       time.Time `json:"updatedAt"`

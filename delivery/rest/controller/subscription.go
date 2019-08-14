@@ -30,6 +30,7 @@ func (c *Controller) handleGetAllSubscriptions(w http.ResponseWriter, r *http.Re
 				PackageDuration: subscription.PackageDuration,
 				BoxSerialNumber: subscription.BoxSerialNumber,
 				SmartCardNumber: subscription.SmartCardNumber,
+				OrderID:         subscription.OrderID,
 				Status:          subscription.Status,
 				ProjectID:       subscription.ProjectID,
 				CreatedAt:       subscription.CreatedAt,
@@ -104,6 +105,7 @@ func (c *Controller) handlePostSubscription(w http.ResponseWriter, r *http.Reque
 		PackageDuration: params.PackageDuration,
 		BoxSerialNumber: params.BoxSerialNumber,
 		SmartCardNumber: params.SmartCardNumber,
+		OrderID:         params.OrderID,
 		ProjectID:       10,
 		CreatedBy:       params.CreatedBy,
 	}
@@ -152,6 +154,7 @@ func (c *Controller) handlePatchSubscription(w http.ResponseWriter, r *http.Requ
 		PackageDuration: params.PackageDuration,
 		BoxSerialNumber: params.BoxSerialNumber,
 		SmartCardNumber: params.SmartCardNumber,
+		OrderID:         params.OrderID,
 		ProjectID:       10,
 		LastUpdateBy:    params.LastUpdateBy,
 	}
