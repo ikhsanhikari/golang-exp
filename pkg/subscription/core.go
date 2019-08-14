@@ -107,8 +107,7 @@ func (c *core) Insert(subscription *Subscription) (err error) {
 	subscription.UpdatedAt = subscription.CreatedAt
 	subscription.Status = 1
 	subscription.LastUpdateBy = subscription.CreatedBy
-
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_subscription (
 			package_duration,
 			box_serial_number,
@@ -121,20 +120,54 @@ func (c *core) Insert(subscription *Subscription) (err error) {
 			created_by,
 			last_update_by
 		) VALUES (
-			:package_duration,
-			:box_serial_number,
-			:smart_card_number,
-			:status,
-			:created_at,
-			:updated_at,
-			:deleted_at,
-			:project_id,
-			:created_by,
-			:last_update_by
-		)
-	`, subscription)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		)`
+	args := []interface{}{
+		subscription.PackageDuration,
+		subscription.BoxSerialNumber,
+		subscription.SmartCardNumber,
+		subscription.Status,
+		subscription.CreatedAt,
+		subscription.UpdatedAt,
+		subscription.DeletedAt,
+		subscription.ProjectID,
+		subscription.CreatedBy,
+		subscription.LastUpdateBy,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	subscription.ID, err = res.LastInsertId()
-
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    subscription.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_subscription",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:subscriptions", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
@@ -145,21 +178,52 @@ func (c *core) Update(subscription *Subscription) (err error) {
 	subscription.UpdatedAt = time.Now()
 	subscription.Status = 1
 
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_subscription
 		SET
-			package_duration = 	:package_duration,
-			box_serial_number = :box_serial_number,
-			smart_card_number = :smart_card_number,
-			updated_at=	:updated_at,
-			project_id=	:project_id,
-			last_update_by= :last_update_by
+			package_duration = ?,
+			box_serial_number = ?,
+			smart_card_number= ?,
+			update_at= ?,
+			project_id=	?,
+			last_update_by=	?
 		WHERE
-			id = 		:id AND
-			project_id =:project_id AND 
-			status = 	1
-	`, subscription)
+			id = 		? AND
+			project_id = ? AND 
+			status = 	1`
+
+	args := []interface{}{
+		subscription.PackageDuration,
+		subscription.BoxSerialNumber,
+		subscription.SmartCardNumber,
+		subscription.UpdatedAt,
+		subscription.ProjectID,
+		subscription.LastUpdateBy,
+		subscription.ID,
+		subscription.ProjectID,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    subscription.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_subscription",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:subscription:%d", redisPrefix, subscription.ProjectID, subscription.ID)
 	_ = c.deleteCache(redisKey)
@@ -173,17 +237,47 @@ func (c *core) Update(subscription *Subscription) (err error) {
 func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
 
-	_, err = c.db.Exec(`
+	query := `
 		UPDATE
-			mla_subscription
+		mla_subscription
 		SET
 			deleted_at = ?,
 			status = 0
 		WHERE
 			id = ? AND
 			status = 1 AND 
-			project_id = ?
-	`, now, id, pid)
+			project_id = ?`
+
+	args := []interface{}{
+		now, id, pid,
+	}
+
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     queryTrail,
+		TableName: "mla_subscription",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:%d:subscription:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
