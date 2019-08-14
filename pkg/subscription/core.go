@@ -87,7 +87,6 @@ func (c *core) getFromDB(pid int64, id int64) (subscription Subscription, err er
 		smart_card_number,	
 		order_id,
 		status,
-		order_id,
 		created_at,
 		updated_at,
 		deleted_at,
