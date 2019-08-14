@@ -14,7 +14,6 @@ import (
 
 type ICore interface {
 	Select(pid int64) (subscriptions Subscriptions, err error)
-	SelectByIDs(ids []int64, pid int64, limit int) (subscription Subscription, err error)
 	Get(pid int64, id int64) (subscription Subscription, err error)
 	Insert(subscription *Subscription) (err error)
 	Update(subscription *Subscription) (err error)
@@ -37,30 +36,6 @@ func (c *core) Select(pid int64) (subscriptions Subscriptions, err error) {
 		byt, _ := jsoniter.ConfigFastest.Marshal(subscriptions)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
-	return
-}
-
-func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (subscription Subscription, err error) {
-	// if len(ids) == 0 {
-	// 	return nil,nil
-	// }
-	// query, args, err := sqlx.In(`
-	// 	SELECT
-	// 		id,
-	// 		name,
-	// 		info,
-	// 		price
-	// 	FROM
-	// 		subscription
-	// 	WHERE
-	// 		id in (?) AND
-	// 		project_id = ? AND
-	// 		status = 1
-	// 	ORDER BY created_at DESC
-	// 	LIMIT ?
-	// `, ids, pid, limit)
-
-	// err = c.db.Select(&product, query, args...)
 	return
 }
 

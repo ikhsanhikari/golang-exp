@@ -95,7 +95,7 @@ func (c *Controller) handlePostSubscription(w http.ResponseWriter, r *http.Reque
 	// }
 
 	if err != nil {
-		c.reporter.Warningf("[handlePostSubscription] id must be integer, err: %s", err.Error())
+		c.reporter.Warningf("[handlePostSubscription] invalid parameter, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
