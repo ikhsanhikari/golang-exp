@@ -10,3 +10,7 @@ type reqSubscription struct {
 	CreatedBy       string `json:"createdBy"`
 	LastUpdateBy    string `json:"lastUpdateBy"`
 }
+
+type reqDeleteSubscription struct {
+	UserID string `json:"userID"`
+}
