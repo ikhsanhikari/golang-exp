@@ -17,7 +17,7 @@ Golang-Docker-Push-Staging:
   stage: push
   image: google/cloud-sdk
   services:
-    - docker:dind
+    - docker:18.09-dind
   variables:
     GCLOUD_SERVICE_KEY: $GCR_SSTV_KEY_STAG
     GCLOUD_PROJECT_ID: $GCR_SSTV_PROJECT_STAG
@@ -33,7 +33,7 @@ Golang-Docker-Push-Production:
   stage: push
   image: google/cloud-sdk
   services:
-    - docker:dind
+    - docker:18.09-dind
   variables:
     GCLOUD_SERVICE_KEY: $GCR_SSTV_KEY_PROD
     GCLOUD_PROJECT_ID: $GCR_SSTV_PROJECT_PROD

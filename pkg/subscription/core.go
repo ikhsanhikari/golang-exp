@@ -1,4 +1,4 @@
-package device
+package subscription
 
 import (
 	"database/sql"
@@ -13,11 +13,10 @@ import (
 )
 
 type ICore interface {
-	Select(pid int64) (devices Devices, err error)
-	SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error)
-	Get(pid int64, id int64) (device Device, err error)
-	Insert(device *Device) (err error)
-	Update(device *Device) (err error)
+	Select(pid int64) (subscriptions Subscriptions, err error)
+	Get(pid int64, id int64) (subscription Subscription, err error)
+	Insert(subscription *Subscription) (err error)
+	Update(subscription *Subscription) (err error)
 	Delete(pid int64, id int64) (err error)
 }
 
@@ -29,48 +28,25 @@ type core struct {
 
 const redisPrefix = "molanobar-v1"
 
-func (c *core) Select(pid int64) (devices Devices, err error) {
-	redisKey := fmt.Sprintf("%s:devices", redisPrefix)
-	devices, err = c.selectFromCache(redisKey)
+func (c *core) Select(pid int64) (subscriptions Subscriptions, err error) {
+	redisKey := fmt.Sprintf("%s:subscriptions", redisPrefix)
+	subscriptions, err = c.selectFromCache(redisKey)
 	if err != nil {
-		devices, err = c.selectFromDB(pid)
-		byt, _ := jsoniter.ConfigFastest.Marshal(devices)
+		subscriptions, err = c.selectFromDB(pid)
+		byt, _ := jsoniter.ConfigFastest.Marshal(subscriptions)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
 	return
 }
 
-func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error) {
-	// if len(ids) == 0 {
-	// 	return nil,nil
-	// }
-	// query, args, err := sqlx.In(`
-	// 	SELECT
-	// 		id,
-	// 		name,
-	// 		info,
-	// 		price
-	// 	FROM
-	// 		device
-	// 	WHERE
-	// 		id in (?) AND
-	// 		project_id = ? AND
-	// 		status = 1
-	// 	ORDER BY created_at DESC
-	// 	LIMIT ?
-	// `, ids, pid, limit)
-
-	// err = c.db.Select(&product, query, args...)
-	return
-}
-
-func (c *core) selectFromDB(pid int64) (device Devices, err error) {
-	err = c.db.Select(&device, `
+func (c *core) selectFromDB(pid int64) (subscription Subscriptions, err error) {
+	err = c.db.Select(&subscription, `
 		SELECT
 			id,
-			name,
-			info,
-			price,
+			package_duration,
+			box_serial_number,
+			smart_card_number,
+			order_id,
 			status,
 			created_at,
 			updated_at,
@@ -79,7 +55,7 @@ func (c *core) selectFromDB(pid int64) (device Devices, err error) {
 			created_by,
 			last_update_by
 		FROM
-			mla_devices
+			mla_subscription
 		WHERE
 			status = 1 AND 
 			project_id = ?
@@ -88,27 +64,28 @@ func (c *core) selectFromDB(pid int64) (device Devices, err error) {
 	return
 }
 
-func (c *core) Get(pid int64, id int64) (device Device, err error) {
-	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
+func (c *core) Get(pid int64, id int64) (subscription Subscription, err error) {
+	redisKey := fmt.Sprintf("%s:%d:subscription:%d", redisPrefix, pid, id)
 
-	device, err = c.getFromCache(redisKey)
+	subscription, err = c.getFromCache(redisKey)
 	if err != nil {
-		device, err = c.getFromDB(pid, id)
+		subscription, err = c.getFromDB(pid, id)
 		if err != sql.ErrNoRows {
-			byt, _ := jsoniter.ConfigFastest.Marshal(device)
+			byt, _ := jsoniter.ConfigFastest.Marshal(subscription)
 			_ = c.setToCache(redisKey, 300, byt)
 		}
 	}
 	return
 }
 
-func (c *core) getFromDB(pid int64, id int64) (device Device, err error) {
-	err = c.db.Get(&device, `
+func (c *core) getFromDB(pid int64, id int64) (subscription Subscription, err error) {
+	err = c.db.Get(&subscription, `
 	SELECT
 		id,
-		name,
-		info,
-		price,
+		package_duration,
+		box_serial_number,
+		smart_card_number,	
+		order_id,
 		status,
 		created_at,
 		updated_at,
@@ -117,7 +94,7 @@ func (c *core) getFromDB(pid int64, id int64) (device Device, err error) {
 		created_by,
 		last_update_by
 	FROM
-		mla_devices
+		mla_subscription
 	WHERE
 		status = 1 AND 
 		project_id = ? AND
@@ -127,16 +104,17 @@ func (c *core) getFromDB(pid int64, id int64) (device Device, err error) {
 	return
 }
 
-func (c *core) Insert(device *Device) (err error) {
-	device.CreatedAt = time.Now()
-	device.UpdatedAt = device.CreatedAt
-	device.Status = 1
-	device.LastUpdateBy = device.CreatedBy
+func (c *core) Insert(subscription *Subscription) (err error) {
+	subscription.CreatedAt = time.Now()
+	subscription.UpdatedAt = subscription.CreatedAt
+	subscription.Status = 1
+	subscription.LastUpdateBy = subscription.CreatedBy
 	query := `
-		INSERT INTO mla_devices (
-			name,
-			info,
-			price,
+		INSERT INTO mla_subscription (
+			package_duration,
+			box_serial_number,
+			smart_card_number,
+			order_id,
 			status,
 			created_at,
 			updated_at,
@@ -154,19 +132,21 @@ func (c *core) Insert(device *Device) (err error) {
 			?,
 			?,
 			?,
+			?,
 			?
 		)`
 	args := []interface{}{
-		device.Name,
-		device.Info,
-		device.Price,
-		device.Status,
-		device.CreatedAt,
-		device.UpdatedAt,
-		device.DeletedAt,
-		device.ProjectID,
-		device.CreatedBy,
-		device.LastUpdateBy,
+		subscription.PackageDuration,
+		subscription.BoxSerialNumber,
+		subscription.SmartCardNumber,
+		subscription.OrderID,
+		subscription.Status,
+		subscription.CreatedAt,
+		subscription.UpdatedAt,
+		subscription.DeletedAt,
+		subscription.ProjectID,
+		subscription.CreatedBy,
+		subscription.LastUpdateBy,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
@@ -178,39 +158,40 @@ func (c *core) Insert(device *Device) (err error) {
 	if err != nil {
 		return err
 	}
-	device.ID, err = res.LastInsertId()
+	subscription.ID, err = res.LastInsertId()
 	if err != nil {
 		return err
 	}
 	//Add Logs
 	dataAudit := auditTrail.AuditTrail{
-		UserID:    device.CreatedBy,
+		UserID:    subscription.CreatedBy,
 		Query:     queryTrail,
-		TableName: "mla_devices",
+		TableName: "mla_subscription",
 	}
 	c.auditTrail.Insert(tx, &dataAudit)
 	err = tx.Commit()
 	if err != nil {
 		return err
 	}
-
-	redisKey := fmt.Sprintf("%s:devices", redisPrefix)
+	redisKey := fmt.Sprintf("%s:subscriptions", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Update(device *Device) (err error) {
-	device.UpdatedAt = time.Now()
-	device.Status = 1
+func (c *core) Update(subscription *Subscription) (err error) {
+	subscription.UpdatedAt = time.Now()
+	subscription.Status = 1
+
 	query := `
 		UPDATE
-			mla_devices
+			mla_subscription
 		SET
-			name = ?,
-			info = ?,
-			price= ?,
-			update_at= ?,
+			package_duration = ?,
+			box_serial_number = ?,
+			smart_card_number= ?,
+			order_id = ?,
+			updated_at= ?,
 			project_id=	?,
 			last_update_by=	?
 		WHERE
@@ -219,14 +200,15 @@ func (c *core) Update(device *Device) (err error) {
 			status = 	1`
 
 	args := []interface{}{
-		device.Name,
-		device.Info,
-		device.Price,
-		device.UpdatedAt,
-		device.ProjectID,
-		device.LastUpdateBy,
-		device.ID,
-		device.ProjectID,
+		subscription.PackageDuration,
+		subscription.BoxSerialNumber,
+		subscription.SmartCardNumber,
+		subscription.OrderID,
+		subscription.UpdatedAt,
+		subscription.ProjectID,
+		subscription.LastUpdateBy,
+		subscription.ID,
+		subscription.ProjectID,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
@@ -240,19 +222,20 @@ func (c *core) Update(device *Device) (err error) {
 	}
 	//Add Logs
 	dataAudit := auditTrail.AuditTrail{
-		UserID:    device.LastUpdateBy,
+		UserID:    subscription.LastUpdateBy,
 		Query:     queryTrail,
-		TableName: "mla_devices",
+		TableName: "mla_subscription",
 	}
 	c.auditTrail.Insert(tx, &dataAudit)
 	err = tx.Commit()
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
+
+	redisKey := fmt.Sprintf("%s:%d:subscription:%d", redisPrefix, subscription.ProjectID, subscription.ID)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:devices", redisPrefix)
+	redisKey = fmt.Sprintf("%s:subscriptions", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
 	return
@@ -262,15 +245,15 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
 
 	query := `
-	UPDATE
-		mla_devices
-	SET
-		deleted_at = ?,
-		status = 0
-	WHERE
-		id = ? AND
-		status = 1 AND 
-		project_id = ?`
+		UPDATE
+		mla_subscription
+		SET
+			deleted_at = ?,
+			status = 0
+		WHERE
+			id = ? AND
+			status = 1 AND 
+			project_id = ?`
 
 	args := []interface{}{
 		now, id, pid,
@@ -294,7 +277,7 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 	dataAudit := auditTrail.AuditTrail{
 		UserID:    "uid",
 		Query:     queryTrail,
-		TableName: "mla_devices",
+		TableName: "mla_subscription",
 	}
 	c.auditTrail.Insert(tx, &dataAudit)
 	err = tx.Commit()
@@ -302,29 +285,30 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
+
+	redisKey := fmt.Sprintf("%s:%d:subscription:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 
-	redisKey = fmt.Sprintf("%s:devices", redisPrefix)
+	redisKey = fmt.Sprintf("%s:subscriptions", redisPrefix)
 	_ = c.deleteCache(redisKey)
 	return
 }
 
-func (c *core) selectFromCache(key string) (devices Devices, err error) {
+func (c *core) selectFromCache(key string) (subscriptions Subscriptions, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET", key))
-	err = json.Unmarshal(b, &devices)
+	err = json.Unmarshal(b, &subscriptions)
 	return
 }
 
-func (c *core) getFromCache(key string) (device Device, err error) {
+func (c *core) getFromCache(key string) (subscription Subscription, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()
 
 	b, err := redis.Bytes(conn.Do("GET", key))
-	err = json.Unmarshal(b, &device)
+	err = json.Unmarshal(b, &subscription)
 	return
 }
 
