@@ -14,11 +14,10 @@ import (
 
 type ICore interface {
 	Select(pid int64) (devices Devices, err error)
-	SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error)
 	Get(pid int64, id int64) (device Device, err error)
 	Insert(device *Device) (err error)
-	Update(device *Device) (err error)
-	Delete(pid int64, id int64) (err error)
+	Update(device *Device, isAdmin bool) (err error)
+	Delete(pid int64, id int64, isAdmin bool, userID string) (err error)
 }
 
 type core struct {
@@ -37,30 +36,6 @@ func (c *core) Select(pid int64) (devices Devices, err error) {
 		byt, _ := jsoniter.ConfigFastest.Marshal(devices)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
-	return
-}
-
-func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error) {
-	// if len(ids) == 0 {
-	// 	return nil,nil
-	// }
-	// query, args, err := sqlx.In(`
-	// 	SELECT
-	// 		id,
-	// 		name,
-	// 		info,
-	// 		price
-	// 	FROM
-	// 		device
-	// 	WHERE
-	// 		id in (?) AND
-	// 		project_id = ? AND
-	// 		status = 1
-	// 	ORDER BY created_at DESC
-	// 	LIMIT ?
-	// `, ids, pid, limit)
-
-	// err = c.db.Select(&product, query, args...)
 	return
 }
 
@@ -200,7 +175,7 @@ func (c *core) Insert(device *Device) (err error) {
 	return
 }
 
-func (c *core) Update(device *Device) (err error) {
+func (c *core) Update(device *Device, isAdmin bool) (err error) {
 	device.UpdatedAt = time.Now()
 	device.Status = 1
 	query := `
@@ -210,7 +185,7 @@ func (c *core) Update(device *Device) (err error) {
 			name = ?,
 			info = ?,
 			price= ?,
-			update_at= ?,
+			updated_at= ?,
 			project_id=	?,
 			last_update_by=	?
 		WHERE
@@ -228,6 +203,12 @@ func (c *core) Update(device *Device) (err error) {
 		device.ID,
 		device.ProjectID,
 	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, device.CreatedBy)
+	}
+
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -258,7 +239,7 @@ func (c *core) Update(device *Device) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64, id int64) (err error) {
+func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string) (err error) {
 	now := time.Now()
 
 	query := `
@@ -274,6 +255,11 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	args := []interface{}{
 		now, id, pid,
+	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, userID)
 	}
 
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)

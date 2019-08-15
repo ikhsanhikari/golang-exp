@@ -16,8 +16,8 @@ type ICore interface {
 	Select(pid int64) (subscriptions Subscriptions, err error)
 	Get(pid int64, id int64) (subscription Subscription, err error)
 	Insert(subscription *Subscription) (err error)
-	Update(subscription *Subscription) (err error)
-	Delete(pid int64, id int64) (err error)
+	Update(subscription *Subscription, isAdmin bool) (err error)
+	Delete(pid int64, id int64, isAdmin bool, userID string) (err error)
 }
 
 type core struct {
@@ -179,7 +179,7 @@ func (c *core) Insert(subscription *Subscription) (err error) {
 	return
 }
 
-func (c *core) Update(subscription *Subscription) (err error) {
+func (c *core) Update(subscription *Subscription, isAdmin bool) (err error) {
 	subscription.UpdatedAt = time.Now()
 	subscription.Status = 1
 
@@ -210,6 +210,12 @@ func (c *core) Update(subscription *Subscription) (err error) {
 		subscription.ID,
 		subscription.ProjectID,
 	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, subscription.CreatedBy)
+	}
+
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -241,7 +247,7 @@ func (c *core) Update(subscription *Subscription) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64, id int64) (err error) {
+func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string) (err error) {
 	now := time.Now()
 
 	query := `
@@ -257,6 +263,10 @@ func (c *core) Delete(pid int64, id int64) (err error) {
 
 	args := []interface{}{
 		now, id, pid,
+	}
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, userID)
 	}
 
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
