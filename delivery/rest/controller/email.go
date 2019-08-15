@@ -2,6 +2,7 @@ package controller
 
 import (
 	//"database/sql"
+	"database/sql"
 	"fmt"
 	"net/http"
 
@@ -25,13 +26,13 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	// cek admin
-	// _, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
-	// if isExist == sql.ErrNoRows {
-	// 	c.reporter.Errorf("[handlePostEmailECert] user is not exist")
-	// 	view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
-	// 	return
-	// }
+	//cek admin
+	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostEmailECert] user is not exist")
+		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
+		return
+	}
 
 	var params reqEmail
 
@@ -94,13 +95,13 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	// cek admin
-	// _, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
-	// if isExist == sql.ErrNoRows {
-	// 	c.reporter.Errorf("[handlePostEmailInvoice] user is not exist")
-	// 	view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
-	// 	return
-	// }
+	//cek admin
+	_, isExist := c.admin.Check(fmt.Sprintf("%v", userID))
+	if isExist == sql.ErrNoRows {
+		c.reporter.Errorf("[handlePostEmailInvoice] user is not exist")
+		view.RenderJSONError(w, "user is not exist", http.StatusUnauthorized)
+		return
+	}
 
 	var params reqInvoice
 
@@ -112,7 +113,7 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 	}
 	content, orderDetail := c.handleGetDataInvoice(params.OrderID, fmt.Sprintf("%s", userID))
 
-	em,venueID,compID := "", int64(0), int64(0)
+	em, venueID, compID := "", int64(0), int64(0)
 	if len(orderDetail) > 0 {
 		em = orderDetail[0].CompanyEmail
 		venueID = orderDetail[0].VenueID
