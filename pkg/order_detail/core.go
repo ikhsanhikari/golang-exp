@@ -18,6 +18,7 @@ type ICore interface {
 	Update(orderDetail *OrderDetail, isAdmin bool) (err error)
 	Delete(orderDetail *OrderDetail, isAdmin bool) (err error)
 	GetFromDBByOrderID(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error)
+	GetDetailByOrderID(orderID int64, pid int64, uid string) (dataDetails DataDetails, err error)
 }
 
 // core contains db client
@@ -254,6 +255,47 @@ func (c *core) GetFromDBByOrderID(orderID int64, pid int64, uid string) (orderDe
 		err = c.db.Select(&orderDetails, qs, orderID, pid, uid)
 	} else {
 		err = c.db.Select(&orderDetails, qs, orderID, pid)
+	}
+
+	return
+}
+
+func (c *core) GetDetailByOrderID(orderID int64, pid int64, uid string) (dataDetails DataDetails , err error) {
+	qs := `select
+		order_details.id,
+		order_details.order_id,
+		order_details.item_type,
+		order_details.item_id,
+		order_details.description,
+		order_details.amount,
+		order_details.quantity,
+		order_details.status,
+		order_details.created_at,
+		venues.id as venue_id,
+		company.id as company_id,
+		company.email as company_email
+	from
+		mla_order_details order_details
+		left join mla_orders orders on order_details.order_id = orders.order_id
+		left join mla_venues venues on orders.venue_id = venues.id
+		left join mla_company company on venues.pt_id = company.id
+	where
+		order_details.order_id = ? AND
+		order_details.project_id = ? AND
+		order_details.deleted_at IS NULL AND
+		orders.deleted_at IS NULL AND`
+	
+	
+	if uid != "" {
+		qs += ` order_details.created_by = ? AND `
+		
+	}
+	qs += ` order_details.status = 1 ;`
+
+	if uid != "" {
+		err = c.db.Select(&dataDetails, qs, orderID, pid, uid)
+	} else {
+		err = c.db.Select(&dataDetails, qs, orderID, pid)
 	}
 
 	return

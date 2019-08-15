@@ -20,6 +20,7 @@ import (
 type ICore interface {
 	Send(emailRequest EmailRequest) (err error)
 	GetBase64Png(licenseNum string) (string, string)
+	GetPic() (string)
 }
 
 // core contains db client
@@ -36,6 +37,7 @@ var httpClient = http.Client{
 // this is the example to create http request
 func (c *core) Send(emailRequest EmailRequest) (err error) {
 	// accessToken, err := c.tokenGeneratorEmail.GetAccessToken(5)
+
 	if err != nil {
 		return err
 	}
@@ -60,7 +62,6 @@ func (c *core) Send(emailRequest EmailRequest) (err error) {
 	// request.Header.Add("Authorization", "Bearer "+accessToken)
 
 	response, err := httpClient.Do(request)
-
 	if err != nil {
 		return err
 	}
@@ -101,10 +102,28 @@ func (c *core) GetBase64Png(licenseNum string) (string, string) {
 	png := qr.Bytes()
 	b64Png := base64.StdEncoding.EncodeToString(png)
 
-	file, err = os.Open("file/img/background1.png") // a QR code image
+	pathfile := "file/img/background1.png"
+
+	b64Pd := GetPng(pathfile)
+
+	return b64Png, b64Pd
+}
+
+func (c *core) GetPic() (string) {
+
+	pathfile := "file/img/mix.png"
+
+	b64 := GetPng(pathfile)
+
+	return b64
+}
+
+func GetPng(pic string) (string) {
+
+	file, err := os.Open(pic)
 
 	if err != nil {
-		return "0", "0"
+		return "0"
 	}
 
 	fInfo, _ := file.Stat()
@@ -115,5 +134,7 @@ func (c *core) GetBase64Png(licenseNum string) (string, string) {
 	fReader.Read(buf)
 
 	b64Pd := base64.StdEncoding.EncodeToString(buf)
-	return b64Png, b64Pd
+	return b64Pd
 }
+
+

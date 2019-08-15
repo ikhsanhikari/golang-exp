@@ -198,7 +198,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/agents/:userId", c.auth.MustAuthorize(c.handleGetAllAgentsByUserID, "molanobar:agents.read"))
 	router.GET("/agents-check", c.auth.MustAuthorize(c.handleAgentsCheck, "molanobar:agents.read"))
 
-	//router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
+	router.POST("/sendmailinvoice", c.auth.MustAuthorize(c.handlePostEmailInvoice, "molanobar:email.ecert"))
 	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmailECert, "molanobar:email.ecert"))
 
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
@@ -211,5 +211,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/cities/:id", c.handleGetCityByID)
 	router.GET("/province", c.handleGetAllProvinces)
 	router.GET("/province/:id", c.handleGetProvincesByID)
+
+	router.GET("/pdf", c.handleGetDataInvoices)
 
 }

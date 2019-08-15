@@ -4,10 +4,11 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/base64"
-	"fmt"
+	"net/http"
 	"strings"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
 	wkhtmltopdf "github.com/SebastiaanKlippert/go-wkhtmltopdf"
 	"github.com/leekchan/accounting"
 )
@@ -54,32 +55,36 @@ func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp stri
 	return b64Pdf
 }
 
-func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
+func (c *Controller) handleGetDataInvoice(id int64, userID string) (string, order_detail.DataDetails) {
 	var totPrice int64
 
 	t := "pdf_invoice.tmpl"
 	pdf := "invoice.pdf"
 
-	order, err := c.order.Get(id, 10, fmt.Sprintf("%v", userID))
+	var dataDetail = order_detail.DataDetails{}
+	order, err := c.order.Get(id, 10, userID)
+
 	if err == sql.ErrNoRows {
 		c.reporter.Warningf("[handlePatchPDF] order not found, err: %s", err.Error())
-		return "0"
+		return "0", dataDetail
 	}
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchPDF] Failed get order, err: %s", err.Error())
-		return "0"
+		return "0", dataDetail
 	}
 
-	orderDetail, err := c.orderDetail.GetFromDBByOrderID(id, 10, fmt.Sprintf("%v", userID))
+	dataDetail, err = c.orderDetail.GetDetailByOrderID(id, 10, userID)
+
+	base := c.email.GetPic()
 	if err == sql.ErrNoRows {
 		c.reporter.Warningf("[handlePatchPDF] orderDetail not found, err: %s", err.Error())
-		return "0"
+		return "0", dataDetail
 	}
 
 	ac := accounting.Accounting{Precision: 2, Thousand: ".", Decimal: ","}
 
-	items := make([]map[string]interface{}, 0, len(orderDetail))
-	for _, v := range orderDetail {
+	items := make([]map[string]interface{}, 0, len(dataDetail))
+	for _, v := range dataDetail {
 		typePrice := v.Quantity * int64(v.Amount)
 		items = append(items, map[string]interface{}{
 			"Quantity":     v.Quantity,
@@ -100,11 +105,12 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) string {
 		"Subtotal":          ac.FormatMoney(totPrice),
 		"Total":             ac.FormatMoney(totPrice),
 		"BalanceDue":        ac.FormatMoney(totPrice),
+		"Logo":              base,
 	}
 
 	b64InvoicePdf := c.handleBasePdf(templateData, t, pdf, "Potrait")
 
-	return b64InvoicePdf
+	return b64InvoicePdf, dataDetail
 }
 
 func (c *Controller) handleGetDataSertificate(venueid int64, userID string) (string, order.SummaryVenue, string) {
@@ -309,4 +315,8 @@ func (c *Controller) handleGetHtmlBodyCert(venueName string) string {
 
 	return buff.String()
 
+}
+
+func (c *Controller) handleGetDataInvoices(w http.ResponseWriter, r *http.Request) {
+	//view.RenderJSONData(w, c.handleGetDataInvoice(165, "RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
 }

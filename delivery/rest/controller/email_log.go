@@ -11,16 +11,18 @@ import (
 	//auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
-func (c *Controller) handlePostEmailEcertLog(userID string, venueID int64, to string, emailType string) string {
+func (c *Controller) handlePostEmailEcertLog(userID string, orderID int64, venueID int64, to string, emailType string,compId int64) string {
 
 	//companyEmail, err = c.company.GetByOrderID(orderID, 10)
 
 	emailLog := email_log.EmailLog{
 		SenderUID: userID,
+		OrderID:   orderID,
 		VenueID:   venueID,
 		To:        to, //companyEmail.CompanyEmail,
 		EmailType: emailType,
 		CreatedBy: userID,
+		CompanyID: compId,
 	}
 
 	err := c.emailLog.Insert(&emailLog)
