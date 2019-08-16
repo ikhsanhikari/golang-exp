@@ -149,6 +149,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/venue/:id", c.auth.MustAuthorize(c.handleGetVenueByID, "molanobar:venues.read"))
 	router.PATCH("/venues/show/:id", c.auth.MustAuthorize(c.handleShowStatusVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
+	router.GET("/venue", c.auth.MustAuthorize(c.handleSelectAllVenues, "molanobar:venues.read"))
 
 	router.GET("/installation", c.auth.MustAuthorize(c.handleGetAllInstallations, "molanobar:installations.read"))
 	router.POST("/installation", c.auth.MustAuthorize(c.handlePostInstallation, "molanobar:installations.create"))

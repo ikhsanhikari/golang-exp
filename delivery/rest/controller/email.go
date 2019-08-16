@@ -1,7 +1,6 @@
 package controller
 
 import (
-	//"database/sql"
 	"database/sql"
 	"fmt"
 	"net/http"
@@ -43,7 +42,15 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		return
 	}
 	content, sumvenue, qrcodecontent := c.handleGetDataSertificate(params.VenueID, fmt.Sprintf("%s", userID))
-	htmlEmail := c.handleGetHtmlBodyCert(sumvenue.VenueName)
+
+	if content == "0" {
+		c.reporter.Errorf("[handlePostEmailInvoice] Error create pdf")
+		view.RenderJSONError(w, "Error create pdf", http.StatusBadRequest)
+		return
+	}
+
+	htmlEmail := c.handleGetHtmlBodyCert(sumvenue.VenueName, sumvenue.VenueAddress)
+
 	emailReq := email.EmailRequest{
 		Subject: "Selamat! Keanggotaan Mola Live Arena sudah aktif.",
 		To:      sumvenue.CompanyEmail,
@@ -69,6 +76,7 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 	}
 	errEmail := c.email.Send(emailReq)
 	msg := c.handlePostEmailEcertLog(userID, sumvenue.LastOrderID, params.VenueID, emailReq.To, "ecert", sumvenue.CompanyID)
+
 	if msg == "0" {
 		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
 	}
@@ -82,7 +90,13 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 }
 
 func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Request) {
-	user, ok := authpassport.GetUser(r)
+	var (
+		user, ok          = authpassport.GetUser(r)
+		params            reqInvoice
+		em, name, address = "", "", ""
+		venueID, compID   = int64(0), int64(0)
+	)
+
 	if !ok {
 		c.reporter.Errorf("[handlePostEmailInvoice] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
@@ -103,8 +117,6 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	var params reqInvoice
-
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostEmailInvoice] id must be integer, err: %s", err.Error())
@@ -113,17 +125,29 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 	}
 	content, orderDetail := c.handleGetDataInvoice(params.OrderID, fmt.Sprintf("%s", userID))
 
-	em, venueID, compID := "", int64(0), int64(0)
+	if content == "0" {
+		c.reporter.Errorf("[handlePostEmailInvoice] Error create pdf")
+		view.RenderJSONError(w, "Error create pdf", http.StatusBadRequest)
+		return
+	}
+
 	if len(orderDetail) > 0 {
 		em = orderDetail[0].CompanyEmail
 		venueID = orderDetail[0].VenueID
 		compID = orderDetail[0].CompanyID
+		name = orderDetail[0].VenueName
+		address = orderDetail[0].Address
+	} else {
+		c.reporter.Errorf("[handlePostEmailInvoice] Not found Detail Data")
+		view.RenderJSONError(w, "Not found Detail Data", http.StatusBadRequest)
+		return
 	}
 
+	htmlEmail := c.handleGetHtmlBodyInvoice(name, address)
 	emailReq := email.EmailRequest{
 		Subject: "Invoice",
 		To:      em,
-		HTML:    "<html></html>",
+		HTML:    htmlEmail,
 		From:    "no-reply@molalivearena.com",
 		Text:    " ",
 		Attachments: []email.Attachment{

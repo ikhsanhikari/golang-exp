@@ -55,11 +55,11 @@ func (c *Controller) handleBasePdf(templateData map[string]interface{}, tmp stri
 }
 
 func (c *Controller) handleGetDataInvoice(id int64, userID string) (string, order_detail.DataDetails) {
-	var totPrice int64
-
-	t := "pdf_invoice.tmpl"
-	pdf := "invoice.pdf"
-
+	var (
+		t           = "pdf_invoice.tmpl"
+		pdf         = "invoice.pdf"
+		compAddress = ""
+	)
 	var dataDetail = order_detail.DataDetails{}
 	order, err := c.order.Get(id, 10, userID)
 
@@ -73,6 +73,10 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) (string, orde
 	}
 
 	dataDetail, err = c.orderDetail.GetDetailByOrderID(id, 10, userID)
+	if err == sql.ErrNoRows {
+		c.reporter.Warningf("[handlePatchPDF] orderDetail not found, err: %s", err.Error())
+		return "0", dataDetail
+	}
 
 	base := c.email.GetPic()
 	if err == sql.ErrNoRows {
@@ -91,19 +95,19 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) (string, orde
 			"ProductPrice": ac.FormatMoney(v.Amount),
 			"TotalPrice":   ac.FormatMoney(typePrice),
 		})
-		totPrice = totPrice + typePrice
 	}
+
+	compAddress = dataDetail[0].CompanyAddress + ", " + dataDetail[0].CompanyCity + ", " + dataDetail[0].CompanyProvince + " " + dataDetail[0].CompanyZip
 
 	templateData := map[string]interface{}{
 		"CreatedAt":         order.CreatedAt.Format("2006-01-02"),
 		"OrderNumber":       order.OrderID,
 		"CustomerReference": "",
-		"BuyerName":         "PT Liga Inggris",
-		"BuyerAddress":      "Jalan EPL, No.153, Surabaya 17865489",
+		"BuyerName":         dataDetail[0].CompanyName,
+		"BuyerAddress":      compAddress,
 		"Items":             items,
-		"Subtotal":          ac.FormatMoney(totPrice),
-		"Total":             ac.FormatMoney(totPrice),
-		"BalanceDue":        ac.FormatMoney(totPrice),
+		"Total":             ac.FormatMoney(dataDetail[0].TotalPrice),
+		"BalanceDue":        ac.FormatMoney(dataDetail[0].TotalPrice),
 		"Logo":              base,
 	}
 
@@ -149,7 +153,7 @@ func (c *Controller) handleGetDataSertificate(venueid int64, userID string) (str
 
 }
 
-func (c *Controller) handleGetHtmlBodyCert(venueName string) string {
+func (c *Controller) handleGetHtmlBodyCert(venueName string, venueAddress string) string {
 
 	// file, err := os.Open("file/img_email_cert/artboard-background.png")
 	// if err != nil {
@@ -311,7 +315,27 @@ func (c *Controller) handleGetHtmlBodyCert(venueName string) string {
 		c.reporter.Errorf("[handleGetHtmlBodyCert] Failed execute html, err: %s", err.Error())
 		return "1"
 	}
-
 	return buff.String()
 
+}
+
+func (c *Controller) handleGetHtmlBodyInvoice(venueName string, venueAddress string) string {
+
+	templateData := map[string]interface{}{
+		"VenueName":    venueName,
+		"VenueAddress": venueAddress,
+	}
+
+	t, err := c.template.Get("email_invoice.tmpl")
+	if err != nil {
+		return "1"
+	}
+
+	buff := bytes.NewBuffer([]byte{})
+	err = t.Execute(buff, templateData)
+	if err != nil {
+		c.reporter.Errorf("[handleGetHtmlBodyCert] Failed execute html, err: %s", err.Error())
+		return "1"
+	}
+	return buff.String()
 }

@@ -260,38 +260,43 @@ func (c *core) GetFromDBByOrderID(orderID int64, pid int64, uid string) (orderDe
 	return
 }
 
-func (c *core) GetDetailByOrderID(orderID int64, pid int64, uid string) (dataDetails DataDetails , err error) {
+func (c *core) GetDetailByOrderID(orderID int64, pid int64, uid string) (dataDetails DataDetails, err error) {
 	qs := `select
-		order_details.id,
-		order_details.order_id,
-		order_details.item_type,
-		order_details.item_id,
-		order_details.description,
-		order_details.amount,
-		order_details.quantity,
-		order_details.status,
-		order_details.created_at,
-		venues.id as venue_id,
-		company.id as company_id,
-		company.email as company_email
+		detail.id,
+		detail.item_type,
+		detail.item_id,
+		detail.description,
+		detail.amount,
+		detail.quantity,
+		detail.created_at,
+		orders.total_price,
+		venue.id as venue_id,
+		venue.venue_name as venue_name,
+		venue.address as address,
+		comp.id as company_id,
+		comp.email as company_email,
+		comp.name as company_name,
+		comp.address as company_address,
+		comp.city as company_city,
+		comp.province as company_province,
+		comp.zip as company_zip
 	from
-		mla_order_details order_details
-		left join mla_orders orders on order_details.order_id = orders.order_id
-		left join mla_venues venues on orders.venue_id = venues.id
-		left join mla_company company on venues.pt_id = company.id
+		mla_order_details detail
+		left join mla_orders orders on detail.order_id = orders.order_id
+		left join mla_venues venue on orders.venue_id = venue.id
+		left join mla_company comp on venue.pt_id = comp.id
 	where
-		order_details.order_id = ? AND
-		order_details.project_id = ? AND
-		order_details.deleted_at IS NULL AND
+		detail.order_id = ? AND
+		detail.project_id = ? AND
+		detail.deleted_at IS NULL AND
 		orders.deleted_at IS NULL AND`
-	
-	
-	if uid != "" {
-		qs += ` order_details.created_by = ? AND `
-		
-	}
-	qs += ` order_details.status = 1 ;`
 
+	if uid != "" {
+		qs += ` detail.created_by = ? AND `
+
+	}
+	qs += ` detail.status = 1 ;`
+	
 	if uid != "" {
 		err = c.db.Select(&dataDetails, qs, orderID, pid, uid)
 	} else {
