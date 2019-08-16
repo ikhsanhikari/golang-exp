@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"database/sql"
 	"encoding/base64"
-	"net/http"
 	"strings"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
@@ -315,8 +314,4 @@ func (c *Controller) handleGetHtmlBodyCert(venueName string) string {
 
 	return buff.String()
 
-}
-
-func (c *Controller) handleGetDataInvoices(w http.ResponseWriter, r *http.Request) {
-	//view.RenderJSONData(w, c.handleGetDataInvoice(165, "RxHeyqVsEndVAUo2EBA4VBQWp207OO"), http.StatusOK)
 }

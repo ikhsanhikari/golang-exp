@@ -120,11 +120,10 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 		compID = orderDetail[0].CompanyID
 	}
 
-	htmlEmail := c.handleGetHtmlBodyCert("a")
 	emailReq := email.EmailRequest{
 		Subject: "Invoice",
 		To:      em,
-		HTML:    htmlEmail,
+		HTML:    "<html></html>",
 		From:    "no-reply@molalivearena.com",
 		Text:    " ",
 		Attachments: []email.Attachment{
