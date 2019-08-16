@@ -5,12 +5,11 @@ import (
 	"net/http"
 	"strconv"
 
-
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-	//auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 func (c *Controller) handleGetAllInstallations(w http.ResponseWriter, r *http.Request) {
@@ -27,17 +26,17 @@ func (c *Controller) handleGetAllInstallations(w http.ResponseWriter, r *http.Re
 			Type: "installation",
 			ID:   installation.ID,
 			Attributes: view.InstallationAttributes{
-				ID				:  installation.ID,
-				Name			:  installation.Name,
-				Description		:  installation.Description,
-				Price			:  installation.Price,
-				DeviceID		:  installation.DeviceID,
-				CreatedAt		:  installation.CreatedAt,
-				UpdatedAt		:  installation.UpdatedAt,
-				DeletedAt		:  installation.DeletedAt,
-				ProjectID		:  installation.ProjectID,
-				CreatedBy		:  installation.CreatedBy,
-				LastUpdateBy	:  installation.LastUpdateBy,
+				ID:           installation.ID,
+				Name:         installation.Name,
+				Description:  installation.Description,
+				Price:        installation.Price,
+				DeviceID:     installation.DeviceID,
+				CreatedAt:    installation.CreatedAt,
+				UpdatedAt:    installation.UpdatedAt,
+				DeletedAt:    installation.DeletedAt,
+				ProjectID:    installation.ProjectID,
+				CreatedBy:    installation.CreatedBy,
+				LastUpdateBy: installation.LastUpdateBy,
 			},
 		})
 	}
@@ -46,14 +45,38 @@ func (c *Controller) handleGetAllInstallations(w http.ResponseWriter, r *http.Re
 
 // Handle delete
 func (c *Controller) handleDeleteInstallation(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+	var (
+		params  reqDeleteInstallation
+		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+		isAdmin = false
+	)
+
 	if err != nil {
 		c.reporter.Warningf("[handleDeleteInstallation] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
-	_, err = c.installation.Get(id,10)
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePatchAging] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+
+	userID, ok := user["sub"]
+	if !ok {
+		_ = form.Bind(&params, r)
+		if params.UserID == "" {
+			c.reporter.Errorf("[handlePostAging] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
+	}
+
+	_, err = c.installation.Get(id, 10)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteInstallation] Installation not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation not found", http.StatusNotFound)
@@ -66,7 +89,7 @@ func (c *Controller) handleDeleteInstallation(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	err = c.installation.Delete(id,10)
+	err = c.installation.Delete(id, 10, userID.(string), isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteInstallation] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete Installation", http.StatusInternalServerError)
@@ -84,14 +107,14 @@ func (c *Controller) handlePostInstallation(w http.ResponseWriter, r *http.Reque
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	
+
 	installation := installation.Installation{
-		ID				:  params.ID,
-		Name			:  params.Name,
-		Description		:  params.Description,
-		Price			:  params.Price,
-		DeviceID		:  params.DeviceID,
-		CreatedBy		:  params.CreatedBy,
+		ID:          params.ID,
+		Name:        params.Name,
+		Description: params.Description,
+		Price:       params.Price,
+		DeviceID:    params.DeviceID,
+		CreatedBy:   params.CreatedBy,
 	}
 
 	err = c.installation.Insert(&installation)
@@ -105,7 +128,10 @@ func (c *Controller) handlePostInstallation(w http.ResponseWriter, r *http.Reque
 }
 
 func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+	var (
+		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+		isAdmin = false
+	)
 	if err != nil {
 		c.reporter.Warningf("[handlePatchInstallation] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -119,8 +145,24 @@ func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Requ
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePatchAging] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		if params.LastUpdateBy == "" {
+			c.reporter.Errorf("[handlePatchAging] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.LastUpdateBy
+		isAdmin = true
+	}
 
-	_, err = c.installation.Get(id,10)
+	_, err = c.installation.Get(id, 10)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchInstallation] Installation not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation not found", http.StatusNotFound)
@@ -133,14 +175,14 @@ func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Requ
 		return
 	}
 	installation := installation.Installation{
-		ID				:  id,
-		Name			:  params.Name,
-		Description		:  params.Description,
-		Price			:  params.Price,
-		DeviceID		:  params.DeviceID,
-		LastUpdateBy	:  params.LastUpdateBy,
+		ID:           id,
+		Name:         params.Name,
+		Description:  params.Description,
+		Price:        params.Price,
+		DeviceID:     params.DeviceID,
+		LastUpdateBy: userID.(string),
 	}
-	err = c.installation.Update(&installation)
+	err = c.installation.Update(&installation, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchInstallation] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update Installation", http.StatusInternalServerError)
@@ -149,4 +191,3 @@ func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Requ
 
 	view.RenderJSONData(w, installation, http.StatusOK)
 }
- 

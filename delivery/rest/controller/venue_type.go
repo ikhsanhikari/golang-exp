@@ -7,9 +7,9 @@ import (
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
+	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-	//auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 )
 
 func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Request) {
@@ -26,19 +26,19 @@ func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Reque
 			Type: "venueTypes",
 			ID:   venueType.Id,
 			Attributes: view.VenueTypeAttributes{
-				Id							:  venueType.Id,
-				Name						:  venueType.Name,
-				Description					:  venueType.Description,
-				Capacity					:  venueType.Capacity,
-				CommercialTypeID			:  venueType.CommercialTypeID,
-				PricingGroupID				:  venueType.PricingGroupID,
-				CreatedAt					:  venueType.CreatedAt,
-				UpdatedAt					:  venueType.UpdatedAt,
-				DeletedAt					:  venueType.DeletedAt,
-				Status						:  venueType.Status,
-				ProjectID					:  venueType.ProjectID,
-				CreatedBy					:  venueType.CreatedBy,
-				LastUpdateBy				:  venueType.LastUpdateBy,
+				Id:               venueType.Id,
+				Name:             venueType.Name,
+				Description:      venueType.Description,
+				Capacity:         venueType.Capacity,
+				CommercialTypeID: venueType.CommercialTypeID,
+				PricingGroupID:   venueType.PricingGroupID,
+				CreatedAt:        venueType.CreatedAt,
+				UpdatedAt:        venueType.UpdatedAt,
+				DeletedAt:        venueType.DeletedAt,
+				Status:           venueType.Status,
+				ProjectID:        venueType.ProjectID,
+				CreatedBy:        venueType.CreatedBy,
+				LastUpdateBy:     venueType.LastUpdateBy,
 			},
 		})
 	}
@@ -47,6 +47,28 @@ func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Reque
 
 // Handle delete
 func (c *Controller) handleDeleteVenueType(w http.ResponseWriter, r *http.Request) {
+	var (
+		params  reqDeleteVenueType
+		isAdmin = false
+	)
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleDeleteAging] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		_ = form.Bind(&params, r)
+		if params.UserID == "" {
+			c.reporter.Errorf("[handlePostAging] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.UserID
+		isAdmin = true
+	}
 	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	if err != nil {
 		c.reporter.Warningf("[handleDeleteVenueType] id must be integer, err: %s", err.Error())
@@ -54,7 +76,7 @@ func (c *Controller) handleDeleteVenueType(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	venueTy, err := c.venueType.Get(10,id)
+	venueTy, err := c.venueType.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteVenueType] VenueType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "VenueType not found", http.StatusNotFound)
@@ -67,7 +89,7 @@ func (c *Controller) handleDeleteVenueType(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = c.venueType.Delete(10,id, venueTy.CommercialTypeID)
+	err = c.venueType.Delete(10, id, venueTy.CommercialTypeID, userID.(string), isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteVenueType] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete VenueType", http.StatusInternalServerError)
@@ -85,16 +107,15 @@ func (c *Controller) handlePostVenueType(w http.ResponseWriter, r *http.Request)
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	
+
 	venueType := venue_type.VenueType{
-		Id							:  params.Id,
-		Name						:  params.Name,
-		Description					:  params.Description,
-		Capacity					:  params.Capacity,
-		CommercialTypeID			:  params.CommercialTypeID,
-		PricingGroupID				:  params.PricingGroupID,
-		CreatedBy					:  params.CreatedBy,
-				
+		Id:               params.Id,
+		Name:             params.Name,
+		Description:      params.Description,
+		Capacity:         params.Capacity,
+		CommercialTypeID: params.CommercialTypeID,
+		PricingGroupID:   params.PricingGroupID,
+		CreatedBy:        params.CreatedBy,
 	}
 
 	err = c.venueType.Insert(&venueType)
@@ -108,7 +129,11 @@ func (c *Controller) handlePostVenueType(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request) {
-	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+	var (
+		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+		isAdmin = false
+	)
+
 	if err != nil {
 		c.reporter.Warningf("[handlePatchVenueType] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -123,7 +148,24 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	venueTy, err := c.venueType.Get(10,id)
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handlePatchAging] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+	userID, ok := user["sub"]
+	if !ok {
+		if params.LastUpdateBy == "" {
+			c.reporter.Errorf("[handlePatchAging] invalid parameter, failed get userID")
+			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			return
+		}
+		userID = params.LastUpdateBy
+		isAdmin = true
+	}
+
+	venueTy, err := c.venueType.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchVenueType] VenueType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "VenueType not found", http.StatusNotFound)
@@ -136,16 +178,15 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		return
 	}
 	venueType := venue_type.VenueType{
-		Id							:  id,
-		Name						:  params.Name,
-		Description					:  params.Description,
-		Capacity					:  params.Capacity,
-		CommercialTypeID			:  params.CommercialTypeID,
-		PricingGroupID				:  params.PricingGroupID,
-		LastUpdateBy				:  params.LastUpdateBy,
-				
+		Id:               id,
+		Name:             params.Name,
+		Description:      params.Description,
+		Capacity:         params.Capacity,
+		CommercialTypeID: params.CommercialTypeID,
+		PricingGroupID:   params.PricingGroupID,
+		LastUpdateBy:     userID.(string),
 	}
-	err = c.venueType.Update(&venueType, venueTy.CommercialTypeID)
+	err = c.venueType.Update(&venueType, venueTy.CommercialTypeID, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchVenueType] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update VenueType", http.StatusInternalServerError)
@@ -155,19 +196,19 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		ID:   id,
 		Type: "venueTypes",
 		Attributes: view.VenueTypeAttributes{
-			Id							:  venueType.Id,
-			Name						:  venueType.Name,
-			Description					:  venueType.Description,
-			Capacity					:  venueType.Capacity,
-			PricingGroupID				:  venueType.PricingGroupID,
-			CommercialTypeID			:  venueType.CommercialTypeID,
-			CreatedAt					:  venueType.CreatedAt,
-			UpdatedAt					:  venueType.UpdatedAt,
-			DeletedAt					:  venueType.DeletedAt,
-			Status						:  venueType.Status,
-			ProjectID					:  venueType.ProjectID,
-			CreatedBy					:  venueType.CreatedBy,
-			LastUpdateBy				:  venueType.LastUpdateBy,
+			Id:               venueType.Id,
+			Name:             venueType.Name,
+			Description:      venueType.Description,
+			Capacity:         venueType.Capacity,
+			PricingGroupID:   venueType.PricingGroupID,
+			CommercialTypeID: venueType.CommercialTypeID,
+			CreatedAt:        venueType.CreatedAt,
+			UpdatedAt:        venueType.UpdatedAt,
+			DeletedAt:        venueType.DeletedAt,
+			Status:           venueType.Status,
+			ProjectID:        venueType.ProjectID,
+			CreatedBy:        venueType.CreatedBy,
+			LastUpdateBy:     venueType.LastUpdateBy,
 		},
 	}
 
@@ -201,23 +242,21 @@ func (c *Controller) handleGetVenueTypeByCommercialTypeID(w http.ResponseWriter,
 			Type: "venueTypes",
 			ID:   venueType.Id,
 			Attributes: view.VenueTypeAttributes{
-				Id							:  venueType.Id,
-				Name						:  venueType.Name,
-				Description					:  venueType.Description,
-				Capacity					:  venueType.Capacity,
-				CommercialTypeID			:  venueType.CommercialTypeID,
-				PricingGroupID				:  venueType.PricingGroupID,
-				CreatedAt					:  venueType.CreatedAt,
-				UpdatedAt					:  venueType.UpdatedAt,
-				DeletedAt					:  venueType.DeletedAt,
-				Status						:  venueType.Status,
-				ProjectID					:  venueType.ProjectID,
-				CreatedBy					:  venueType.CreatedBy,
-				LastUpdateBy				:  venueType.LastUpdateBy,
+				Id:               venueType.Id,
+				Name:             venueType.Name,
+				Description:      venueType.Description,
+				Capacity:         venueType.Capacity,
+				CommercialTypeID: venueType.CommercialTypeID,
+				PricingGroupID:   venueType.PricingGroupID,
+				CreatedAt:        venueType.CreatedAt,
+				UpdatedAt:        venueType.UpdatedAt,
+				DeletedAt:        venueType.DeletedAt,
+				Status:           venueType.Status,
+				ProjectID:        venueType.ProjectID,
+				CreatedBy:        venueType.CreatedBy,
+				LastUpdateBy:     venueType.LastUpdateBy,
 			},
 		})
 	}
 	view.RenderJSONData(w, res, http.StatusOK)
 }
-
- 
