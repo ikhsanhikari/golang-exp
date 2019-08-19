@@ -426,6 +426,7 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		VenueTechnicianName:          params.VenueTechnicianName,
 		VenueTechnicianContactNumber: params.VenueTechnicianContactNumber,
 		VenuePhone:                   params.VenuePhone,
+		ShowStatus:                   params.ShowStatus,
 		CreatedBy:                    userid,
 	}
 
@@ -518,7 +519,6 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		Facilities:                   params.Facilities,
 		Longitude:                    params.Longitude,
 		Latitude:                     params.Latitude,
-		People:                       null.IntFrom(params.People),
 		PtID:                         params.PtID,
 		VenueCategory:                params.VenueCategory,
 		PicName:                      params.PicName,
@@ -526,6 +526,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		VenueTechnicianName:          params.VenueTechnicianName,
 		VenueTechnicianContactNumber: params.VenueTechnicianContactNumber,
 		VenuePhone:                   params.VenuePhone,
+		ShowStatus:                   params.ShowStatus,
 		CreatedBy:                    venues.CreatedBy,
 		LastUpdateBy:                 userid,
 	}
