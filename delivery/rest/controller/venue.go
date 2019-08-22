@@ -357,8 +357,8 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "Failed post Venue", http.StatusInternalServerError)
 		return
 	}
-	_, err = c.venue.GetCity(params.City)
-	if err == sql.ErrNoRows {
+	city, err := c.venue.GetCity(params.City)
+	if len(city) == 0 {
 		err = c.venue.InsertVenueAvailable(params.City, 0)
 	}
 
