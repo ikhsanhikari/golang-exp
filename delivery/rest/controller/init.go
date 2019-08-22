@@ -149,6 +149,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/venue/:id", c.auth.MustAuthorize(c.handleGetVenueByID, "molanobar:venues.read"))
 	router.PATCH("/venues/show/:id", c.auth.MustAuthorize(c.handleShowStatusVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
+	router.GET("/venue", c.auth.MustAuthorize(c.handleSelectAllVenues, "molanobar:venues.read"))
 
 	router.GET("/installation", c.auth.MustAuthorize(c.handleGetAllInstallations, "molanobar:installations.read"))
 	router.POST("/installation", c.auth.MustAuthorize(c.handlePostInstallation, "molanobar:installations.create"))
@@ -202,7 +203,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/agents/:userId", c.auth.MustAuthorize(c.handleGetAllAgentsByUserID, "molanobar:agents.read"))
 	router.GET("/agents-check", c.auth.MustAuthorize(c.handleAgentsCheck, "molanobar:agents.read"))
 
-	//router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
+	router.POST("/sendmailinvoice", c.auth.MustAuthorize(c.handlePostEmailInvoice, "molanobar:email.ecert"))
 	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmailECert, "molanobar:email.ecert"))
 
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))

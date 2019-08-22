@@ -18,6 +18,7 @@ type ICore interface {
 	Update(orderDetail *OrderDetail, isAdmin bool) (err error)
 	Delete(orderDetail *OrderDetail, isAdmin bool) (err error)
 	GetFromDBByOrderID(orderID int64, pid int64, uid string) (orderDetails OrderDetails, err error)
+	GetDetailByOrderID(orderID int64, pid int64, uid string) (dataDetails DataDetails, err error)
 }
 
 // core contains db client
@@ -254,6 +255,52 @@ func (c *core) GetFromDBByOrderID(orderID int64, pid int64, uid string) (orderDe
 		err = c.db.Select(&orderDetails, qs, orderID, pid, uid)
 	} else {
 		err = c.db.Select(&orderDetails, qs, orderID, pid)
+	}
+
+	return
+}
+
+func (c *core) GetDetailByOrderID(orderID int64, pid int64, uid string) (dataDetails DataDetails, err error) {
+	qs := `select
+		detail.id,
+		detail.item_type,
+		detail.item_id,
+		detail.description,
+		detail.amount,
+		detail.quantity,
+		detail.created_at,
+		orders.total_price,
+		venue.id as venue_id,
+		venue.venue_name as venue_name,
+		venue.address as address,
+		comp.id as company_id,
+		comp.email as company_email,
+		comp.name as company_name,
+		comp.address as company_address,
+		comp.city as company_city,
+		comp.province as company_province,
+		comp.zip as company_zip
+	from
+		mla_order_details detail
+		left join mla_orders orders on detail.order_id = orders.order_id
+		left join mla_venues venue on orders.venue_id = venue.id
+		left join mla_company comp on venue.pt_id = comp.id
+	where
+		detail.order_id = ? AND
+		detail.project_id = ? AND
+		detail.deleted_at IS NULL AND
+		orders.deleted_at IS NULL AND`
+
+	if uid != "" {
+		qs += ` detail.created_by = ? AND `
+
+	}
+	qs += ` detail.status = 1 ;`
+	
+	if uid != "" {
+		err = c.db.Select(&dataDetails, qs, orderID, pid, uid)
+	} else {
+		err = c.db.Select(&dataDetails, qs, orderID, pid)
 	}
 
 	return
