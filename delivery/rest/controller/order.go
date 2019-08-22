@@ -784,6 +784,26 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 		return
 	}
 
+	if updateStatus.Status == 2 {
+		if isAdmin {
+			userID = ""
+		}
+
+		result := c.handleEmailECert(getOrder.VenueID, userID.(string))
+		if result == false {
+			c.reporter.Warningf("[handleUpdateOrderStatus] Failed sent email ECert")
+			view.RenderJSONError(w, "Failed sent email ECert", http.StatusInternalServerError)
+			return
+		}
+
+		result = c.handleEmailInvoice(updateStatus.OrderID, userID.(string))
+		if result == false {
+			c.reporter.Warningf("[handleUpdateOrderStatus] Failed sent email invoice")
+			view.RenderJSONError(w, "Failed sent email invoice", http.StatusInternalServerError)
+			return
+		}
+	}
+
 	//set response
 	res := view.DataResponseOrder{
 		ID:   updateStatus.OrderID,
