@@ -12,7 +12,11 @@ import (
 )
 
 func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request) {
-	user, ok := authpassport.GetUser(r)
+	var (
+		user, ok = authpassport.GetUser(r)
+		params   reqEmail
+	)
+
 	if !ok {
 		c.reporter.Errorf("[handlePostEmailECert] failed get user")
 		view.RenderJSONError(w, "failed get user", http.StatusBadRequest)
@@ -33,20 +37,30 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		return
 	}
 
-	var params reqEmail
-
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostEmailECert] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content, sumvenue, qrcodecontent := c.handleGetDataSertificate(params.VenueID, fmt.Sprintf("%s", userID))
+
+	result := c.handleEmailECert(params.VenueID, userID)
+
+	if result == false {
+		c.reporter.Warningf("[handlePostEmailECert] Error db or Email")
+		view.RenderJSONError(w, "Error db or Email", http.StatusInternalServerError)
+		return
+	}
+
+	view.RenderJSONData(w, true, http.StatusOK)
+}
+
+func (c *Controller) handleEmailECert(venueID int64, userID string) bool {
+	content, sumvenue, qrcodecontent := c.handleGetDataSertificate(venueID, userID)
 
 	if content == "0" {
-		c.reporter.Errorf("[handlePostEmailInvoice] Error create pdf")
-		view.RenderJSONError(w, "Error create pdf", http.StatusBadRequest)
-		return
+		c.reporter.Errorf("[handleEmailECert] content get data invoice null")
+		return false
 	}
 
 	htmlEmail := c.handleGetHtmlBodyCert(sumvenue.VenueName, sumvenue.VenueAddress)
@@ -75,26 +89,23 @@ func (c *Controller) handlePostEmailECert(w http.ResponseWriter, r *http.Request
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailEcertLog(userID, sumvenue.LastOrderID, params.VenueID, emailReq.To, "ecert", sumvenue.CompanyID)
+	msg := c.handlePostEmailEcertLog(userID, sumvenue.LastOrderID, venueID, emailReq.To, "ecert", sumvenue.CompanyID)
 
 	if msg == "0" {
-		c.reporter.Errorf("[handlePostEmailECert], err save email_log: %s", errEmail.Error())
+		c.reporter.Errorf("[handleEmailInvoice] Email Invoice Error")
+		return false
 	}
 	if errEmail != nil {
-		c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
-		view.RenderJSONData(w, false, http.StatusOK)
-		return
+		c.reporter.Errorf("[handleEmailInvoice] Error send Email Invoice ")
+		return false
 	}
-
-	view.RenderJSONData(w, true, http.StatusOK)
+	return true
 }
 
 func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Request) {
 	var (
-		user, ok          = authpassport.GetUser(r)
-		params            reqInvoice
-		em, name, address = "", "", ""
-		venueID, compID   = int64(0), int64(0)
+		user, ok = authpassport.GetUser(r)
+		params   reqInvoice
 	)
 
 	if !ok {
@@ -123,12 +134,25 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
-	content, orderDetail := c.handleGetDataInvoice(params.OrderID, fmt.Sprintf("%s", userID))
+	result := c.handleEmailInvoice(params.OrderID, fmt.Sprintf("%s", userID))
+	if result == false {
+		c.reporter.Warningf("[handlePostEmailInvoice] Error db or Email")
+		view.RenderJSONError(w, "Error db or Email", http.StatusInternalServerError)
+		return
+	}
+	view.RenderJSONData(w, true, http.StatusOK)
+}
+
+func (c *Controller) handleEmailInvoice(orderID int64, userID string) bool {
+	var (
+		em, name, address = "", "", ""
+		venueID, compID   = int64(0), int64(0)
+	)
+	content, orderDetail := c.handleGetDataInvoice(orderID, userID)
 
 	if content == "0" {
-		c.reporter.Errorf("[handlePostEmailInvoice] Error create pdf")
-		view.RenderJSONError(w, "Error create pdf", http.StatusBadRequest)
-		return
+		c.reporter.Errorf("[handleEmailInvoice] content get data invoice null")
+		return false
 	}
 
 	if len(orderDetail) > 0 {
@@ -138,9 +162,8 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 		name = orderDetail[0].VenueName
 		address = orderDetail[0].Address
 	} else {
-		c.reporter.Errorf("[handlePostEmailInvoice] Not found Detail Data")
-		view.RenderJSONError(w, "Not found Detail Data", http.StatusBadRequest)
-		return
+		c.reporter.Errorf("[handleEmailInvoice] content get data invoice = 0")
+		return false
 	}
 
 	htmlEmail := c.handleGetHtmlBodyInvoice(name, address)
@@ -161,15 +184,14 @@ func (c *Controller) handlePostEmailInvoice(w http.ResponseWriter, r *http.Reque
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailEcertLog(userID, params.OrderID, venueID, emailReq.To, "invoice", compID)
+	msg := c.handlePostEmailEcertLog(userID, orderID, venueID, emailReq.To, "invoice", compID)
 	if msg == "0" {
-		c.reporter.Errorf("[handlePostEmailInvoice], err save email_log: %s", errEmail.Error())
+		c.reporter.Errorf("[handleEmailInvoice] Email Invoice Error")
+		return false
 	}
 	if errEmail != nil {
-		c.reporter.Errorf("[email failed to send], err: %s", errEmail.Error())
-		view.RenderJSONData(w, false, http.StatusOK)
-		return
+		c.reporter.Errorf("[handleEmailInvoice] Error send Email Invoice ")
+		return false
 	}
-
-	view.RenderJSONData(w, true, http.StatusOK)
+	return true
 }
