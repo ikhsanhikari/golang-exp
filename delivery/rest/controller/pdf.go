@@ -295,6 +295,7 @@ func (c *Controller) handleGetHtmlBodyCert(venueName string, venueAddress string
 		// "Artboardlayer1":            artboardLayer1,
 		// "Artboardshape1copy":        artboardShape1Copy,
 		"VenueName": venueName,
+		"VenueAddress": venueAddress,
 		// "Artboardrectangle3":        artboardRectangle3,
 		// "Artboardellipse12x":        artboardEllipse1,
 		// "Artboardlayer22x":          artboardLayer2,
