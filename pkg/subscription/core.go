@@ -16,8 +16,9 @@ type ICore interface {
 	Select(pid int64) (subscriptions Subscriptions, err error)
 	Get(pid int64, id int64) (subscription Subscription, err error)
 	Insert(subscription *Subscription) (err error)
-	Update(subscription *Subscription, isAdmin bool) (err error)
-	Delete(pid int64, id int64, isAdmin bool, userID string) (err error)
+	Update(subscription *Subscription, isAdmin bool, orderID string) (err error)
+	Delete(pid int64, id int64, isAdmin bool, userID string, orderID string) (err error)
+	GetByOrderNumber(pid int64, id string) (subscriptions Subscriptions, err error)
 }
 
 type core struct {
@@ -176,10 +177,13 @@ func (c *core) Insert(subscription *Subscription) (err error) {
 	redisKey := fmt.Sprintf("%s:subscriptions", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:subscription-by-order-id:%s", redisPrefix, subscription.OrderID)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
-func (c *core) Update(subscription *Subscription, isAdmin bool) (err error) {
+func (c *core) Update(subscription *Subscription, isAdmin bool, orderID string) (err error) {
 	subscription.UpdatedAt = time.Now()
 	subscription.Status = 1
 
@@ -244,10 +248,13 @@ func (c *core) Update(subscription *Subscription, isAdmin bool) (err error) {
 	redisKey = fmt.Sprintf("%s:subscriptions", redisPrefix)
 	_ = c.deleteCache(redisKey)
 
+	redisKey = fmt.Sprintf("%s:subscription-by-order-id:%s", redisPrefix, orderID)
+	_ = c.deleteCache(redisKey)
+
 	return
 }
 
-func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string) (err error) {
+func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string, orderID string) (err error) {
 	now := time.Now()
 
 	query := `
@@ -301,9 +308,48 @@ func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string) (err err
 
 	redisKey = fmt.Sprintf("%s:subscriptions", redisPrefix)
 	_ = c.deleteCache(redisKey)
+
+	redisKey = fmt.Sprintf("%s:subscription-by-order-id:%s", redisPrefix, orderID)
+	_ = c.deleteCache(redisKey)
 	return
 }
 
+func (c *core) getByOrderNumberFromDB(pid int64, orderNumber string) (subscription Subscriptions, err error) {
+	err = c.db.Select(&subscription, `
+		SELECT
+			id,
+			package_duration,
+			box_serial_number,
+			smart_card_number,
+			order_id,
+			status,
+			created_at,
+			updated_at,
+			deleted_at,
+			project_id,
+			created_by,
+			last_update_by
+		FROM
+			mla_subscription
+		WHERE
+			status = 1 AND 
+			project_id = ? AND
+			order_id = ?
+	`, pid, orderNumber)
+	return
+}
+
+func (c *core) GetByOrderNumber(pid int64, id string) (subscriptions Subscriptions, err error) {
+	redisKey := fmt.Sprintf("%s:subscription-by-order-id:%s", redisPrefix, id)
+	subscriptions, err = c.selectFromCache(redisKey)
+
+	if err != nil {
+		subscriptions, err = c.getByOrderNumberFromDB(pid, id)
+		byt, _ := jsoniter.ConfigFastest.Marshal(subscriptions)
+		_ = c.setToCache(redisKey, 300, byt)
+	}
+	return
+}
 func (c *core) selectFromCache(key string) (subscriptions Subscriptions, err error) {
 	conn := c.redis.Get()
 	defer conn.Close()

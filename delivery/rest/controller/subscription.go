@@ -48,6 +48,39 @@ func (c *Controller) handleGetAllSubscriptions(w http.ResponseWriter, r *http.Re
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetSubscriptionByOrderID(w http.ResponseWriter, r *http.Request) {
+	var (
+		pid = int64(10)
+	)
+	orderID := router.GetParam(r, "order_id")
+	subscriptions, err := c.subscription.GetByOrderNumber(pid, orderID)
+	if err != nil {
+		c.reporter.Errorf("[handleGetSubscriptionByOrderID] error get from repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get subscriptions by buyer id", http.StatusInternalServerError)
+		return
+	}
+	res := make([]view.DataResponse, 0, len(subscriptions))
+	for _, subscription := range subscriptions {
+		res = append(res, view.DataResponse{
+			Type: "subscriptions",
+			ID:   subscription.ID,
+			Attributes: view.SubscriptionAttributes{
+				PackageDuration: subscription.PackageDuration,
+				BoxSerialNumber: subscription.BoxSerialNumber,
+				SmartCardNumber: subscription.SmartCardNumber,
+				OrderID:         subscription.OrderID,
+				Status:          subscription.Status,
+				ProjectID:       subscription.ProjectID,
+				CreatedAt:       subscription.CreatedAt,
+				UpdatedAt:       subscription.UpdatedAt,
+				CreatedBy:       subscription.CreatedBy,
+				LastUpdateBy:    subscription.LastUpdateBy,
+			},
+		})
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Request) {
 	var (
 		pid     = int64(10)
@@ -61,7 +94,8 @@ func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	_, err = c.subscription.Get(pid, id)
+	paramsSub, err := c.subscription.Get(pid, id)
+	orderID := paramsSub.OrderID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteSubscription] subscription not found, err: %s", err.Error())
 		view.RenderJSONError(w, "subscription not found", http.StatusNotFound)
@@ -100,7 +134,7 @@ func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Req
 		isAdmin = true
 	}
 
-	err = c.subscription.Delete(10, id, isAdmin, userID.(string))
+	err = c.subscription.Delete(pid, id, isAdmin, userID.(string), orderID)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteSubscription] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete subscription", http.StatusInternalServerError)
@@ -176,7 +210,8 @@ func (c *Controller) handlePatchSubscription(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	_, err = c.subscription.Get(10, id)
+	paramsSub, err := c.subscription.Get(pid, id)
+	orderID := paramsSub.OrderID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchSubscription] subscription not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Subscription not found", http.StatusNotFound)
@@ -216,7 +251,7 @@ func (c *Controller) handlePatchSubscription(w http.ResponseWriter, r *http.Requ
 		ProjectID:       pid,
 		LastUpdateBy:    userID.(string),
 	}
-	err = c.subscription.Update(&subscription, isAdmin)
+	err = c.subscription.Update(&subscription, isAdmin, orderID)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchSubscription] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update subscription", http.StatusInternalServerError)
