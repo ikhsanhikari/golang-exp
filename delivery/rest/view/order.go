@@ -74,7 +74,7 @@ type SumVenueAttributes struct {
 	VenueLatitude         float64     `db:"venue_latitude"`
 	VenueCategory         int64       `db:"venue_category"`
 	VenueShowStatus       int64       `db:"venue_show_status"`
-	CompanyID             int64       `db:"company_id"`
+	CompanyID             null.Int    `db:"company_id"`
 	CompanyName           string      `db:"company_name"`
 	CompanyAddress        string      `db:"company_address"`
 	CompanyCity           string      `db:"company_city"`
@@ -85,7 +85,7 @@ type SumVenueAttributes struct {
 	LicenseNumber         string      `db:"license_number"`
 	LicenseActiveDate     null.Time   `db:"license_active_date"`
 	LicenseExpiredDate    null.Time   `db:"license_expired_date"`
-	LastOrderID           int64       `db:"last_order_id"`
+	LastOrderID           null.Int    `db:"last_order_id"`
 	LastOrderNumber       string      `db:"last_order_number"`
 	LastOrderTotalPrice   float64     `db:"last_order_total_price"`
 	LastRoomID            null.Int    `db:"last_room_id"`
