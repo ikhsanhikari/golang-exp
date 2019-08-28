@@ -175,7 +175,8 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 			last_update_by,
 			province,
 			city,
-			pt_id
+			pt_id,
+			show_status
 		FROM
 			mla_venues
 		WHERE
@@ -442,8 +443,10 @@ func (c *core) Insert(venue *Venue) (err error) {
 			last_update_by,
 			province,
 			city,
-			pt_id
+			pt_id,
+			show_status
 		) VALUES (
+			?,
 			?,
 			?,
 			?,
@@ -488,6 +491,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 		venue.Province,
 		venue.City,
 		venue.PtID,
+		venue.ShowStatus,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()

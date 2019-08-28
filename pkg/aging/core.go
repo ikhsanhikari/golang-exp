@@ -16,8 +16,8 @@ import (
 // ICore is the interface
 type ICore interface {
 	Insert(aging *Aging) (err error)
-	Update(aging *Aging) (err error)
-	Delete(id int64, pid int64) (err error)
+	Update(aging *Aging, isAdmin bool) (err error)
+	Delete(id int64, pid int64, uid string, isAdmin bool) (err error)
 
 	Get(id int64, pid int64) (aging Aging, err error)
 
@@ -37,6 +37,7 @@ func (c *core) Insert(aging *Aging) (err error) {
 	aging.CreatedAt = time.Now()
 	aging.UpdatedAt = null.TimeFrom(aging.CreatedAt)
 	aging.Status = 1
+
 	query := `
 		INSERT INTO mla_aging(
 			name,
@@ -49,15 +50,8 @@ func (c *core) Insert(aging *Aging) (err error) {
 			last_update_by,
 			project_id
 		) VALUES (
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?,
-			?)`
+			?,?,?,?,?,?,?,?,?)`
+
 	args := []interface{}{
 		aging.Name,
 		aging.Description,
@@ -94,14 +88,16 @@ func (c *core) Insert(aging *Aging) (err error) {
 	if err != nil {
 		return err
 	}
+
 	redisKey := fmt.Sprintf("%s:%d:aging", redisPrefix, aging.ProjectID)
 	_ = c.deleteCache(redisKey)
 
 	return
 }
 
-func (c *core) Update(aging *Aging) (err error) {
+func (c *core) Update(aging *Aging, isAdmin bool) (err error) {
 	aging.UpdatedAt = null.TimeFrom(time.Now())
+
 	query := `
 		UPDATE
 			mla_aging
@@ -113,8 +109,9 @@ func (c *core) Update(aging *Aging) (err error) {
 			last_update_by = ?
 		WHERE
 			id = ? AND
-			project_id = ? AND 
+			project_id = ? AND
 			status = 1`
+
 	args := []interface{}{
 		aging.Name,
 		aging.Description,
@@ -124,6 +121,12 @@ func (c *core) Update(aging *Aging) (err error) {
 		aging.ID,
 		aging.ProjectID,
 	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, aging.CreatedBy)
+	}
+
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -154,7 +157,7 @@ func (c *core) Update(aging *Aging) (err error) {
 	return
 }
 
-func (c *core) Delete(id int64, pid int64) (err error) {
+func (c *core) Delete(id int64, pid int64, uid string, isAdmin bool) (err error) {
 	now := time.Now()
 
 	query := `
@@ -162,16 +165,25 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 			mla_aging
 		SET
 			deleted_at = ?,
+			last_update_by = ?,
 			status = 0
 		WHERE
 			id = ? AND
 			project_id = ? AND
 			status = 1`
+
 	args := []interface{}{
 		now,
+		uid,
 		id,
 		pid,
 	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, uid)
+	}
+
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -184,7 +196,7 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 	}
 	//Add Logs
 	dataAudit := auditTrail.AuditTrail{
-		UserID:    "uid",
+		UserID:    uid,
 		Query:     queryTrail,
 		TableName: "mla_aging",
 	}
