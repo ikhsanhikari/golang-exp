@@ -9,7 +9,7 @@ import (
 type EmailLog struct {
 	ID           int64     `db:"id"`
 	SenderUID    string    `db:"sender_uid"`
-	OrderID      int64     `db:"order_id"`
+	OrderID      null.Int  `db:"order_id"`
 	VenueID      int64     `db:"venue_id"`
 	CompanyID    int64     `db:"company_id"`
 	To           string    `db:"to_email"`
