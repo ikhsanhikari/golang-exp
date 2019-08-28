@@ -18,8 +18,8 @@ type ICore interface {
 	Select(pid int64) (installations Installations, err error)
 	Get(id int64, pid int64) (installation Installation, err error)
 	Insert(installation *Installation) (err error)
-	Update(installation *Installation) (err error)
-	Delete(id int64, pid int64) (err error)
+	Update(installation *Installation, isAdmin bool) (err error)
+	Delete(id int64, pid int64, uid string, isAdmin bool) (err error)
 }
 
 // core contains db client
@@ -182,7 +182,7 @@ func (c *core) Insert(installation *Installation) (err error) {
 	return
 }
 
-func (c *core) Update(installation *Installation) (err error) {
+func (c *core) Update(installation *Installation, isAdmin bool) (err error) {
 	installation.UpdatedAt = time.Now()
 	installation.ProjectID = 10
 
@@ -209,6 +209,11 @@ func (c *core) Update(installation *Installation) (err error) {
 		installation.UpdatedAt,
 		installation.LastUpdateBy,
 		installation.ID,
+	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, installation.CreatedBy)
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
@@ -240,7 +245,7 @@ func (c *core) Update(installation *Installation) (err error) {
 	return
 }
 
-func (c *core) Delete(id int64, pid int64) (err error) {
+func (c *core) Delete(id int64, pid int64, uid string, isAdmin bool) (err error) {
 	now := time.Now()
 
 	query := `
@@ -254,6 +259,11 @@ func (c *core) Delete(id int64, pid int64) (err error) {
 			project_id = ?`
 	args := []interface{}{
 		now, id, pid,
+	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, uid)
 	}
 
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
