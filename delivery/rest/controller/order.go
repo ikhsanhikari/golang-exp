@@ -784,6 +784,14 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 		return
 	}
 
+	if updateStatus.Status == 2 {
+		if isAdmin {
+			userID = ""
+		}
+
+		go c.sendEmail(updateStatus.OrderID, updateStatus.VenueID, userID.(string))
+	}
+
 	//set response
 	res := view.DataResponseOrder{
 		ID:   updateStatus.OrderID,
@@ -1622,4 +1630,16 @@ func (c *Controller) generateOrderNumber() (string, error) {
 		lastOrderNumber.Number = 0
 	}
 	return "MN" + dateNow + leftPadLen(strconv.FormatInt((lastOrderNumber.Number+1), 10), "0", 7), nil
+}
+
+func (c *Controller) sendEmail(orderID, venueID int64, userID string) {
+	result := c.handleEmailECert(venueID, userID)
+	if result == false {
+		c.reporter.Warningf("[handleUpdateOrderStatus] Failed sent email ECert")
+	}
+
+	result = c.handleEmailInvoice(orderID, userID)
+	if result == false {
+		c.reporter.Warningf("[handleUpdateOrderStatus] Failed sent email invoice")
+	}
 }

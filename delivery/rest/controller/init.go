@@ -221,5 +221,6 @@ func (c *Controller) Register(router *router.Router) {
 	router.POST("/subscriptions", c.auth.MustAuthorize(c.handlePostSubscription, "molanobar:subscriptions.create"))
 	router.PATCH("/subscriptions/:id", c.auth.MustAuthorize(c.handlePatchSubscription, "molanobar:subscriptions.update"))
 	router.DELETE("/subscriptions/:id", c.auth.MustAuthorize(c.handleDeleteSubscription, "molanobar:subscriptions.delete"))
+	router.GET("/subscriptions_by_order/:order_id", c.auth.MustAuthorize(c.handleGetSubscriptionByOrderID, "molanobar:subscriptions.read"))
 
 }

@@ -434,7 +434,7 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 	}
 	city, err := c.venue.GetCity(params.City)
 	if len(city) == 0 {
-		err = c.venue.InsertVenueAvailable(params.City, 0)
+		err = c.venue.InsertVenueAvailable(params.City, 1)
 	}
 
 	err = c.InsertLicense(venue.Id, venue.CreatedBy, venue.CreatedBy)
