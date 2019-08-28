@@ -8,7 +8,6 @@ import (
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
-	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	auth "git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
@@ -16,10 +15,7 @@ import (
 )
 
 func (c *Controller) handleGetAllLicenses(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
-	licenses, err := c.license.Select(pid)
+	licenses, err := c.license.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllLicenses] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Licenses", http.StatusInternalServerError)
@@ -50,11 +46,8 @@ func (c *Controller) handleGetAllLicenses(w http.ResponseWriter, r *http.Request
 }
 
 func (c *Controller) handleGetLicensesByBuyerID(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
 	buyerID := router.GetParam(r, "buyer_id")
-	licenses, err := c.license.GetByBuyerId(pid, buyerID)
+	licenses, err := c.license.GetByBuyerId(10, buyerID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetLicensesByBuyerId] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Licenses by buyer id", http.StatusInternalServerError)
@@ -85,19 +78,14 @@ func (c *Controller) handleGetLicensesByBuyerID(w http.ResponseWriter, r *http.R
 }
 
 func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid     = int64(10)
-		params  reqDeleteLicense
-		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		isAdmin = false
-	)
+	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	if err != nil {
 		c.reporter.Warningf("[handleDeleteLicense] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
-	licenseParam, err := c.license.Get(pid, id)
+	licenseParam, err := c.license.Get(10, id)
 	buyerID := licenseParam.BuyerID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteLicense] license not found, err: %s", err.Error())
@@ -111,31 +99,7 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = form.Bind(&params, r)
-	if err != nil {
-		c.reporter.Warningf("[handleDeleteLicense] form binding, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
-	//check user id
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleDeleteLicense] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		_ = form.Bind(&params, r)
-		if params.UserID == "" {
-			c.reporter.Errorf("[handleDeleteLicense] invalid parameter, failed get userID")
-			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
-			return
-		}
-		userID = params.UserID
-		isAdmin = true
-	}
-	err = c.license.Delete(pid, id, buyerID, licenseParam.LicenseNumber, isAdmin, userID.(string))
+	err = c.license.Delete(10, id, buyerID, licenseParam.LicenseNumber)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteLicense] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete license", http.StatusInternalServerError)
@@ -146,10 +110,8 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *Controller) handlePostLicense(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid    = int64(10)
-		params reqLicense
-	)
+
+	var params reqLicense
 
 	user, ok := auth.GetUser(r)
 	if !ok {
@@ -161,6 +123,7 @@ func (c *Controller) handlePostLicense(w http.ResponseWriter, r *http.Request) {
 	if !ok {
 		c.reporter.Warningf("[handlePostLicense] user[sub] Failed get id user because nil")
 	}
+
 	err := form.Bind(&params, r)
 
 	if uid != nil {
@@ -182,7 +145,7 @@ func (c *Controller) handlePostLicense(w http.ResponseWriter, r *http.Request) {
 		LicenseStatus: params.LicenseStatus,
 		ActiveDate:    params.ActiveDate,
 		ExpiredDate:   params.ExpiredDate,
-		ProjectID:     pid,
+		ProjectID:     10,
 		CreatedBy:     params.CreatedBy,
 		BuyerID:       params.BuyerID,
 	}

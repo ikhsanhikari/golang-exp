@@ -12,7 +12,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 )
 
-func (c *Controller) insertOrderDetail(order order.Order, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging, isAdmin bool) (err error) {
+func (c *Controller) insertOrderDetail(order order.Order, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging) (err error) {
 	var details = c.mappingDetailOrder(order.RoomQuantity, device, product, installation, room, aging)
 
 	for _, detail := range details {
@@ -28,7 +28,7 @@ func (c *Controller) insertOrderDetail(order order.Order, device device.Device, 
 			ProjectID:    order.ProjectID,
 		}
 
-		err = c.orderDetail.Insert(&insertDetail, isAdmin)
+		err = c.orderDetail.Insert(&insertDetail)
 		if err != nil {
 			return err
 		}
@@ -37,7 +37,7 @@ func (c *Controller) insertOrderDetail(order order.Order, device device.Device, 
 	return
 }
 
-func (c *Controller) updateOrderDetail(order order.Order, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging, isAdmin bool) (err error) {
+func (c *Controller) updateOrderDetail(order order.Order, device device.Device, product product.Product, installation installation.Installation, room room.Room, aging aging.Aging) (err error) {
 	var details = c.mappingDetailOrder(order.RoomQuantity, device, product, installation, room, aging)
 
 	for _, detail := range details {
@@ -53,7 +53,7 @@ func (c *Controller) updateOrderDetail(order order.Order, device device.Device, 
 			ProjectID:    order.ProjectID,
 		}
 
-		err = c.orderDetail.Update(&updateDetail, isAdmin)
+		err = c.orderDetail.Update(&updateDetail)
 		if err != nil {
 			return err
 		}
@@ -62,7 +62,7 @@ func (c *Controller) updateOrderDetail(order order.Order, device device.Device, 
 	return
 }
 
-func (c *Controller) deleteOrderDetail(order order.Order, isAdmin bool) (err error) {
+func (c *Controller) deleteOrderDetail(order order.Order) (err error) {
 
 	deleteDetails := order_detail.OrderDetail{
 		OrderID:      order.OrderID,
@@ -71,7 +71,7 @@ func (c *Controller) deleteOrderDetail(order order.Order, isAdmin bool) (err err
 		LastUpdateBy: order.LastUpdateBy,
 	}
 
-	err = c.orderDetail.Delete(&deleteDetails, isAdmin)
+	err = c.orderDetail.Delete(&deleteDetails)
 	if err != nil {
 		return err
 	}

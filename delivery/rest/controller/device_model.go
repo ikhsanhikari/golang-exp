@@ -9,7 +9,3 @@ type reqDevice struct {
 	CreatedBy    string  `json:"createdBy"`
 	LastUpdateBy string  `json:"lastUpdateBy"`
 }
-
-type reqDeleteDevice struct {
-	UserID string `json:"userID"`
-}

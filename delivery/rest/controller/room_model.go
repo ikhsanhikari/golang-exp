@@ -6,10 +6,6 @@ type reqRoom struct {
 	Price        float64 `json:"price"`
 	Status       int8    `json:"status"`
 	ProjectID    int64   `json:"projectId"`
-	CreatedBy    string  `json:"createdBy"`
-	LastUpdateBy string  `json:"lastUpdateBy"`
-}
-
-type reqDeleteRoom struct {
-	UserID string `json:"userID"`
+	CreatedBy    string  `json:"created_by"`
+	LastUpdateBy string  `json:"last_update_by"`
 }

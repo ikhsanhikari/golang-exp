@@ -18,7 +18,7 @@ type ICore interface {
 	Get(pid int64, id int64) (license License, err error)
 	Insert(license *License) (err error)
 	Update(license *License, buyerID string) (err error)
-	Delete(pid int64, id int64, buyerID string, licenseNumber string, isAdmin bool, userID string) (err error)
+	Delete(pid int64, id int64, buyerID string, licenseNumber string) (err error)
 	GetByBuyerId(pid int64, id string) (licenses Licenses, err error)
 }
 
@@ -330,7 +330,7 @@ func (c *core) Update(license *License, buyerID string) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64, id int64, buyerID string, licenseNumber string, isAdmin bool, userID string) (err error) {
+func (c *core) Delete(pid int64, id int64, buyerID string, licenseNumber string) (err error) {
 	now := time.Now()
 
 	query := `
@@ -345,10 +345,6 @@ func (c *core) Delete(pid int64, id int64, buyerID string, licenseNumber string,
 		project_id = ?`
 	args := []interface{}{
 		now, id, pid,
-	}
-	if !isAdmin {
-		query += ` AND created_by = ? `
-		args = append(args, userID)
 	}
 
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
