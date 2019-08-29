@@ -14,11 +14,10 @@ import (
 
 type ICore interface {
 	Select(pid int64) (devices Devices, err error)
-	SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error)
 	Get(pid int64, id int64) (device Device, err error)
 	Insert(device *Device) (err error)
-	Update(device *Device) (err error)
-	Delete(pid int64, id int64) (err error)
+	Update(device *Device, isAdmin bool) (err error)
+	Delete(pid int64, id int64, isAdmin bool, userID string) (err error)
 }
 
 type core struct {
@@ -37,30 +36,6 @@ func (c *core) Select(pid int64) (devices Devices, err error) {
 		byt, _ := jsoniter.ConfigFastest.Marshal(devices)
 		_ = c.setToCache(redisKey, 300, byt)
 	}
-	return
-}
-
-func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (device Device, err error) {
-	// if len(ids) == 0 {
-	// 	return nil,nil
-	// }
-	// query, args, err := sqlx.In(`
-	// 	SELECT
-	// 		id,
-	// 		name,
-	// 		info,
-	// 		price
-	// 	FROM
-	// 		device
-	// 	WHERE
-	// 		id in (?) AND
-	// 		project_id = ? AND
-	// 		status = 1
-	// 	ORDER BY created_at DESC
-	// 	LIMIT ?
-	// `, ids, pid, limit)
-
-	// err = c.db.Select(&product, query, args...)
 	return
 }
 
@@ -132,8 +107,7 @@ func (c *core) Insert(device *Device) (err error) {
 	device.UpdatedAt = device.CreatedAt
 	device.Status = 1
 	device.LastUpdateBy = device.CreatedBy
-
-	res, err := c.db.NamedExec(`
+	query := `
 		INSERT INTO mla_devices (
 			name,
 			info,
@@ -146,19 +120,54 @@ func (c *core) Insert(device *Device) (err error) {
 			created_by,
 			last_update_by
 		) VALUES (
-			:name,
-			:info,
-			:price,
-			:status,
-			:created_at,
-			:updated_at,
-			:deleted_at,
-			:project_id,
-			:created_by,
-			:last_update_by
-		)
-	`, device)
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?,
+			?
+		)`
+	args := []interface{}{
+		device.Name,
+		device.Info,
+		device.Price,
+		device.Status,
+		device.CreatedAt,
+		device.UpdatedAt,
+		device.DeletedAt,
+		device.ProjectID,
+		device.CreatedBy,
+		device.LastUpdateBy,
+	}
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	res, err := tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
 	device.ID, err = res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    device.CreatedBy,
+		Query:     queryTrail,
+		TableName: "mla_devices",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 
 	redisKey := fmt.Sprintf("%s:devices", redisPrefix)
 	_ = c.deleteCache(redisKey)
@@ -166,26 +175,61 @@ func (c *core) Insert(device *Device) (err error) {
 	return
 }
 
-func (c *core) Update(device *Device) (err error) {
+func (c *core) Update(device *Device, isAdmin bool) (err error) {
 	device.UpdatedAt = time.Now()
 	device.Status = 1
-
-	_, err = c.db.NamedExec(`
+	query := `
 		UPDATE
 			mla_devices
 		SET
-			name = 		:name,
-			info = 		:info,
-			price = 	:price,
-			updated_at=	:updated_at,
-			project_id=	:project_id,
-			last_update_by= :last_update_by
+			name = ?,
+			info = ?,
+			price= ?,
+			updated_at= ?,
+			project_id=	?,
+			last_update_by=	?
 		WHERE
-			id = 		:id AND
-			project_id =:project_id AND 
-			status = 	1
-	`, device)
+			id = 		? AND
+			project_id = ? AND 
+			status = 	1`
 
+	args := []interface{}{
+		device.Name,
+		device.Info,
+		device.Price,
+		device.UpdatedAt,
+		device.ProjectID,
+		device.LastUpdateBy,
+		device.ID,
+		device.ProjectID,
+	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, device.CreatedBy)
+	}
+
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+	if err != nil {
+		return err
+	}
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    device.LastUpdateBy,
+		Query:     queryTrail,
+		TableName: "mla_devices",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, device.ProjectID, device.ID)
 	_ = c.deleteCache(redisKey)
 
@@ -195,21 +239,55 @@ func (c *core) Update(device *Device) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64, id int64) (err error) {
+func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string) (err error) {
 	now := time.Now()
 
-	_, err = c.db.Exec(`
-		UPDATE
-			mla_devices
-		SET
-			deleted_at = ?,
-			status = 0
-		WHERE
-			id = ? AND
-			status = 1 AND 
-			project_id = ?
-	`, now, id, pid)
+	query := `
+	UPDATE
+		mla_devices
+	SET
+		deleted_at = ?,
+		status = 0
+	WHERE
+		id = ? AND
+		status = 1 AND 
+		project_id = ?`
 
+	args := []interface{}{
+		now, id, pid,
+	}
+
+	if !isAdmin {
+		query += ` AND created_by = ? `
+		args = append(args, userID)
+	}
+
+	queryTrail := auditTrail.ConstructLogQuery(query, args...)
+	tx, err := c.db.Beginx()
+
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+	_, err = tx.Exec(query, args...)
+
+	if err != nil {
+		return err
+	}
+
+	//Add Logs
+	dataAudit := auditTrail.AuditTrail{
+		UserID:    "uid",
+		Query:     queryTrail,
+		TableName: "mla_devices",
+	}
+	c.auditTrail.Insert(tx, &dataAudit)
+	err = tx.Commit()
+
+	if err != nil {
+		return err
+	}
 	redisKey := fmt.Sprintf("%s:%d:device:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
 

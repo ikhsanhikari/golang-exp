@@ -25,6 +25,7 @@ import (
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	province "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
 	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	subscription "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/subscription"
 	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	venue "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	venueType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
@@ -163,6 +164,9 @@ func main() {
 	coreAgent := agent.Init(db, redis)
 	reporter.Infoln("/pkg/agent successfully initialized")
 
+	coreSubscription := subscription.Init(db, redis, coreAuditTrail)
+	reporter.Infoln("/pkg/subscription successfully initialized")
+
 	var (
 		server = webserver.New(&cfg.Webserver)
 		rest   = rest.New(
@@ -189,6 +193,7 @@ func main() {
 			coreProvince,
 			coreEmailLog,
 			coreAgent,
+			coreSubscription,
 		)
 	)
 	rest.Register(server.Router())

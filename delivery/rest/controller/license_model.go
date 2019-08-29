@@ -13,3 +13,6 @@ type reqLicense struct {
 	LastUpdateBy  string    `json:"lastUpdateBy"`
 	BuyerID       string    `json:"buyerId"`
 }
+type reqDeleteLicense struct {
+	UserID string `json:"userID"`
+}
