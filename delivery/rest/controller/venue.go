@@ -121,7 +121,6 @@ func (c *Controller) handleGetVenueByID(w http.ResponseWriter, r *http.Request) 
 		ID:   venue.Id,
 		Attributes: view.VenueAttributes{
 			Id:               venue.Id,
-			VenueId:          venue.VenueId,
 			VenueType:        venue.VenueType,
 			VenueName:        venue.VenueName,
 			Address:          venue.Address,
@@ -221,7 +220,6 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 				ID:   venue.Id,
 				Attributes: view.VenueAttributes{
 					Id:               venue.Id,
-					VenueId:          venue.VenueId,
 					VenueType:        venue.VenueType,
 					VenueName:        venue.VenueName,
 					Address:          venue.Address,
@@ -288,7 +286,6 @@ func (c *Controller) handleSelectAllVenues(w http.ResponseWriter, r *http.Reques
 			ID:   venue.Id,
 			Attributes: view.VenueAttributes{
 				Id:               venue.Id,
-				VenueId:          venue.VenueId,
 				VenueType:        venue.VenueType,
 				VenueName:        venue.VenueName,
 				Address:          venue.Address,
@@ -408,7 +405,6 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	venue := venue.Venue{
-		VenueId:                      params.VenueId,
 		VenueType:                    params.VenueType,
 		VenueName:                    params.VenueName,
 		Address:                      params.Address,
@@ -508,7 +504,6 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 
 	venue := venue.Venue{
 		Id:                           id,
-		VenueId:                      params.VenueId,
 		VenueType:                    params.VenueType,
 		VenueName:                    params.VenueName,
 		Address:                      params.Address,
@@ -541,7 +536,6 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		Type: "venues",
 		Attributes: view.VenueAttributes{
 			Id:               id,
-			VenueId:          params.VenueId,
 			VenueType:        params.VenueType,
 			VenueName:        params.VenueName,
 			Address:          params.Address,
@@ -610,7 +604,6 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 	}
 	venue := venue.Venue{
 		Id:               id,
-		VenueId:          venues.VenueId,
 		VenueType:        venues.VenueType,
 		VenueName:        venues.VenueName,
 		Address:          venues.Address,
@@ -661,7 +654,6 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 		Type: "venues",
 		Attributes: view.VenueAttributes{
 			Id:               id,
-			VenueId:          venues.VenueId,
 			VenueType:        venues.VenueType,
 			VenueName:        venues.VenueName,
 			Address:          venues.Address,
