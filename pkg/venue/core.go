@@ -55,6 +55,7 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 	query := `
 		SELECT
 			id,
+			venue_id,
 			venue_type,
 			venue_name,
 			address,
@@ -100,6 +101,7 @@ func (c *core) getStatusFromDB(id int64, pid int64) (venue Venue, err error) {
 	qs := `
 		SELECT
 			id,
+			venue_id,
 			venue_type,
 			venue_name,
 			address,
@@ -152,6 +154,7 @@ func (c *core) getFromDB(id int64, pid int64, uid string) (venue Venue, err erro
 	qs := `
 		SELECT
 			id,
+			venue_id,
 			venue_type,
 			venue_name,
 			address,
@@ -198,6 +201,7 @@ func (c *core) GetVenueByCity(pid int64, cityName string, showStatus string, lim
 func (c *core) getFromDBVenue(pid int64, showStatus string, cityName string, limit int, offset int) (venues Venues, err error) {
 	query := `SELECT
 				id,
+				venue_id,
 				venue_type,
 				venue_name,
 				address,
@@ -265,6 +269,7 @@ func (c *core) getFromDBVenueStatus(pid int64, limit int, offset int) (venues Ve
 	err = c.db.Select(&venues, `
 		SELECT
 			id,
+			venue_id,
 			venue_type,
 			venue_name,
 			address,
@@ -308,6 +313,7 @@ func (c *core) getFromDBVenueCityID(cityName string, pid int64, limit int, offse
 	err = c.db.Select(&venues, `
 		SELECT
 			id,
+			venue_id,
 			venue_type,
 			venue_name,
 			address,
@@ -417,6 +423,7 @@ func (c *core) Insert(venue *Venue) (err error) {
 
 	query := `
 		INSERT INTO mla_venues (
+			venue_id,
 			venue_type,
 			venue_name,
 			address,
@@ -459,9 +466,11 @@ func (c *core) Insert(venue *Venue) (err error) {
 			?,
 			?,
 			?,
+			?,
 			?
 			)`
 	args := []interface{}{
+		venue.VenueId,
 		venue.VenueType,
 		venue.VenueName,
 		venue.Address,
@@ -554,6 +563,7 @@ func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
 		UPDATE
 			mla_venues
 		SET
+			venue_id = ?,
 			venue_type = ?,
 			venue_name = ?,
 			address = ?,
@@ -577,6 +587,7 @@ func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
 			stats = 1
 	`
 	args := []interface{}{
+		venue.VenueId,
 		venue.VenueType,
 		venue.VenueName,
 		venue.Address,
