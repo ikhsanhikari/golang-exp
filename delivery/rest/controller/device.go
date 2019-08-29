@@ -15,11 +15,8 @@ import (
 )
 
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
 
-	devices, err := c.device.Select(pid)
+	devices, err := c.device.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllDevices] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Devices", http.StatusInternalServerError)
@@ -48,19 +45,14 @@ func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request)
 }
 
 func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid     = int64(10)
-		params  reqDeleteDevice
-		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		isAdmin = false
-	)
+	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	if err != nil {
 		c.reporter.Warningf("[handleDeleteDevice] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
-	_, err = c.device.Get(pid, id)
+	_, err = c.device.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteDevice] device not found, err: %s", err.Error())
 		view.RenderJSONError(w, "device not found", http.StatusNotFound)
@@ -73,33 +65,7 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	err = form.Bind(&params, r)
-	if err != nil {
-		c.reporter.Warningf("[handleDeleteDevice] form binding, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
-
-	//check user id
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleDeleteDevice] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		_ = form.Bind(&params, r)
-		if params.UserID == "" {
-			c.reporter.Errorf("[handleDeleteDevice] invalid parameter, failed get userID")
-			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
-			return
-		}
-		userID = params.UserID
-		isAdmin = true
-	}
-
-	err = c.device.Delete(pid, id, isAdmin, userID.(string))
+	err = c.device.Delete(10, id)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteDevice] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete device", http.StatusInternalServerError)
@@ -110,10 +76,9 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 }
 
 func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid    = int64(10)
-		params reqDevice
-	)
+
+	// request param
+	var params reqDevice
 	err := form.Bind(&params, r)
 
 	//checking if userID nil, it will be request
@@ -141,7 +106,7 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 		Name:      params.Name,
 		Info:      params.Info,
 		Price:     params.Price,
-		ProjectID: pid,
+		ProjectID: 10,
 		CreatedBy: uid,
 	}
 
@@ -156,17 +121,14 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid     = int64(10)
-		params  reqDevice
-		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		isAdmin = false
-	)
+	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	if err != nil {
 		c.reporter.Warningf("[handlePatchDevice] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
+
+	var params reqDevice
 	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePatchDevice] form binding, err: %s", err.Error())
@@ -174,7 +136,7 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.device.Get(pid, id)
+	_, err = c.device.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchDevice] device not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device not found", http.StatusNotFound)
@@ -187,34 +149,15 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//check user id
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handlePatchRoom] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		_ = form.Bind(&params, r)
-		if params.LastUpdateBy == "" {
-			c.reporter.Errorf("[handlePatchRoom] invalid parameter, failed get userID")
-			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
-			return
-		}
-		userID = params.LastUpdateBy
-		isAdmin = true
-	}
-
 	device := device.Device{
 		ID:           id,
 		Name:         params.Name,
 		Info:         params.Info,
 		Price:        params.Price,
-		ProjectID:    pid,
-		LastUpdateBy: userID.(string),
+		ProjectID:    10,
+		LastUpdateBy: params.LastUpdateBy,
 	}
-	err = c.device.Update(&device, isAdmin)
+	err = c.device.Update(&device)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchDevice] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update device", http.StatusInternalServerError)

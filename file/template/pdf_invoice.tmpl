@@ -41,8 +41,8 @@
 <body>
     <div>
         <img alt="mix-logo"
-            src="data:image/png;base64,{{.Logo}}"
-            width="220" height="120" />
+            src="https://lh3.googleusercontent.com/-z6Yi3PQiMoM/XS7Vk1SbzlI/AAAAAAAAAQI/LACPW_dkvp4o7wWml0RTik_-4rnEMwszQCEwYBhgL/h240/0.png"
+            width="190" height="120" />
         <p style="font-size: 18px;float: right;">Invoice</p>
     </div>
     <div>
@@ -104,6 +104,10 @@
     <br>
     <div>
         <table border="0" cellpadding="0" cellspacing="0" style="margin-left:615px;width:35%;float:left">
+            <tr>
+                <td>Subtotal</td>
+                <td align="right">{{ .Subtotal }}</td>
+            </tr>
             <tr>
                 <td>TOTAL</td>
                 <td align="right">{{ .Total }}</td>
