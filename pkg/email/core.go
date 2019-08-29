@@ -136,5 +136,3 @@ func GetPng(pic string) (string) {
 	b64Pd := base64.StdEncoding.EncodeToString(buf)
 	return b64Pd
 }
-
-
