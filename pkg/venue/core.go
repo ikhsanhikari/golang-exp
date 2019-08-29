@@ -459,11 +459,9 @@ func (c *core) Insert(venue *Venue) (err error) {
 			?,
 			?,
 			?,
-			?,
 			?
 			)`
 	args := []interface{}{
-		venue.VenueId,
 		venue.VenueType,
 		venue.VenueName,
 		venue.Address,
@@ -579,7 +577,6 @@ func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
 			stats = 1
 	`
 	args := []interface{}{
-		venue.VenueId,
 		venue.VenueType,
 		venue.VenueName,
 		venue.Address,
