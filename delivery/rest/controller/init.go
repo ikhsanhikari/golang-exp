@@ -21,6 +21,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/subscription"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
@@ -57,6 +58,7 @@ type Controller struct {
 	province       province.ICore
 	emailLog       email_log.ICore
 	agent          agent.ICore
+	subscription   subscription.ICore
 }
 
 // New ...
@@ -84,6 +86,7 @@ func New(
 	province province.ICore,
 	emailLog email_log.ICore,
 	agent agent.ICore,
+	subscription subscription.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -109,6 +112,7 @@ func New(
 		province:       province,
 		emailLog:       emailLog,
 		agent:          agent,
+		subscription:   subscription,
 	}
 }
 
@@ -142,8 +146,10 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/venues/city_available", c.handleGetAllVenuesGroupAvailable)
 	router.POST("/venue", c.auth.MustAuthorize(c.handlePostVenue, "molanobar:venues.create"))
 	router.PATCH("/venue/:id", c.auth.MustAuthorize(c.handlePatchVenue, "molanobar:venues.update"))
+	router.GET("/venue/:id", c.auth.MustAuthorize(c.handleGetVenueByID, "molanobar:venues.read"))
 	router.PATCH("/venues/show/:id", c.auth.MustAuthorize(c.handleShowStatusVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
+	router.GET("/venue", c.auth.MustAuthorize(c.handleSelectAllVenues, "molanobar:venues.read"))
 
 	router.GET("/installation", c.auth.MustAuthorize(c.handleGetAllInstallations, "molanobar:installations.read"))
 	router.POST("/installation", c.auth.MustAuthorize(c.handlePostInstallation, "molanobar:installations.create"))
@@ -197,7 +203,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/agents/:userId", c.auth.MustAuthorize(c.handleGetAllAgentsByUserID, "molanobar:agents.read"))
 	router.GET("/agents-check", c.auth.MustAuthorize(c.handleAgentsCheck, "molanobar:agents.read"))
 
-	//router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmail, "molanobar:email.ecert"))
+	router.POST("/sendmailinvoice", c.auth.MustAuthorize(c.handlePostEmailInvoice, "molanobar:email.ecert"))
 	router.POST("/sendmailecert", c.auth.MustAuthorize(c.handlePostEmailECert, "molanobar:email.ecert"))
 
 	router.GET("/companies", c.auth.MustAuthorize(c.handleGetAllCompanies, "molanobar:companies.read"))
@@ -210,5 +216,11 @@ func (c *Controller) Register(router *router.Router) {
 	router.GET("/cities/:id", c.handleGetCityByID)
 	router.GET("/province", c.handleGetAllProvinces)
 	router.GET("/province/:id", c.handleGetProvincesByID)
+
+	router.GET("/subscriptions", c.auth.MustAuthorize(c.handleGetAllSubscriptions, "molanobar:subscriptions.read"))
+	router.POST("/subscriptions", c.auth.MustAuthorize(c.handlePostSubscription, "molanobar:subscriptions.create"))
+	router.PATCH("/subscriptions/:id", c.auth.MustAuthorize(c.handlePatchSubscription, "molanobar:subscriptions.update"))
+	router.DELETE("/subscriptions/:id", c.auth.MustAuthorize(c.handleDeleteSubscription, "molanobar:subscriptions.delete"))
+	router.GET("/subscriptions_by_order/:order_id", c.auth.MustAuthorize(c.handleGetSubscriptionByOrderID, "molanobar:subscriptions.read"))
 
 }

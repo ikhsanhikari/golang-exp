@@ -15,3 +15,6 @@ type reqProduct struct {
 	CreatedBy    string  `json:"createdBy"`
 	LastUpdateBy string  `json:"lastUpdateBy"`
 }
+type reqDeleteProduct struct {
+	UserID string `json:"userID"`
+}
