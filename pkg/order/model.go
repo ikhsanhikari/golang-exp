@@ -72,7 +72,7 @@ type SummaryVenue struct {
 	LicenseNumber         string    `db:"license_number"`
 	LicenseActiveDate     null.Time `db:"license_active_date"`
 	LicenseExpiredDate    null.Time `db:"license_expired_date"`
-	LastOrderID           null.int  `db:"last_order_id"`
+	LastOrderID           null.Int  `db:"last_order_id"`
 	LastOrderNumber       string    `db:"last_order_number"`
 	LastOrderTotalPrice   float64   `db:"last_order_total_price"`
 	LastRoomID            null.Int  `db:"last_room_id"`
