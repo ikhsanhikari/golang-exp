@@ -223,3 +223,4 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 
 	view.RenderJSONData(w, device, http.StatusOK)
 }
+
