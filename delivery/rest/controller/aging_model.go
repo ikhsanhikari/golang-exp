@@ -13,3 +13,7 @@ type reqUpdateAging struct {
 	Price        float64 `json:"price"`
 	LastUpdateBy string  `json:"lastUpdateBy"`
 }
+
+type reqDeleteAging struct {
+	UserID string `json:"userID"`
+}
