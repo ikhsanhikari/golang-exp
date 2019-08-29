@@ -19,8 +19,8 @@ type ICore interface {
 	SelectByIDs(ids []int64, pid int64, limit int) (product Product, err error)
 	Get(pid int64, id int64) (product Product, err error)
 	Insert(product *Product) (err error)
-	Update(product *Product, venueTypeID int64, isAdmin bool) (err error)
-	Delete(pid int64, id int64, venueTypeID int64, isAdmin bool, userID string) (err error)
+	Update(product *Product, venueTypeID int64) (err error)
+	Delete(pid int64, id int64, venueTypeID int64) (err error)
 }
 
 // core contains db client
@@ -286,7 +286,7 @@ func (c *core) Insert(product *Product) (err error) {
 	return
 }
 
-func (c *core) Update(product *Product, venueTypeID int64, isAdmin bool) (err error) {
+func (c *core) Update(product *Product, venueTypeID int64) (err error) {
 	product.UpdatedAt = time.Now()
 	product.Status = 1
 
@@ -325,11 +325,6 @@ func (c *core) Update(product *Product, venueTypeID int64, isAdmin bool) (err er
 		product.ProductID,
 		product.ProjectID,
 	}
-	if !isAdmin {
-		query += ` AND created_by = ? `
-		args = append(args, product.CreatedBy)
-	}
-
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -364,7 +359,7 @@ func (c *core) Update(product *Product, venueTypeID int64, isAdmin bool) (err er
 	return
 }
 
-func (c *core) Delete(pid int64, id int64, venueTypeID int64, isAdmin bool, userID string) (err error) {
+func (c *core) Delete(pid int64, id int64, venueTypeID int64) (err error) {
 	now := time.Now()
 
 	query := `
@@ -379,11 +374,6 @@ func (c *core) Delete(pid int64, id int64, venueTypeID int64, isAdmin bool, user
 			project_id = ?`
 	args := []interface{}{
 		now, id, pid,
-	}
-
-	if !isAdmin {
-		query += ` AND created_by = ? `
-		args = append(args, userID)
 	}
 
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)

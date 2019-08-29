@@ -15,10 +15,11 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64) (rooms Rooms, err error)
+	SelectByIDs(ids []int64, pid int64, limit int) (room Room, err error)
 	Get(pid int64, id int64) (room Room, err error)
 	Insert(room *Room) (err error)
-	Update(room *Room, isAdmin bool) (err error)
-	Delete(pid int64, id int64, isAdmin bool, userID string) (err error)
+	Update(room *Room) (err error)
+	Delete(pid int64, id int64) (err error)
 }
 
 // core contains db client
@@ -52,6 +53,34 @@ func (c *core) Get(pid int64, id int64) (room Room, err error) {
 			_ = c.setToCache(redisKey, 300, byt)
 		}
 	}
+	return
+}
+
+func (c *core) SelectByIDs(ids []int64, pid int64, limit int) (room Room, err error) {
+	// if len(ids) == 0 {
+	// 	return nil,nil
+	// }
+	query, args, err := sqlx.In(`
+		SELECT
+			id,
+			name,
+			description,
+			price,
+			created_at,
+			updated_at,
+			deleted_at,
+			project_id
+		FROM
+			mla_room
+		WHERE
+			id in (?) AND
+			project_id = ? AND
+			status = 1
+		ORDER BY created_at DESC
+		LIMIT ?
+	`, ids, pid, limit)
+
+	err = c.db.Select(&room, query, args...)
 	return
 }
 
@@ -175,7 +204,7 @@ func (c *core) Insert(room *Room) (err error) {
 	return
 }
 
-func (c *core) Update(room *Room, isAdmin bool) (err error) {
+func (c *core) Update(room *Room) (err error) {
 	room.UpdatedAt = time.Now()
 	room.Status = 1
 
@@ -204,11 +233,6 @@ func (c *core) Update(room *Room, isAdmin bool) (err error) {
 		room.ID,
 		room.ProjectID,
 	}
-	if !isAdmin {
-		query += ` AND created_by = ? `
-		args = append(args, room.CreatedBy)
-	}
-
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()
 	if err != nil {
@@ -240,8 +264,9 @@ func (c *core) Update(room *Room, isAdmin bool) (err error) {
 	return
 }
 
-func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string) (err error) {
+func (c *core) Delete(pid int64, id int64) (err error) {
 	now := time.Now()
+
 	query := `
 		UPDATE
 			mla_room
@@ -254,11 +279,6 @@ func (c *core) Delete(pid int64, id int64, isAdmin bool, userID string) (err err
 			project_id = ?`
 	args := []interface{}{
 		now, id, pid,
-	}
-
-	if !isAdmin {
-		query += ` AND created_by = ? `
-		args = append(args, userID)
 	}
 
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)

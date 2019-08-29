@@ -14,10 +14,7 @@ import (
 )
 
 func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
-	rooms, err := c.room.Select(pid)
+	rooms, err := c.room.Select(10)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllRooms] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Rooms", http.StatusInternalServerError)
@@ -46,20 +43,14 @@ func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid     = int64(10)
-		params  reqDeleteRoom
-		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		isAdmin = false
-	)
-
+	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	if err != nil {
 		c.reporter.Warningf("[handleDeleteRoom] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
-	_, err = c.room.Get(pid, id)
+	_, err = c.room.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteRoom] room not found, err: %s", err.Error())
 		view.RenderJSONError(w, "room not found", http.StatusNotFound)
@@ -72,32 +63,7 @@ func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = form.Bind(&params, r)
-	if err != nil {
-		c.reporter.Warningf("[handleDeleteRoom] form binding, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
-
-	//check user id
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleDeleteRoom] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		_ = form.Bind(&params, r)
-		if params.UserID == "" {
-			c.reporter.Errorf("[handleDeleteRoom] invalid parameter, failed get userID")
-			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
-			return
-		}
-		userID = params.UserID
-		isAdmin = true
-	}
-	err = c.room.Delete(pid, id, isAdmin, userID.(string))
+	err = c.room.Delete(10, id)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteRoom] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete room", http.StatusInternalServerError)
@@ -108,10 +74,7 @@ func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
-	var (
-		params reqRoom
-		pid    = int64(10)
-	)
+	var params reqRoom
 	err := form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePostRoom] id must be integer, err: %s", err.Error())
@@ -129,10 +92,10 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 	userID, ok := user["sub"]
 	var uid = ""
 	if !ok {
-		//is Admin
+		//is User
 		uid = params.CreatedBy
 	} else {
-		//is User
+		//is Admin
 		uid = fmt.Sprintf("%v", userID)
 	}
 
@@ -140,7 +103,7 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 		Name:        params.Name,
 		Description: params.Description,
 		Price:       params.Price,
-		ProjectID:   pid,
+		ProjectID:   10,
 		CreatedBy:   uid,
 	}
 
@@ -155,19 +118,14 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid     = int64(10)
-		params  reqRoom
-		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		isAdmin = false
-	)
-
+	id, err := strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	if err != nil {
 		c.reporter.Warningf("[handlePatchRoom] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 		return
 	}
 
+	var params reqRoom
 	err = form.Bind(&params, r)
 	if err != nil {
 		c.reporter.Warningf("[handlePatchRoom] form binding, err: %s", err.Error())
@@ -175,7 +133,7 @@ func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.room.Get(pid, id)
+	_, err = c.room.Get(10, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchRoom] room not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Room not found", http.StatusNotFound)
@@ -188,34 +146,15 @@ func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	//check user id
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handlePatchRoom] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-	userID, ok := user["sub"]
-	if !ok {
-		_ = form.Bind(&params, r)
-		if params.LastUpdateBy == "" {
-			c.reporter.Errorf("[handlePatchRoom] invalid parameter, failed get userID")
-			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
-			return
-		}
-		userID = params.LastUpdateBy
-		isAdmin = true
-	}
-
 	room := room.Room{
 		ID:           id,
 		Name:         params.Name,
 		Description:  params.Description,
 		Price:        params.Price,
-		ProjectID:    pid,
-		LastUpdateBy: userID.(string),
+		ProjectID:    10,
+		LastUpdateBy: params.LastUpdateBy,
 	}
-	err = c.room.Update(&room, isAdmin)
+	err = c.room.Update(&room)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchRoom] error updating repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed update room", http.StatusInternalServerError)
