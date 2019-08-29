@@ -89,7 +89,7 @@ func (c *Controller) handleEmailECert(venueID int64, userID string) bool {
 		},
 	}
 	errEmail := c.email.Send(emailReq)
-	msg := c.handlePostEmailEcertLog(userID, sumvenue.LastOrderID.Int64, venueID, emailReq.To, "ecert", sumvenue.CompanyID)
+	msg := c.handlePostEmailEcertLog(userID, sumvenue.LastOrderID, venueID, emailReq.To, "ecert", sumvenue.CompanyID)
 
 	if msg == "0" {
 		c.reporter.Errorf("[handleEmailInvoice] Email Invoice Error")
