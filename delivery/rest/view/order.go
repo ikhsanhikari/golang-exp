@@ -74,7 +74,7 @@ type SumVenueAttributes struct {
 	VenueLatitude         float64     `db:"venue_latitude"`
 	VenueCategory         int64       `db:"venue_category"`
 	VenueShowStatus       int64       `db:"venue_show_status"`
-	CompanyID             int64       `db:"company_id"`
+	CompanyID             null.Int    `db:"company_id"`
 	CompanyName           string      `db:"company_name"`
 	CompanyAddress        string      `db:"company_address"`
 	CompanyCity           string      `db:"company_city"`
