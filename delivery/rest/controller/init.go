@@ -227,7 +227,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/subscriptions/:id", c.auth.MustAuthorize(c.handleDeleteSubscription, "molanobar:subscriptions.delete"))
 	router.GET("/subscriptions_by_order/:order_id", c.auth.MustAuthorize(c.handleGetSubscriptionByOrderID, "molanobar:subscriptions.read"))
 
-	router.GET("/regional_agents", c.auth.MustAuthorize(c.handleGetAllRegionalAgents, "molanobar:regional_agents.read"))
+	router.GET("/regional_agents", c.handleGetAllRegionalAgents)
 	router.POST("/regional_agents", c.auth.MustAuthorize(c.handlePostRegionalAgent, "molanobar:regional_agents.create"))
 	router.PATCH("/regional_agents/:id", c.auth.MustAuthorize(c.handlePatchRegionalAgent, "molanobar:regional_agents.update"))
 	router.DELETE("/regional_agents/:id", c.auth.MustAuthorize(c.handleDeleteRegionalAgent, "molanobar:regional_agents.delete"))
