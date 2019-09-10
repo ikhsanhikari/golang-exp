@@ -878,9 +878,13 @@ func (c *core) selectSummaryVenuesFromDBByUserID(pid int64, uid string) (sumvenu
 	`
 
 	if uid != "" {
-		query += `AND venues.created_by = ?`
+		query += ` 
+				AND venues.created_by = ?
+			ORDER BY 
+				venues.updated_at DESC `
 		err = c.db.Select(&sumvenues, query, pid, pid, pid, uid)
 	} else {
+		query += ` ORDER BY venues.updated_at DESC `
 		err = c.db.Select(&sumvenues, query, pid, pid, pid)
 	}
 
@@ -964,10 +968,15 @@ func (c *core) selectSummaryVenuesFromDBByUserIDPagination(pid int64, uid string
 	if uid != "" {
 		query +=
 			` 	AND venues.created_by = ? 
-		 LIMIT ?, ? `
+			ORDER BY 
+				venues.updated_at DESC
+		 	LIMIT ?, ? `
 		err = c.db.Select(&sumvenues, query, pid, pid, pid, uid, offset, limit)
 	} else {
-		query += ` LIMIT ?, ? `
+		query +=
+			` 	ORDER BY 
+					venues.updated_at DESC
+				LIMIT ?, ? `
 		err = c.db.Select(&sumvenues, query, pid, pid, pid, offset, limit)
 	}
 
@@ -1026,9 +1035,13 @@ func (c *core) selectSummaryOrdersFromDBByVenueID(venueID, pid int64, uid string
 	`
 
 	if uid != "" {
-		query += `AND venues.created_by = ?`
+		query +=
+			`	AND venues.created_by = ?
+			ORDER BY 
+				orders.updated_at DESC`
 		err = c.db.Select(&sumorders, query, pid, pid, venueID, uid)
 	} else {
+		query += ` ORDER BY orders.updated_at DESC`
 		err = c.db.Select(&sumorders, query, pid, pid, venueID)
 	}
 
