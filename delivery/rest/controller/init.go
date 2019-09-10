@@ -25,6 +25,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/regional_agent"
 	"git.sstv.io/lib/go/gojunkyard.git/reporter"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
 )
@@ -59,6 +60,7 @@ type Controller struct {
 	emailLog       email_log.ICore
 	agent          agent.ICore
 	subscription   subscription.ICore
+	regionalAgent regional_agent.ICore 
 }
 
 // New ...
@@ -87,6 +89,7 @@ func New(
 	emailLog email_log.ICore,
 	agent agent.ICore,
 	subscription subscription.ICore,
+	regionalAgent regional_agent.ICore ,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -113,6 +116,7 @@ func New(
 		emailLog:       emailLog,
 		agent:          agent,
 		subscription:   subscription,
+		regionalAgent: regionalAgent,
 	}
 }
 
@@ -224,4 +228,8 @@ func (c *Controller) Register(router *router.Router) {
 	router.DELETE("/subscriptions/:id", c.auth.MustAuthorize(c.handleDeleteSubscription, "molanobar:subscriptions.delete"))
 	router.GET("/subscriptions_by_order/:order_id", c.auth.MustAuthorize(c.handleGetSubscriptionByOrderID, "molanobar:subscriptions.read"))
 
+	router.GET("/regional_agents", c.handleGetAllRegionalAgents)
+	router.POST("/regional_agents", c.auth.MustAuthorize(c.handlePostRegionalAgent, "molanobar:regional_agents.create"))
+	router.PATCH("/regional_agents/:id", c.auth.MustAuthorize(c.handlePatchRegionalAgent, "molanobar:regional_agents.update"))
+	router.DELETE("/regional_agents/:id", c.auth.MustAuthorize(c.handleDeleteRegionalAgent, "molanobar:regional_agents.delete"))
 }
