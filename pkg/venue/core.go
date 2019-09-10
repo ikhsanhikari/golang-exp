@@ -16,6 +16,7 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64, uid string) (venues Venues, err error)
+	GetByLatLong(pid int64, uid string, lt float64, lng float64) (venues Venues, err error)
 	GetVenueByCity(pid int64, cityName string, showStatus string, limit int, offset int) (venues Venues, err error)
 	GetVenueByStatus(pid int64, limit int, offset int) (venues Venues, err error)
 	GetVenueByCityID(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
@@ -88,6 +89,55 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 	} else {
 		query = query + `AND created_by = ? ORDER BY venue_name ASC`
 		err = c.db.Select(&venue, query, pid, uid)
+	}
+	return
+}
+
+func (c *core) GetByLatLong(pid int64, uid string, lt float64, lng float64) (venue Venues, err error) {
+	query := `
+		SELECT
+			id,
+			venue_type,
+			venue_name,
+			address,
+			zip,
+			capacity,
+			facilities,
+			longitude,
+			latitude,
+			created_at,
+			updated_at,
+			deleted_at,
+			stats,
+			pic_name,
+			pic_contact_number,
+			venue_phone,
+			project_id,
+			created_by,
+			last_update_by,
+			province,
+			city,
+			pt_id
+			,(
+				6371 * acos (
+				cos ( radians( ? ) )
+				* cos( radians( latitude ) )
+				* cos( radians( longitude ) - radians( ? ) )
+				+ sin ( radians( ? ) )
+				* sin( radians( latitude ) )
+					)
+				) AS distance
+			FROM mla_venues
+			HAVING distance < 5 and
+			stats = 1 AND
+			project_id = ? 
+	`
+	if uid == "" {
+		query = query + `ORDER BY distance`
+		err = c.db.Select(&venue, query, lt, lng, lt, pid)
+	} else {
+		query = query + `AND created_by = ? ORDER BY distance`
+		err = c.db.Select(&venue, query, lt, lng, lt, pid, uid)
 	}
 	return
 }
