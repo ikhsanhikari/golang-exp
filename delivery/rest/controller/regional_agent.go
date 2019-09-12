@@ -7,10 +7,10 @@ import (
 	"strconv"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
+	regionalAgent "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/regional_agent"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-	regionalAgent "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/regional_agent"
 )
 
 func (c *Controller) handleGetAllRegionalAgents(w http.ResponseWriter, r *http.Request) {
@@ -43,6 +43,38 @@ func (c *Controller) handleGetAllRegionalAgents(w http.ResponseWriter, r *http.R
 				LastUpdateBy: regionalAgent.LastUpdateBy,
 			},
 		})
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleGetRegionalAgents(w http.ResponseWriter, r *http.Request) {
+	var (
+		pid     = int64(10)
+		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+	)
+	regionalAgent, err := c.regionalAgent.Get(pid, id)
+	if err != nil {
+		c.reporter.Errorf("[handleGetRegionalAgents] error get from repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get RegionalAgents", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponse{
+		Type: "regionalAgents",
+		ID:   regionalAgent.ID,
+		Attributes: view.RegionalAgentAttributes{
+			Name:         regionalAgent.Name,
+			Area:         regionalAgent.Area,
+			Email:        regionalAgent.Email,
+			Phone:        regionalAgent.Phone,
+			Website:      regionalAgent.Website,
+			Status:       regionalAgent.Status,
+			ProjectID:    regionalAgent.ProjectID,
+			CreatedAt:    regionalAgent.CreatedAt,
+			UpdatedAt:    regionalAgent.UpdatedAt,
+			CreatedBy:    regionalAgent.CreatedBy,
+			LastUpdateBy: regionalAgent.LastUpdateBy,
+		},
 	}
 	view.RenderJSONData(w, res, http.StatusOK)
 }
@@ -139,13 +171,13 @@ func (c *Controller) handlePostRegionalAgent(w http.ResponseWriter, r *http.Requ
 	}
 
 	regionalAgent := regionalAgent.RegionalAgent{
-		Name:         params.Name,
-		Area:         params.Area,
-		Email:        params.Email,
-		Phone:        params.Phone,
-		Website:      params.Website,
-		ProjectID:   pid,
-		CreatedBy:   uid,
+		Name:      params.Name,
+		Area:      params.Area,
+		Email:     params.Email,
+		Phone:     params.Phone,
+		Website:   params.Website,
+		ProjectID: pid,
+		CreatedBy: uid,
 	}
 
 	err = c.regionalAgent.Insert(&regionalAgent)
