@@ -20,6 +20,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/regional_agent"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/subscription"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
@@ -60,6 +61,7 @@ type Controller struct {
 	emailLog       email_log.ICore
 	agent          agent.ICore
 	subscription   subscription.ICore
+	regionalAgent  regional_agent.ICore
 }
 
 // New ...
@@ -89,6 +91,7 @@ func New(
 	emailLog email_log.ICore,
 	agent agent.ICore,
 	subscription subscription.ICore,
+	regionalAgent regional_agent.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -116,6 +119,7 @@ func New(
 		emailLog:       emailLog,
 		agent:          agent,
 		subscription:   subscription,
+		regionalAgent:  regionalAgent,
 	}
 }
 
@@ -153,6 +157,7 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/venues/show/:id", c.auth.MustAuthorize(c.handleShowStatusVenue, "molanobar:venues.update"))
 	router.DELETE("/venue/:id", c.auth.MustAuthorize(c.handleDeleteVenue, "molanobar:venues.delete"))
 	router.GET("/venue", c.auth.MustAuthorize(c.handleSelectAllVenues, "molanobar:venues.read"))
+	router.GET("/venues-near-me/:latitude/:longitude", c.auth.MustAuthorize(c.handleGetVenueByLatAndLong, "molanobar:venues.read"))
 
 	router.GET("/installation", c.auth.MustAuthorize(c.handleGetAllInstallations, "molanobar:installations.read"))
 	router.POST("/installation", c.auth.MustAuthorize(c.handlePostInstallation, "molanobar:installations.create"))
@@ -225,5 +230,11 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/subscriptions/:id", c.auth.MustAuthorize(c.handlePatchSubscription, "molanobar:subscriptions.update"))
 	router.DELETE("/subscriptions/:id", c.auth.MustAuthorize(c.handleDeleteSubscription, "molanobar:subscriptions.delete"))
 	router.GET("/subscriptions_by_order/:order_id", c.auth.MustAuthorize(c.handleGetSubscriptionByOrderID, "molanobar:subscriptions.read"))
+	router.GET("/subscriptions/:id", c.auth.MustAuthorize(c.handleGetSubscriptions, "molanobar:subscriptions.read"))
 
+	router.GET("/regional_agents", c.handleGetAllRegionalAgents)
+	router.POST("/regional_agents", c.auth.MustAuthorize(c.handlePostRegionalAgent, "molanobar:regional_agents.create"))
+	router.PATCH("/regional_agents/:id", c.auth.MustAuthorize(c.handlePatchRegionalAgent, "molanobar:regional_agents.update"))
+	router.DELETE("/regional_agents/:id", c.auth.MustAuthorize(c.handleDeleteRegionalAgent, "molanobar:regional_agents.delete"))
+	router.GET("/regional_agents/:id", c.handleGetRegionalAgents)
 }
