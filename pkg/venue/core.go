@@ -459,12 +459,6 @@ func (c *core) getFromDBCity(cityName string) (venue VenueAvailables, err error)
 }
 
 func (c *core) Insert(venue *Venue) (err error) {
-	venue.CreatedAt = time.Now()
-	venue.UpdatedAt = venue.CreatedAt
-	venue.Status = 1
-	venue.ProjectID = 10
-	venue.LastUpdateBy = venue.CreatedBy
-
 	query := `
 		INSERT INTO mla_venues (
 			venue_type,
@@ -598,8 +592,6 @@ func (c *core) InsertVenueAvailable(cityName string, status int64) (err error) {
 }
 
 func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
-	venue.UpdatedAt = time.Now()
-	venue.ProjectID = 10
 	query := `
 		UPDATE
 			mla_venues
@@ -623,7 +615,7 @@ func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
 			show_status = ?
 		WHERE
 			id = ? AND
-			project_id = 10 AND
+			project_id = ? AND
 			stats = 1
 	`
 	args := []interface{}{
@@ -645,6 +637,7 @@ func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
 		venue.PtID,
 		venue.ShowStatus,
 		venue.Id,
+		venue.ProjectID,
 	}
 	if isAdmin == false {
 		query = query + ` AND created_by = ?`
@@ -703,12 +696,13 @@ func (c *core) Delete(pid int64, id int64, uid string, created_by string, isAdmi
 		WHERE
 			id = ? AND
 			stats = 1 AND 
-			project_id = 10
+			project_id = ?
 	`
 	args := []interface{}{
 		now,
 		uid,
 		id,
+		pid,
 	}
 	if isAdmin == false {
 		query = query + ` AND created_by = ?`

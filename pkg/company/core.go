@@ -138,12 +138,6 @@ func (c *core) GetByOrderID(orderd int64, pid int64) (companyEmail CompanyEmail,
 }
 
 func (c *core) Insert(company *Company) (err error) {
-	company.CreatedAt = time.Now()
-	company.UpdatedAt = company.CreatedAt
-	company.ProjectID = 10
-	company.Status = 1
-	company.LastUpdateBy = company.CreatedBy
-
 	res, err := c.db.NamedExec(`
 		INSERT INTO mla_company (
 			name,
@@ -188,8 +182,6 @@ func (c *core) Insert(company *Company) (err error) {
 }
 
 func (c *core) Update(company *Company, uid string, isAdmin bool) (err error) {
-	company.UpdatedAt = time.Now()
-	company.ProjectID = 10
 	query := `
 	UPDATE
 		mla_company
@@ -205,7 +197,7 @@ func (c *core) Update(company *Company, uid string, isAdmin bool) (err error) {
 		last_update_by = :last_update_by
 	WHERE
 		id = :id AND 
-		project_id = 10 AND 
+		project_id = :project_id AND 
 		status = 1
 	`
 	var redisKey string

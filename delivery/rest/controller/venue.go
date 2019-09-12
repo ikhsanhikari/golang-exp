@@ -48,7 +48,7 @@ func (c *Controller) handleGetAllVenuesGroupAvailable(w http.ResponseWriter, r *
 	var (
 		venues    venue.VenueGroupAvailables
 		err       error
-		projectID = int64(10)
+		projectID = c.projectID
 	)
 	venues, err = c.venue.GetVenueGroupAvailable(projectID)
 
@@ -101,9 +101,9 @@ func (c *Controller) handleGetVenueByID(w http.ResponseWriter, r *http.Request) 
 	}
 
 	if isAdmin == true {
-		venue, err = c.venue.Get(10, id, "")
+		venue, err = c.venue.Get(c.projectID, id, "")
 	} else {
-		venue, err = c.venue.Get(10, id, userid)
+		venue, err = c.venue.Get(c.projectID, id, userid)
 	}
 	if err != nil {
 		c.reporter.Errorf("[handleGetVenueByID] venue not found, err: %s", err.Error())
@@ -176,9 +176,9 @@ func (c *Controller) handleGetVenueByLatAndLong(w http.ResponseWriter, r *http.R
 	}
 
 	if isAdmin == true {
-		venues, err = c.venue.GetByLatLong(10, "", lat, long)
+		venues, err = c.venue.GetByLatLong(c.projectID, "", lat, long)
 	} else {
-		venues, err = c.venue.GetByLatLong(10, userid, lat, long)
+		venues, err = c.venue.GetByLatLong(c.projectID, userid, lat, long)
 	}
 	if err != nil {
 		c.reporter.Errorf("[handleGetVenueByLatAndLong] venue not found, err: %s", err.Error())
@@ -234,7 +234,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		limitVal    = getParam.Get("limit")
 		offsetVal   = getParam.Get("page")
 		showStatus  = getParam.Get("show")
-		projectID   = int64(10)
+		projectID   = c.projectID
 		venues      venue.Venues
 		userid      string
 		err         error
@@ -280,7 +280,7 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 		} else {
 			userid = fmt.Sprintf("%v", userID)
 		}
-		venues, err = c.venue.Select(10, userid)
+		venues, err = c.venue.Select(c.projectID, userid)
 	}
 
 	if err != nil {
@@ -348,7 +348,7 @@ func (c *Controller) handleSelectAllVenues(w http.ResponseWriter, r *http.Reques
 	} else {
 		userid = fmt.Sprintf("%v", userID)
 	}
-	venues, err = c.venue.Select(10, userid)
+	venues, err = c.venue.Select(c.projectID, userid)
 
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenues] error get from repository, err: %s", err.Error())
@@ -428,9 +428,9 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isAdmin == true {
-		venues, err = c.venue.Get(10, id, "")
+		venues, err = c.venue.Get(c.projectID, id, "")
 	} else {
-		venues, err = c.venue.Get(10, id, userid)
+		venues, err = c.venue.Get(c.projectID, id, userid)
 	}
 
 	if err == sql.ErrNoRows {
@@ -445,7 +445,7 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.venue.Delete(10, id, userid, venues.CreatedBy, isAdmin)
+	err = c.venue.Delete(c.projectID, id, userid, venues.CreatedBy, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteVenue] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete Venue", http.StatusInternalServerError)
@@ -501,6 +501,11 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 		VenuePhone:                   params.VenuePhone,
 		ShowStatus:                   params.ShowStatus,
 		CreatedBy:                    userid,
+		CreatedAt:					  time.Now(),
+		UpdatedAt:					  time.Now(),
+		Status:						  1,
+		LastUpdateBy:			      userid,
+		ProjectID:					  c.projectID,
 	}
 
 	err = c.venue.Insert(&venue)
@@ -562,9 +567,9 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if isAdmin == true {
-		venues, err = c.venue.Get(10, id, "")
+		venues, err = c.venue.Get(c.projectID, id, "")
 	} else {
-		venues, err = c.venue.Get(10, id, userid)
+		venues, err = c.venue.Get(c.projectID, id, userid)
 	}
 
 	if err == sql.ErrNoRows {
@@ -601,6 +606,8 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 		ShowStatus:                   params.ShowStatus,
 		CreatedBy:                    venues.CreatedBy,
 		LastUpdateBy:                 userid,
+		UpdatedAt:					  time.Now(),
+		ProjectID:					  c.projectID,
 	}
 	err = c.venue.Update(&venue, userid, isAdmin)
 	if err != nil {
@@ -632,6 +639,7 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 			VenuePhone:       params.VenuePhone,
 			CreatedBy:        venue.CreatedBy,
 			LastUpdateBy:     userid,
+			ProjectID:		  c.projectID,
 		},
 	}
 
@@ -667,7 +675,7 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 		userid = fmt.Sprintf("%v", userID)
 	}
 
-	venues, err := c.venue.GetStatus(10, id)
+	venues, err := c.venue.GetStatus(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteVenue] Venue not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
@@ -700,6 +708,7 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 		CreatedBy:        userid,
 		LastUpdateBy:     userid,
 		ShowStatus:       status,
+		ProjectID:		  c.projectID,
 	}
 	err = c.venue.Update(&venue, userid, isAdmin)
 	if err != nil {
@@ -717,7 +726,7 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 			err = c.venue.UpdateStatusVenueAvailable(venues.City, 1)
 		}
 	} else {
-		_, err := c.venue.GetVenueByCity(10, venues.City, "true", 9, 0)
+		_, err := c.venue.GetVenueByCity(c.projectID, venues.City, "true", 9, 0)
 		if err == sql.ErrNoRows {
 			if vaStatus == 1 {
 				err = c.venue.UpdateStatusVenueAvailable(venues.City, 0)
@@ -772,7 +781,7 @@ func (c *Controller) InsertLicense(venueID int64, createdBy string, buyerID stri
 		LicenseStatus: 1,
 		ActiveDate:    defaultTime,
 		ExpiredDate:   defaultTime,
-		ProjectID:     10,
+		ProjectID:     c.projectID,
 		CreatedBy:     createdBy,
 		BuyerID:       buyerID,
 	}

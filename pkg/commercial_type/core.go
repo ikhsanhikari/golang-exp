@@ -101,11 +101,6 @@ func (c *core) getFromDB(id int64, pid int64) (commercialType CommercialType, er
 }
 
 func (c *core) Insert(commercialType *CommercialType) (err error) {
-	commercialType.CreatedAt = time.Now()
-	commercialType.UpdatedAt = commercialType.CreatedAt
-	commercialType.ProjectID = 10
-	commercialType.Status = 1
-	commercialType.LastUpdateBy = commercialType.CreatedBy
 	query := `
 		INSERT INTO mla_commercial_type (
 			name,
@@ -169,8 +164,6 @@ func (c *core) Insert(commercialType *CommercialType) (err error) {
 }
 
 func (c *core) Update(commercialType *CommercialType) (err error) {
-	commercialType.UpdatedAt = time.Now()
-	commercialType.ProjectID = 10
 	query := `
 		UPDATE
 			mla_commercial_type
@@ -181,7 +174,7 @@ func (c *core) Update(commercialType *CommercialType) (err error) {
 			last_update_by = ?
 		WHERE
 			id = ? AND
-			project_id = 10 AND 
+			project_id = ? AND 
 			status = 1`
 	args := []interface{}{
 		commercialType.Description,
@@ -189,6 +182,7 @@ func (c *core) Update(commercialType *CommercialType) (err error) {
 		commercialType.UpdatedAt,
 		commercialType.LastUpdateBy,
 		commercialType.ID,
+		commercialType.ProjectID,
 	}
 	queryTrail := auditTrail.ConstructLogQuery(query, args...)
 	tx, err := c.db.Beginx()

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"net/http"
 	"strconv"
+	"time"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
@@ -29,7 +30,7 @@ func (c *Controller) handleGetAllCompanies(w http.ResponseWriter, r *http.Reques
 		userid = fmt.Sprintf("%v", userID)
 	}
 
-	companies, err := c.company.Select(10, userid)
+	companies, err := c.company.Select( c.projectID, userid)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllCompanies] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get company", http.StatusInternalServerError)
@@ -89,7 +90,7 @@ func (c *Controller) handleGetCompanyByID(w http.ResponseWriter, r *http.Request
 		userid = fmt.Sprintf("%v", userID)
 	}
 
-	company, err := c.company.Get(id, 10, userid, isAdmin)
+	company, err := c.company.Get(id, c.projectID, userid, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleGetCompanyByID] company not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
@@ -156,7 +157,7 @@ func (c *Controller) handleDeleteCompany(w http.ResponseWriter, r *http.Request)
 		userid = fmt.Sprintf("%v", userID)
 	}
 
-	comp, err := c.company.Get(id, 10, userid, isAdmin)
+	comp, err := c.company.Get(id, c.projectID, userid, isAdmin)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteCompany] Company not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
@@ -169,7 +170,7 @@ func (c *Controller) handleDeleteCompany(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	err = c.company.Delete(id, 10, userid, comp.CreatedBy, isAdmin)
+	err = c.company.Delete(id, c.projectID, userid, comp.CreatedBy, isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteCompany] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete Company", http.StatusInternalServerError)
@@ -213,6 +214,11 @@ func (c *Controller) handlePostCompany(w http.ResponseWriter, r *http.Request) {
 		Email:     params.Email,
 		Npwp:      params.Npwp,
 		CreatedBy: userid,
+		CreatedAt: time.Now(),
+		UpdatedAt: time.Now(),
+		Status: 	1,
+		LastUpdateBy: userid,
+		ProjectID: c.projectID,
 	}
 
 	err = c.company.Insert(&company)
@@ -258,7 +264,7 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		userid = fmt.Sprintf("%v", userID)
 	}
 
-	comp, err := c.company.Get(id, 10, userid, isAdmin)
+	comp, err := c.company.Get(id, c.projectID, userid, isAdmin)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchCompany] Company not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
@@ -281,6 +287,8 @@ func (c *Controller) handlePatchCompany(w http.ResponseWriter, r *http.Request) 
 		Npwp:         params.Npwp,
 		CreatedBy:    comp.CreatedBy,
 		LastUpdateBy: userid,
+		UpdatedAt:	  time.Now(),
+		ProjectID: 	  c.projectID,
 	}
 	err = c.company.Update(&company, userid, isAdmin)
 	if err != nil {
