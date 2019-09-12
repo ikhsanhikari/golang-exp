@@ -172,6 +172,7 @@ func main() {
 		rest   = rest.New(
 			reporter,
 			auth,
+			cfg.ProjectID,
 			coreHistory,
 			coreProduct,
 			coreOrder,

@@ -37,6 +37,7 @@ type Auth interface {
 type Controller struct {
 	reporter       reporter.Reporter
 	auth           Auth
+	projectID      int64
 	history        history.ICore
 	product        product.ICore
 	order          order.ICore
@@ -65,6 +66,7 @@ type Controller struct {
 func New(
 	reporter reporter.Reporter,
 	auth Auth,
+	projectID int64,
 	history history.ICore,
 	product product.ICore,
 	order order.ICore,
@@ -91,6 +93,7 @@ func New(
 	return &Controller{
 		reporter:       reporter,
 		auth:           auth,
+		projectID:      projectID,
 		history:        history,
 		product:        product,
 		order:          order,

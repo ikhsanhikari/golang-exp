@@ -14,8 +14,7 @@ import (
 
 func (c *Controller) handlePostAging(w http.ResponseWriter, r *http.Request) {
 	var (
-		projectID = int64(10)
-		params    reqInsertAging
+		params reqInsertAging
 	)
 
 	err := form.Bind(&params, r)
@@ -34,8 +33,8 @@ func (c *Controller) handlePostAging(w http.ResponseWriter, r *http.Request) {
 	userID, ok := user["sub"]
 	if !ok {
 		if params.CreatedBy == "" {
-			c.reporter.Errorf("[handlePostAging] invalid parameter, failed get userID")
-			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			c.reporter.Errorf("[handlePostAging] invalid parameter, failed get CreatedBy")
+			view.RenderJSONError(w, "invalid parameter, failed get CreatedBy", http.StatusBadRequest)
 			return
 		}
 		userID = params.CreatedBy
@@ -45,7 +44,7 @@ func (c *Controller) handlePostAging(w http.ResponseWriter, r *http.Request) {
 		Name:         params.Name,
 		Description:  params.Description,
 		Price:        params.Price,
-		ProjectID:    projectID,
+		ProjectID:    c.projectID,
 		CreatedBy:    userID.(string),
 		LastUpdateBy: userID.(string),
 	}
@@ -79,11 +78,10 @@ func (c *Controller) handlePostAging(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 	var (
-		projectID = int64(10)
-		params    reqUpdateAging
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		isAdmin   = false
+		params  reqUpdateAging
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		isAdmin = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchAging] invalid parameter, err: %s", err.Error())
@@ -91,7 +89,7 @@ func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	getAging, err := c.aging.Get(id, projectID)
+	getAging, err := c.aging.Get(id, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchAging] aging not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Aging not found", http.StatusNotFound)
@@ -119,8 +117,8 @@ func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 	userID, ok := user["sub"]
 	if !ok {
 		if params.LastUpdateBy == "" {
-			c.reporter.Errorf("[handlePatchAging] invalid parameter, failed get userID")
-			view.RenderJSONError(w, "invalid parameter, failed get userID", http.StatusBadRequest)
+			c.reporter.Errorf("[handlePatchAging] invalid parameter, failed get LastUpdateBy")
+			view.RenderJSONError(w, "invalid parameter, failed get LastUpdateBy", http.StatusBadRequest)
 			return
 		}
 		userID = params.LastUpdateBy
@@ -132,7 +130,7 @@ func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 		Name:         params.Name,
 		Description:  params.Description,
 		Price:        params.Price,
-		ProjectID:    projectID,
+		ProjectID:    c.projectID,
 		CreatedBy:    getAging.CreatedBy,
 		LastUpdateBy: userID.(string),
 	}
@@ -166,11 +164,10 @@ func (c *Controller) handlePatchAging(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handleDeleteAging(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		params    reqDeleteAging
-		projectID = int64(10)
-		isAdmin   = false
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		params  reqDeleteAging
+		isAdmin = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteAging] invalid parameter, err: %s", err.Error())
@@ -196,7 +193,7 @@ func (c *Controller) handleDeleteAging(w http.ResponseWriter, r *http.Request) {
 		isAdmin = true
 	}
 
-	_, err = c.aging.Get(id, projectID)
+	_, err = c.aging.Get(id, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleDeleteAging] aging not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Aging not found", http.StatusNotFound)
@@ -208,7 +205,7 @@ func (c *Controller) handleDeleteAging(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.aging.Delete(id, projectID, userID.(string), isAdmin)
+	err = c.aging.Delete(id, c.projectID, userID.(string), isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteAging] failed delete aging, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete aging", http.StatusInternalServerError)
@@ -223,11 +220,8 @@ func (c *Controller) handleDeleteAging(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handleGetAllAgings(w http.ResponseWriter, r *http.Request) {
-	var (
-		projectID = int64(10)
-	)
 
-	agings, err := c.aging.Select(projectID)
+	agings, err := c.aging.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllAging] aging not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
