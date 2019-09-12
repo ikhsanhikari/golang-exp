@@ -5,7 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"time"
-	"fmt"
+	
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
