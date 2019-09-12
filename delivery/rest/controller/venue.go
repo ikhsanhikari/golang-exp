@@ -20,7 +20,7 @@ import (
 func (c *Controller) handleGetAllVenuesAvailable(w http.ResponseWriter, r *http.Request) {
 	var (
 		venues venue.VenueAvailables
-		err 	error
+		err    error
 	)
 	venues, err = c.venue.GetVenueAvailable()
 
@@ -46,8 +46,8 @@ func (c *Controller) handleGetAllVenuesAvailable(w http.ResponseWriter, r *http.
 
 func (c *Controller) handleGetAllVenuesGroupAvailable(w http.ResponseWriter, r *http.Request) {
 	var (
-		venues venue.VenueGroupAvailables
-		err error
+		venues    venue.VenueGroupAvailables
+		err       error
 		projectID = int64(10)
 	)
 	venues, err = c.venue.GetVenueGroupAvailable(projectID)
@@ -78,7 +78,7 @@ func (c *Controller) handleGetVenueByID(w http.ResponseWriter, r *http.Request) 
 		id, err = strconv.ParseInt(_id, 10, 64)
 		isAdmin = false
 		userid  = ""
-		venue 	venue.Venue
+		venue   venue.Venue
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleGetVenueByID] invalid parameter, err: %s", err.Error())
@@ -147,25 +147,102 @@ func (c *Controller) handleGetVenueByID(w http.ResponseWriter, r *http.Request) 
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetVenueByLatAndLong(w http.ResponseWriter, r *http.Request) {
+	var (
+		lat, err  = strconv.ParseFloat(router.GetParam(r, "latitude"), 64)
+		long, er = strconv.ParseFloat(router.GetParam(r, "longitude"), 64)
+		isAdmin   = false
+		userid    = ""
+		venues    venue.Venues
+	)
+	if err != nil || er != nil  {
+		c.reporter.Errorf("[handleGetVenueByLatAndLong] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
+
+	user, ok := authpassport.GetUser(r)
+	if !ok {
+		c.reporter.Errorf("[handleGetVenueByLatAndLong] failed get user")
+		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
+		return
+	}
+
+	userID, ok := user["sub"]
+	if !ok {
+		isAdmin = true
+	} else {
+		userid = fmt.Sprintf("%v", userID)
+	}
+
+	if isAdmin == true {
+		venues, err = c.venue.GetByLatLong(10, "", lat, long)
+	} else {
+		venues, err = c.venue.GetByLatLong(10, userid, lat, long)
+	}
+	if err != nil {
+		c.reporter.Errorf("[handleGetVenueByLatAndLong] venue not found, err: %s", err.Error())
+		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetVenueByLatAndLong] failed get Venue, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get venue", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponse, 0, len(venues))
+	for _, venue := range venues {
+		res = append(res, view.DataResponse{
+			Type: "venues",
+			ID:   venue.Id,
+			Attributes: view.VenueAttributes{
+				Id:               venue.Id,
+				VenueType:        venue.VenueType,
+				VenueName:        venue.VenueName,
+				Address:          venue.Address,
+				City:             venue.City,
+				Province:         venue.Province,
+				Zip:              venue.Zip,
+				Capacity:         venue.Capacity,
+				Facilities:       venue.Facilities,
+				PtID:             venue.PtID,
+				CreatedAt:        venue.CreatedAt,
+				UpdatedAt:        venue.UpdatedAt,
+				DeletedAt:        venue.DeletedAt,
+				Longitude:        venue.Longitude,
+				Latitude:         venue.Latitude,
+				Status:           venue.Status,
+				PicName:          venue.PicName,
+				PicContactNumber: venue.PicContactNumber,
+				VenuePhone:       venue.VenuePhone,
+				CreatedBy:        venue.CreatedBy,
+				LastUpdateBy:     venue.LastUpdateBy,
+				ShowStatus:       venue.ShowStatus,
+			},
+		})
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
 
 // Select All with Pagination
 func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) {
 	var (
-		getParam 		= r.URL.Query()
-		cityName 		= getParam.Get("city")
-		statusVenue 	= getParam.Get("status")
-		limitVal 		= getParam.Get("limit")
-		offsetVal 		= getParam.Get("page")
-		showStatus 		= getParam.Get("show")
-		projectID 		= int64(10)
-		venues 			venue.Venues
-		userid 			string
-		err 			error
-		limitBase		= 9
-		offset 			= 1
-		hasNext 		= false
-	) 	
-	
+		getParam    = r.URL.Query()
+		cityName    = getParam.Get("city")
+		statusVenue = getParam.Get("status")
+		limitVal    = getParam.Get("limit")
+		offsetVal   = getParam.Get("page")
+		showStatus  = getParam.Get("show")
+		projectID   = int64(10)
+		venues      venue.Venues
+		userid      string
+		err         error
+		limitBase   = 9
+		offset      = 1
+		hasNext     = false
+	)
+
 	if showStatus != "false" {
 		showStatus = "true"
 	} else {
@@ -255,9 +332,9 @@ func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) 
 // Select All without Pagination
 func (c *Controller) handleSelectAllVenues(w http.ResponseWriter, r *http.Request) {
 	var (
-		userid	string
-		err 	error
-		venues  venue.Venues
+		userid string
+		err    error
+		venues venue.Venues
 	)
 	user, ok := authpassport.GetUser(r)
 	if !ok {
@@ -317,13 +394,13 @@ func (c *Controller) handleSelectAllVenues(w http.ResponseWriter, r *http.Reques
 // Handle delete
 func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 	var (
-		id, err 	= strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		userid 		string
-		isAdmin 	= false
-		params 		reqVenue
-		venues 		venue.Venue
+		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+		userid  string
+		isAdmin = false
+		params  reqVenue
+		venues  venue.Venue
 	)
-	
+
 	if err != nil {
 		c.reporter.Warningf("[handleDeleteVenue] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -335,7 +412,7 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
-	
+
 	userID, ok := user["sub"]
 	if !ok {
 		err = form.Bind(&params, r)
@@ -449,13 +526,13 @@ func (c *Controller) handlePostVenue(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 	var (
-		id, err 	= strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		params 		reqVenue
-		isAdmin 	= false
-		userid 		string
-		venues 		venue.Venue
+		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+		params  reqVenue
+		isAdmin = false
+		userid  string
+		venues  venue.Venue
 	)
-	
+
 	if err != nil {
 		c.reporter.Warningf("[handlePatchVenue] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -563,13 +640,13 @@ func (c *Controller) handlePatchVenue(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Request) {
 	var (
-		id, err 	= strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
-		isAdmin 	= false
-		userid 		string
-		status 		int64
-		vaStatus 	int64
+		id, err  = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+		isAdmin  = false
+		userid   string
+		status   int64
+		vaStatus int64
 	)
-	
+
 	if err != nil {
 		c.reporter.Warningf("[handlePatchVenue] id must be integer, err: %s", err.Error())
 		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
@@ -581,7 +658,7 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
 		return
 	}
-	
+
 	userID, ok := user["sub"]
 	if !ok {
 		userid = ""
@@ -681,10 +758,10 @@ func (c *Controller) handleShowStatusVenue(w http.ResponseWriter, r *http.Reques
 
 func (c *Controller) InsertLicense(venueID int64, createdBy string, buyerID string) error {
 	var (
-		licenseNumberUUID 	= util.GenerateUUID()
-		layout 				= "2006-01-02T15:04:05.000Z"
-		str 				= "1999-01-01T11:45:26.371Z"
-		defaultTime, err 	= time.Parse(layout, str)
+		licenseNumberUUID = util.GenerateUUID()
+		layout            = "2006-01-02T15:04:05.000Z"
+		str               = "1999-01-01T11:45:26.371Z"
+		defaultTime, err  = time.Parse(layout, str)
 	)
 	if err != nil {
 		c.reporter.Warningf("[handleInsertLicense] Error insert license, err: %s", err.Error())
