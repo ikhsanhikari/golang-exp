@@ -19,9 +19,8 @@ import (
 
 func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 	var (
-		params    reqOrder
-		projectID = int64(10)
-		isAdmin   = false
+		params  reqOrder
+		isAdmin = false
 	)
 
 	err := form.Bind(&params, r)
@@ -50,9 +49,9 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 
 	var venue venue.Venue
 	if isAdmin {
-		venue, err = c.venue.Get(projectID, params.VenueID, "")
+		venue, err = c.venue.Get(c.projectID, params.VenueID, "")
 	} else {
-		venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
+		venue, err = c.venue.Get(c.projectID, params.VenueID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Venue Not Found, err: %s", err.Error())
@@ -60,21 +59,21 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, err := c.device.Get(projectID, params.DeviceID)
+	device, err := c.device.Get(c.projectID, params.DeviceID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Device Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
 		return
 	}
 
-	product, err := c.product.Get(projectID, params.ProductID)
+	product, err := c.product.Get(c.projectID, params.ProductID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Product Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
 		return
 	}
 
-	installation, err := c.installation.Get(params.InstallationID, projectID)
+	installation, err := c.installation.Get(params.InstallationID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Installation Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
@@ -83,7 +82,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 
 	var room room.Room
 	if params.RoomID != 0 && params.RoomQuantity != 0 {
-		room, err = c.room.Get(projectID, params.RoomID)
+		room, err = c.room.Get(c.projectID, params.RoomID)
 		if err == sql.ErrNoRows {
 			c.reporter.Errorf("[handlePostOrder] Room Not Found, err: %s", err.Error())
 			view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
@@ -91,7 +90,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	aging, err := c.aging.Get(params.AgingID, projectID)
+	aging, err := c.aging.Get(params.AgingID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrder] Aging Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
@@ -134,7 +133,7 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 		Status:         0,
 		CreatedBy:      userID.(string),
 		LastUpdateBy:   userID.(string),
-		ProjectID:      projectID,
+		ProjectID:      c.projectID,
 		Email:          params.Email,
 	}
 
@@ -191,9 +190,8 @@ func (c *Controller) handlePostOrder(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Request) {
 	var (
-		params    reqOrder
-		projectID = int64(10)
-		isAdmin   = false
+		params  reqOrder
+		isAdmin = false
 	)
 
 	err := form.Bind(&params, r)
@@ -232,9 +230,9 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 	var venue venue.Venue
 	if isAdmin {
-		venue, err = c.venue.Get(projectID, params.VenueID, "")
+		venue, err = c.venue.Get(c.projectID, params.VenueID, "")
 	} else {
-		venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
+		venue, err = c.venue.Get(c.projectID, params.VenueID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrderByAgent] Venue Not Found, err: %s", err.Error())
@@ -242,21 +240,21 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	device, err := c.device.Get(projectID, params.DeviceID)
+	device, err := c.device.Get(c.projectID, params.DeviceID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrderByAgent] Device Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
 		return
 	}
 
-	product, err := c.product.Get(projectID, params.ProductID)
+	product, err := c.product.Get(c.projectID, params.ProductID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrderByAgent] Product Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
 		return
 	}
 
-	installation, err := c.installation.Get(params.InstallationID, projectID)
+	installation, err := c.installation.Get(params.InstallationID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrderByAgent] Installation Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
@@ -265,7 +263,7 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 	var room room.Room
 	if params.RoomID != 0 && params.RoomQuantity != 0 {
-		room, err = c.room.Get(projectID, params.RoomID)
+		room, err = c.room.Get(c.projectID, params.RoomID)
 		if err == sql.ErrNoRows {
 			c.reporter.Errorf("[handlePostOrderByAgent] Room Not Found, err: %s", err.Error())
 			view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
@@ -273,7 +271,7 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		}
 	}
 
-	aging, err := c.aging.Get(params.AgingID, projectID)
+	aging, err := c.aging.Get(params.AgingID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePostOrderByAgent] Aging Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
@@ -313,7 +311,7 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 		Status:         4,
 		CreatedBy:      userID.(string),
 		LastUpdateBy:   userID.(string),
-		ProjectID:      projectID,
+		ProjectID:      c.projectID,
 		Email:          params.Email,
 	}
 
@@ -368,11 +366,10 @@ func (c *Controller) handlePostOrderByAgent(w http.ResponseWriter, r *http.Reque
 
 func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		params    reqUserID
-		projectID = int64(10)
-		isAdmin   = false
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		params  reqUserID
+		isAdmin = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrderForPayment] invalid parameter, err: %s", err.Error())
@@ -401,9 +398,9 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 	//check open payment status
 	var getOrder order.Order
 	if isAdmin {
-		getOrder, err = c.order.Get(id, projectID, "")
+		getOrder, err = c.order.Get(id, c.projectID, "")
 	} else {
-		getOrder, err = c.order.Get(id, projectID, userID.(string))
+		getOrder, err = c.order.Get(id, c.projectID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrderForPayment] order not found, err: %s", err.Error())
@@ -503,11 +500,10 @@ func (c *Controller) handlePatchOrderForPayment(w http.ResponseWriter, r *http.R
 
 func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	var (
-		params    reqOrder
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		projectID = int64(10)
-		isAdmin   = false
+		params  reqOrder
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		isAdmin = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrder] invalid parameter, err: %s", err.Error())
@@ -543,9 +539,9 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	//validasi order
 	var getOrder order.Order
 	if isAdmin {
-		getOrder, err = c.order.Get(id, projectID, "")
+		getOrder, err = c.order.Get(id, c.projectID, "")
 	} else {
-		getOrder, err = c.order.Get(id, projectID, userID.(string))
+		getOrder, err = c.order.Get(id, c.projectID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order not found, err: %s", err.Error())
@@ -561,9 +557,9 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 	//validasi foreign key
 	var venue venue.Venue
 	if isAdmin {
-		venue, err = c.venue.Get(projectID, params.VenueID, "")
+		venue, err = c.venue.Get(c.projectID, params.VenueID, "")
 	} else {
-		venue, err = c.venue.Get(projectID, params.VenueID, userID.(string))
+		venue, err = c.venue.Get(c.projectID, params.VenueID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Venue Not Found, err: %s", err.Error())
@@ -571,21 +567,21 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	device, err := c.device.Get(projectID, params.DeviceID)
+	device, err := c.device.Get(c.projectID, params.DeviceID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Device Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
 		return
 	}
 
-	product, err := c.product.Get(projectID, params.ProductID)
+	product, err := c.product.Get(c.projectID, params.ProductID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Product Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
 		return
 	}
 
-	installation, err := c.installation.Get(params.InstallationID, projectID)
+	installation, err := c.installation.Get(params.InstallationID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Installation Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
@@ -594,7 +590,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 
 	var room room.Room
 	if params.RoomID != 0 && params.RoomQuantity != 0 {
-		room, err = c.room.Get(projectID, params.RoomID)
+		room, err = c.room.Get(c.projectID, params.RoomID)
 		if err == sql.ErrNoRows {
 			c.reporter.Errorf("[handlePostOrder] Room Not Found, err: %s", err.Error())
 			view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
@@ -602,7 +598,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
-	aging, err := c.aging.Get(params.AgingID, projectID)
+	aging, err := c.aging.Get(params.AgingID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] Aging Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)
@@ -619,9 +615,9 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 
 	//validasi order detail
 	if isAdmin {
-		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, "")
+		_, err = c.orderDetail.GetFromDBByOrderID(id, c.projectID, "")
 	} else {
-		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, userID.(string))
+		_, err = c.orderDetail.GetFromDBByOrderID(id, c.projectID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order details not found, err: %s", err.Error())
@@ -650,7 +646,7 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 		RoomQuantity:   params.RoomQuantity,
 		TotalPrice:     totalPrice,
 		PaymentFee:     params.PaymentFee,
-		ProjectID:      projectID,
+		ProjectID:      c.projectID,
 		Status:         getOrder.Status,
 		CreatedBy:      getOrder.CreatedBy,
 		LastUpdateBy:   userID.(string),
@@ -710,11 +706,10 @@ func (c *Controller) handlePatchOrder(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		params    reqUpdateOrderStatus
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		projectID = int64(10)
-		isAdmin   = false
+		params  reqUpdateOrderStatus
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		isAdmin = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOrderStatus] invalid parameter, err: %s", err.Error())
@@ -748,9 +743,9 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 
 	var getOrder order.Order
 	if isAdmin {
-		getOrder, err = c.order.Get(id, projectID, "")
+		getOrder, err = c.order.Get(id, c.projectID, "")
 	} else {
-		getOrder, err = c.order.Get(id, projectID, userID.(string))
+		getOrder, err = c.order.Get(id, c.projectID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleUpdateOrderStatus] order not found, err: %s", err.Error())
@@ -766,7 +761,7 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 	//update status order
 	updateStatus := order.Order{
 		OrderID:      id,
-		ProjectID:    projectID,
+		ProjectID:    c.projectID,
 		Status:       params.Status,
 		CreatedBy:    getOrder.CreatedBy,
 		LastUpdateBy: userID.(string),
@@ -830,11 +825,10 @@ func (c *Controller) handleUpdateOrderStatusByID(w http.ResponseWriter, r *http.
 
 func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		params    reqUpdateOpenPaymentStatus
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		projectID = int64(10)
-		isAdmin   = false
+		params  reqUpdateOpenPaymentStatus
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		isAdmin = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] invalid parameter, err: %s", err.Error())
@@ -868,9 +862,9 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 
 	var getOrder order.Order
 	if isAdmin {
-		getOrder, err = c.order.Get(id, projectID, "")
+		getOrder, err = c.order.Get(id, c.projectID, "")
 	} else {
-		getOrder, err = c.order.Get(id, projectID, userID.(string))
+		getOrder, err = c.order.Get(id, c.projectID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleUpdateOpenPaymentStatus] order not found, err: %s", err.Error())
@@ -885,7 +879,7 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 
 	updateStatus := order.Order{
 		OrderID:           id,
-		ProjectID:         projectID,
+		ProjectID:         c.projectID,
 		OpenPaymentStatus: params.OpenPaymentStatus,
 		CreatedBy:         getOrder.CreatedBy,
 		LastUpdateBy:      userID.(string),
@@ -937,11 +931,10 @@ func (c *Controller) handleUpdateOpenPaymentStatusByID(w http.ResponseWriter, r 
 
 func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		params    reqUserID
-		projectID = int64(10)
-		isAdmin   = false
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+		params  reqUserID
+		isAdmin = false
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteOrder] invalid parameter, err: %s", err.Error())
@@ -970,9 +963,9 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	//validasi order
 	var getOrder order.Order
 	if isAdmin {
-		getOrder, err = c.order.Get(id, projectID, "")
+		getOrder, err = c.order.Get(id, c.projectID, "")
 	} else {
-		getOrder, err = c.order.Get(id, projectID, userID.(string))
+		getOrder, err = c.order.Get(id, c.projectID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleDeleteOrder] order not found, err: %s", err.Error())
@@ -987,9 +980,9 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 
 	//validasi order detail
 	if isAdmin {
-		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, "")
+		_, err = c.orderDetail.GetFromDBByOrderID(id, c.projectID, "")
 	} else {
-		_, err = c.orderDetail.GetFromDBByOrderID(id, projectID, userID.(string))
+		_, err = c.orderDetail.GetFromDBByOrderID(id, c.projectID, userID.(string))
 	}
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handlePatchOrder] order details not found, err: %s", err.Error())
@@ -1005,7 +998,7 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 	//delete order
 	deleteOrder := order.Order{
 		OrderID:      id,
-		ProjectID:    projectID,
+		ProjectID:    c.projectID,
 		CreatedBy:    getOrder.CreatedBy,
 		LastUpdateBy: userID.(string),
 		BuyerID:      getOrder.BuyerID,
@@ -1037,7 +1030,6 @@ func (c *Controller) handleDeleteOrder(w http.ResponseWriter, r *http.Request) {
 }
 
 func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) {
-	var projectID = int64(10)
 
 	user, ok := authpassport.GetUser(r)
 	if !ok {
@@ -1050,7 +1042,7 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 		userID = ""
 	}
 
-	orders, err := c.order.Select(projectID, userID.(string))
+	orders, err := c.order.Select(c.projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrders] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
@@ -1101,9 +1093,8 @@ func (c *Controller) handleGetAllOrders(w http.ResponseWriter, r *http.Request) 
 
 func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		projectID = int64(10)
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleGetOrderByID] invalid parameter, err: %s", err.Error())
@@ -1122,7 +1113,7 @@ func (c *Controller) handleGetOrderByID(w http.ResponseWriter, r *http.Request) 
 		userID = ""
 	}
 
-	order, err := c.order.Get(id, projectID, userID.(string))
+	order, err := c.order.Get(id, c.projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetOrderByID] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)
@@ -1172,7 +1163,6 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 	var (
 		_venueID     = router.GetParam(r, "venue_id")
 		venueID, err = strconv.ParseInt(_venueID, 10, 64)
-		projectID    = int64(10)
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByVenueID] invalid parameter, err: %s", err.Error())
@@ -1191,7 +1181,7 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 		userID = ""
 	}
 
-	orders, err := c.order.SelectByVenueID(venueID, projectID, userID.(string))
+	orders, err := c.order.SelectByVenueID(venueID, c.projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByVenueID] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -1243,8 +1233,7 @@ func (c *Controller) handleGetAllByVenueID(w http.ResponseWriter, r *http.Reques
 
 func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Request) {
 	var (
-		buyerID   = router.GetParam(r, "buyer_id")
-		projectID = int64(10)
+		buyerID = router.GetParam(r, "buyer_id")
 	)
 
 	user, ok := authpassport.GetUser(r)
@@ -1258,7 +1247,7 @@ func (c *Controller) handleGetAllByBuyerID(w http.ResponseWriter, r *http.Reques
 		userID = ""
 	}
 
-	orders, err := c.order.SelectByBuyerID(buyerID, projectID, userID.(string))
+	orders, err := c.order.SelectByBuyerID(buyerID, c.projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByBuyerID] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -1312,7 +1301,6 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 	var (
 		_paidDate = router.GetParam(r, "paid_date")
 		paidDate  = _paidDate[:10]
-		projectID = int64(10)
 	)
 
 	user, ok := authpassport.GetUser(r)
@@ -1326,7 +1314,7 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 		userID = ""
 	}
 
-	orders, err := c.order.SelectByPaidDate(paidDate, projectID, userID.(string))
+	orders, err := c.order.SelectByPaidDate(paidDate, c.projectID, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllOrdersByPaidDate] orders not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get orders", http.StatusInternalServerError)
@@ -1378,8 +1366,7 @@ func (c *Controller) handleGetAllByPaidDate(w http.ResponseWriter, r *http.Reque
 
 func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Request) {
 	var (
-		projectID = int64(10)
-		params    reqCalculateOrderPrice
+		params reqCalculateOrderPrice
 	)
 
 	err := form.Bind(&params, r)
@@ -1400,28 +1387,28 @@ func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Re
 		userID = ""
 	}
 
-	venue, err := c.venue.Get(projectID, params.VenueID, userID.(string))
+	venue, err := c.venue.Get(c.projectID, params.VenueID, userID.(string))
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleCalculateOrderPrice] Venue Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue Not Found", http.StatusNotFound)
 		return
 	}
 
-	device, err := c.device.Get(projectID, params.DeviceID)
+	device, err := c.device.Get(c.projectID, params.DeviceID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleCalculateOrderPrice] Device Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device Not Found", http.StatusNotFound)
 		return
 	}
 
-	product, err := c.product.Get(projectID, params.ProductID)
+	product, err := c.product.Get(c.projectID, params.ProductID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleCalculateOrderPrice] Product Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product Not Found", http.StatusNotFound)
 		return
 	}
 
-	installation, err := c.installation.Get(params.InstallationID, projectID)
+	installation, err := c.installation.Get(params.InstallationID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleCalculateOrderPrice] Installation Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation Not Found", http.StatusNotFound)
@@ -1430,7 +1417,7 @@ func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Re
 
 	var room room.Room
 	if params.RoomID != 0 && params.RoomQuantity != 0 {
-		room, err = c.room.Get(projectID, params.RoomID)
+		room, err = c.room.Get(c.projectID, params.RoomID)
 		if err == sql.ErrNoRows {
 			c.reporter.Errorf("[handleCalculateOrderPrice] Room Not Found, err: %s", err.Error())
 			view.RenderJSONError(w, "Room Not Found", http.StatusNotFound)
@@ -1438,7 +1425,7 @@ func (c *Controller) handleCalculateOrderPrice(w http.ResponseWriter, r *http.Re
 		}
 	}
 
-	aging, err := c.aging.Get(params.AgingID, projectID)
+	aging, err := c.aging.Get(params.AgingID, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleCalculateOrderPrice] Aging Not Found, err: %s", err.Error())
 		view.RenderJSONError(w, "Aging Not Found", http.StatusNotFound)

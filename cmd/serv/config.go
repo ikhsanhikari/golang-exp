@@ -21,8 +21,9 @@ type config struct {
 	PaymentBaseURL      string                 `envconfig:"PAYMENT_BASE_URL"`
 	PaymentMethodID     int64                  `envconfig:"PAYMENT_METHOD_ID"`
 	EmailBaseURL        string                 `envconfig:"EMAIL_BASE_URL"`
-	TemplatePaths   	[]string               `envconfig:"TEMPLATE_PATHS"`
-	UrlQrCode		    string                 `envconfig:"URL_QRCODE"`
+	TemplatePaths       []string               `envconfig:"TEMPLATE_PATHS"`
+	UrlQrCode           string                 `envconfig:"URL_QRCODE"`
+	ProjectID           int64                  `envconfig:"PROJECT_ID"`
 }
 
 var loadAndParse = env.LoadAndParse

@@ -14,9 +14,8 @@ import (
 
 func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id       = router.GetParam(r, "id")
-		id, err   = strconv.ParseInt(_id, 10, 64)
-		projectID = int64(10)
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
 	)
 	if err != nil {
 		c.reporter.Errorf("[handleGetSumOrderByVenueID] invalid parameter, err: %s", err.Error())
@@ -35,7 +34,7 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 		userID = ""
 	}
 
-	sumvenue, err := c.order.GetSummaryVenueByVenueID(id, projectID, fmt.Sprintf("%v", userID))
+	sumvenue, err := c.order.GetSummaryVenueByVenueID(id, c.projectID, fmt.Sprintf("%v", userID))
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handleGetSumOrderByVenueID] failed get sum venue, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get sum venue", http.StatusInternalServerError)
@@ -44,7 +43,7 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 
 	var res view.DataResponseOrder
 	if sumvenue.VenueID != 0 {
-		sumorders, err := c.order.SelectSummaryOrdersByVenueID(id, projectID, fmt.Sprintf("%v", userID))
+		sumorders, err := c.order.SelectSummaryOrdersByVenueID(id, c.projectID, fmt.Sprintf("%v", userID))
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetSumOrderByVenueID] failed get sum orders, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
@@ -127,8 +126,7 @@ func (c *Controller) handleGetSumOrderByID(w http.ResponseWriter, r *http.Reques
 
 func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *http.Request) {
 	var (
-		_id       = router.GetParam(r, "id")
-		projectID = int64(10)
+		_id = router.GetParam(r, "id")
 	)
 
 	user, ok := authpassport.GetUser(r)
@@ -149,7 +147,7 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 		return
 	}
 
-	sumvenue, err := c.order.GetSummaryVenueByLicenseNumber(_id, projectID)
+	sumvenue, err := c.order.GetSummaryVenueByLicenseNumber(_id, c.projectID)
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get sum venue, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get sum venue", http.StatusInternalServerError)
@@ -158,7 +156,7 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 
 	var res view.DataResponseOrder
 	if sumvenue.VenueID != 0 {
-		sumorders, err := c.order.SelectSummaryOrdersByLicenseNumber(_id, projectID)
+		sumorders, err := c.order.SelectSummaryOrdersByLicenseNumber(_id, c.projectID)
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetLicenseByIDForChecker] failed get sum orders, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
@@ -240,7 +238,6 @@ func (c *Controller) handleGetLicenseByIDForChecker(w http.ResponseWriter, r *ht
 }
 
 func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.Request) {
-	projectID := int64(10)
 
 	getParam := r.URL.Query()
 	limitVal := getParam.Get("limit")
@@ -272,14 +269,14 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 	}
 
 	if pagination == "true" {
-		sumvenues, err = c.order.SelectSummaryVenuesByUserID(projectID, userID.(string))
+		sumvenues, err = c.order.SelectSummaryVenuesByUserID(c.projectID, userID.(string))
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetSumOrdersByUserIDPagination] failed get sum venues, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum venues", http.StatusInternalServerError)
 			return
 		}
 	} else {
-		sumvenues, err = c.order.SelectSummaryVenuesByUserID(projectID, userID.(string))
+		sumvenues, err = c.order.SelectSummaryVenuesByUserID(c.projectID, userID.(string))
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum venues, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum venues", http.StatusInternalServerError)
@@ -290,7 +287,7 @@ func (c *Controller) handleGetSumOrdersByUserID(w http.ResponseWriter, r *http.R
 	res := make([]view.DataResponseOrder, 0, len(sumvenues))
 	for _, sumvenue := range sumvenues {
 
-		sumorders, err := c.order.SelectSummaryOrdersByVenueID(sumvenue.VenueID, projectID, userID.(string))
+		sumorders, err := c.order.SelectSummaryOrdersByVenueID(sumvenue.VenueID, c.projectID, userID.(string))
 		if err != nil && err != sql.ErrNoRows {
 			c.reporter.Errorf("[handleGetSumOrdersByUserID] failed get sum order, err: %s", err.Error())
 			view.RenderJSONError(w, "Failed get sum orders", http.StatusInternalServerError)
