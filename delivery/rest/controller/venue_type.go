@@ -4,7 +4,8 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
-
+	"time"
+	"fmt"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/venue_type"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
@@ -13,7 +14,7 @@ import (
 )
 
 func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Request) {
-	venueTypes, err := c.venueType.Select(10)
+	venueTypes, err := c.venueType.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenueTypes] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get VenueTypes", http.StatusInternalServerError)
@@ -76,7 +77,7 @@ func (c *Controller) handleDeleteVenueType(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	venueTy, err := c.venueType.Get(10, id)
+	venueTy, err := c.venueType.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteVenueType] VenueType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "VenueType not found", http.StatusNotFound)
@@ -89,7 +90,7 @@ func (c *Controller) handleDeleteVenueType(w http.ResponseWriter, r *http.Reques
 		return
 	}
 
-	err = c.venueType.Delete(10, id, venueTy.CommercialTypeID, userID.(string), isAdmin)
+	err = c.venueType.Delete(c.projectID, id, venueTy.CommercialTypeID, userID.(string), isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteVenueType] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete VenueType", http.StatusInternalServerError)
@@ -116,6 +117,11 @@ func (c *Controller) handlePostVenueType(w http.ResponseWriter, r *http.Request)
 		CommercialTypeID: params.CommercialTypeID,
 		PricingGroupID:   params.PricingGroupID,
 		CreatedBy:        params.CreatedBy,
+		CreatedAt:		  time.Now(),
+	    UpdatedAt:		  time.Now(),
+	    Status:			  1,
+		LastUpdateBy:    params.CreatedBy,
+		ProjectID:		 c.projectID,
 	}
 
 	err = c.venueType.Insert(&venueType)
@@ -165,7 +171,7 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		isAdmin = true
 	}
 
-	venueTy, err := c.venueType.Get(10, id)
+	venueTy, err := c.venueType.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchVenueType] VenueType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "VenueType not found", http.StatusNotFound)
@@ -185,6 +191,8 @@ func (c *Controller) handlePatchVenueType(w http.ResponseWriter, r *http.Request
 		CommercialTypeID: params.CommercialTypeID,
 		PricingGroupID:   params.PricingGroupID,
 		LastUpdateBy:     userID.(string),
+		ProjectID:		  c.projectID,
+		UpdatedAt:		  time.Now(),
 	}
 	err = c.venueType.Update(&venueType, venueTy.CommercialTypeID, isAdmin)
 	if err != nil {
@@ -224,7 +232,7 @@ func (c *Controller) handleGetVenueTypeByCommercialTypeID(w http.ResponseWriter,
 		return
 	}
 
-	venueTypes, err := c.venueType.GetByCommercialType(10, ctid)
+	venueTypes, err := c.venueType.GetByCommercialType(c.projectID, ctid)
 	if err != nil {
 		c.reporter.Errorf("[handleGetVenueTypeByCommercialTypeID] order not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Orders not found", http.StatusNotFound)

@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/installation"
@@ -13,7 +14,7 @@ import (
 )
 
 func (c *Controller) handleGetAllInstallations(w http.ResponseWriter, r *http.Request) {
-	installations, err := c.installation.Select(10)
+	installations, err := c.installation.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllInstallations] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get installation", http.StatusInternalServerError)
@@ -76,7 +77,7 @@ func (c *Controller) handleDeleteInstallation(w http.ResponseWriter, r *http.Req
 		isAdmin = true
 	}
 
-	_, err = c.installation.Get(id, 10)
+	_, err = c.installation.Get(id, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteInstallation] Installation not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation not found", http.StatusNotFound)
@@ -89,7 +90,7 @@ func (c *Controller) handleDeleteInstallation(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	err = c.installation.Delete(id, 10, userID.(string), isAdmin)
+	err = c.installation.Delete(id, c.projectID, userID.(string), isAdmin)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteInstallation] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete Installation", http.StatusInternalServerError)
@@ -115,6 +116,11 @@ func (c *Controller) handlePostInstallation(w http.ResponseWriter, r *http.Reque
 		Price:       params.Price,
 		DeviceID:    params.DeviceID,
 		CreatedBy:   params.CreatedBy,
+		CreatedAt:   time.Now(),
+	    UpdatedAt:   time.Now(),
+		Status:		 1,
+		LastUpdateBy: params.CreatedBy,
+		ProjectID:	 c.projectID,
 	}
 
 	err = c.installation.Insert(&installation)
@@ -162,7 +168,7 @@ func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Requ
 		isAdmin = true
 	}
 
-	_, err = c.installation.Get(id, 10)
+	_, err = c.installation.Get(id, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchInstallation] Installation not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Installation not found", http.StatusNotFound)
@@ -181,6 +187,8 @@ func (c *Controller) handlePatchInstallation(w http.ResponseWriter, r *http.Requ
 		Price:        params.Price,
 		DeviceID:     params.DeviceID,
 		LastUpdateBy: userID.(string),
+		UpdatedAt:	  time.Now(),
+		ProjectID:	  c.projectID,
 	}
 	err = c.installation.Update(&installation, isAdmin)
 	if err != nil {

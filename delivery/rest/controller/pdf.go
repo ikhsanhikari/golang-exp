@@ -61,7 +61,7 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) (string, orde
 		compAddress = ""
 	)
 	var dataDetail = order_detail.DataDetails{}
-	order, err := c.order.Get(id, 10, userID)
+	order, err := c.order.Get(id, c.projectID, userID)
 
 	if err == sql.ErrNoRows {
 		c.reporter.Warningf("[handlePatchPDF] order not found, err: %s", err.Error())
@@ -72,7 +72,7 @@ func (c *Controller) handleGetDataInvoice(id int64, userID string) (string, orde
 		return "0", dataDetail
 	}
 
-	dataDetail, err = c.orderDetail.GetDetailByOrderID(id, 10, userID)
+	dataDetail, err = c.orderDetail.GetDetailByOrderID(id, c.projectID, userID)
 	if err == sql.ErrNoRows {
 		c.reporter.Warningf("[handlePatchPDF] orderDetail not found, err: %s", err.Error())
 		return "0", dataDetail
@@ -122,7 +122,7 @@ func (c *Controller) handleGetDataSertificate(venueid int64, userID string) (str
 	t := "pdf_sertificate.tmpl"
 	pdf := "sertificate.pdf"
 
-	sumvenue, err := c.order.GetSummaryVenueByVenueID(venueid, 10, userID)
+	sumvenue, err := c.order.GetSummaryVenueByVenueID(venueid, c.projectID, userID)
 	if err != nil {
 		c.reporter.Errorf("[handleSertificatePDF] sum order not found, err: %s", err.Error())
 		return "0", sumvenue, "0"

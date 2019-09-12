@@ -12,3 +12,7 @@ type reqCompany struct {
 	CreatedBy  		string    `json:"createdBy"`
 	LastUpdateBy	string    `json:"lastUpdateBy"`
 }
+
+type reqCom struct {
+	UserID 			string 	  `json:"userID"`
+}

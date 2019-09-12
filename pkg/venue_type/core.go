@@ -150,12 +150,6 @@ func (c *core) GetByCommercialTypeID(pid int64, commercialTypeId int64) (venueTy
 }
 
 func (c *core) Insert(venueType *VenueType) (err error) {
-	venueType.CreatedAt = time.Now()
-	venueType.UpdatedAt = venueType.CreatedAt
-	venueType.Status = 1
-	venueType.ProjectID = 10
-	venueType.LastUpdateBy = venueType.CreatedBy
-
 	query := `
 	INSERT INTO mla_venue_types (
 		name,
@@ -230,9 +224,6 @@ func (c *core) Insert(venueType *VenueType) (err error) {
 }
 
 func (c *core) Update(venueType *VenueType, comId int64, isAdmin bool) (err error) {
-	venueType.UpdatedAt = time.Now()
-	venueType.ProjectID = 10
-
 	query := `
 		UPDATE
 			mla_venue_types
@@ -245,7 +236,7 @@ func (c *core) Update(venueType *VenueType, comId int64, isAdmin bool) (err erro
 			updated_at = ?,
 			last_update_by = ? 
 		WHERE
-			id = ? AND status = 1 AND project_id = 10`
+			id = ? AND status = 1 AND project_id = ?`
 
 	args := []interface{}{
 		venueType.Name,
@@ -256,6 +247,7 @@ func (c *core) Update(venueType *VenueType, comId int64, isAdmin bool) (err erro
 		venueType.UpdatedAt,
 		venueType.LastUpdateBy,
 		venueType.Id,
+		venueType.ProjectID,
 	}
 
 	if !isAdmin {
@@ -305,9 +297,9 @@ func (c *core) Delete(pid int64, id int64, comId int64, uid string, isAdmin bool
 		WHERE
 			id = ? AND
 			status = 1 AND 
-			project_id = 10`
+			project_id = ?`
 	args := []interface{}{
-		now, id,
+		now, id, pid ,
 	}
 
 	if !isAdmin {
@@ -341,11 +333,11 @@ func (c *core) Delete(pid int64, id int64, comId int64, uid string, isAdmin bool
 	if err != nil {
 		return err
 	}
-	redisKey := fmt.Sprintf("%s:%d:venueType:%d", redisPrefix, 10, id)
+	redisKey := fmt.Sprintf("%s:%d:venueType:%d", redisPrefix, pid, id)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, 10)
+	redisKey = fmt.Sprintf("%s:%d:venueType", redisPrefix, pid)
 	_ = c.deleteCache(redisKey)
-	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, 10, comId)
+	redisKey = fmt.Sprintf("%s:%d:venueType-by-commercial-type:%d", redisPrefix, pid, comId)
 	_ = c.deleteCache(redisKey)
 	return
 }
