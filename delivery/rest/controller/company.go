@@ -141,7 +141,7 @@ func (c *Controller) handleDeleteCompany(w http.ResponseWriter, r *http.Request)
 	}
 	var userid string
 	var isAdmin = false
-	var params reqCompany
+	var params reqCom
 	userID, ok := user["sub"]
 	if !ok {
 		err = form.Bind(&params, r)
@@ -150,7 +150,7 @@ func (c *Controller) handleDeleteCompany(w http.ResponseWriter, r *http.Request)
 			view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 			return
 		}
-		userid = params.CreatedBy
+		userid = params.UserID
 		isAdmin = true
 	} else {
 		userid = fmt.Sprintf("%v", userID)

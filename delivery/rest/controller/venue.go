@@ -397,7 +397,7 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		userid  string
 		isAdmin = false
-		params  reqVenue
+		params  reqVenu
 		venues  venue.Venue
 	)
 
@@ -421,7 +421,7 @@ func (c *Controller) handleDeleteVenue(w http.ResponseWriter, r *http.Request) {
 			view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
 			return
 		}
-		userid = params.CreatedBy
+		userid = params.UserID
 		isAdmin = true
 	} else {
 		userid = fmt.Sprintf("%v", userID)

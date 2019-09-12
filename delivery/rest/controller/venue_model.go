@@ -26,3 +26,9 @@ type reqVenue struct {
 	LastUpdateBy                 string  `json:"lastUpdateBy"`
 	ShowStatus                   int64   `json:"ShowStatus"`
 }
+
+type reqVenu struct {
+	UserID 			string 	  `json:"userID"`
+}
+
+
