@@ -14,7 +14,6 @@ import (
 )
 
 func (c *Controller) handleGetAllVenueTypes(w http.ResponseWriter, r *http.Request) {
-	fmt.Println(c.projectID)
 	venueTypes, err := c.venueType.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllVenueTypes] error get from repository, err: %s", err.Error())
