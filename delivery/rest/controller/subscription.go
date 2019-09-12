@@ -48,6 +48,38 @@ func (c *Controller) handleGetAllSubscriptions(w http.ResponseWriter, r *http.Re
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
+func (c *Controller) handleGetSubscriptions(w http.ResponseWriter, r *http.Request) {
+	var (
+		pid     = int64(10)
+		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
+	)
+
+	subscription, err := c.subscription.Get(pid, id)
+	if err != nil {
+		c.reporter.Errorf("[handleGetSubscriptions] error get from repository, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get Subscriptions", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponse{
+		Type: "subscriptions",
+		ID:   subscription.ID,
+		Attributes: view.SubscriptionAttributes{
+			PackageDuration: subscription.PackageDuration,
+			BoxSerialNumber: subscription.BoxSerialNumber,
+			SmartCardNumber: subscription.SmartCardNumber,
+			OrderID:         subscription.OrderID,
+			Status:          subscription.Status,
+			ProjectID:       subscription.ProjectID,
+			CreatedAt:       subscription.CreatedAt,
+			UpdatedAt:       subscription.UpdatedAt,
+			CreatedBy:       subscription.CreatedBy,
+			LastUpdateBy:    subscription.LastUpdateBy,
+		},
+	}
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
 func (c *Controller) handleGetSubscriptionByOrderID(w http.ResponseWriter, r *http.Request) {
 	var (
 		pid = int64(10)
