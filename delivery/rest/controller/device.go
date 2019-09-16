@@ -16,7 +16,7 @@ import (
 
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 
 	devices, err := c.device.Select(pid)
@@ -49,7 +49,7 @@ func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request)
 
 func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqDeleteDevice
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -111,7 +111,7 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 
 func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid    = int64(10)
+		pid    = c.projectID
 		params reqDevice
 	)
 	err := form.Bind(&params, r)
@@ -157,7 +157,7 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqDevice
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -223,5 +223,3 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 
 	view.RenderJSONData(w, device, http.StatusOK)
 }
-
-

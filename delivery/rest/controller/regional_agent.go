@@ -15,7 +15,7 @@ import (
 
 func (c *Controller) handleGetAllRegionalAgents(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 	regionalAgents, err := c.regionalAgent.Select(pid)
 	if err != nil {
@@ -49,7 +49,7 @@ func (c *Controller) handleGetAllRegionalAgents(w http.ResponseWriter, r *http.R
 
 func (c *Controller) handleGetRegionalAgents(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	)
 	regionalAgent, err := c.regionalAgent.Get(pid, id)
@@ -81,7 +81,7 @@ func (c *Controller) handleGetRegionalAgents(w http.ResponseWriter, r *http.Requ
 
 func (c *Controller) handleDeleteRegionalAgent(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqDeleteRegionalAgent
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -144,7 +144,7 @@ func (c *Controller) handleDeleteRegionalAgent(w http.ResponseWriter, r *http.Re
 func (c *Controller) handlePostRegionalAgent(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqRegionalAgent
-		pid    = int64(10)
+		pid    = c.projectID
 	)
 	err := form.Bind(&params, r)
 	if err != nil {
@@ -192,7 +192,7 @@ func (c *Controller) handlePostRegionalAgent(w http.ResponseWriter, r *http.Requ
 
 func (c *Controller) handlePatchRegionalAgent(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqRegionalAgent
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false

@@ -16,7 +16,7 @@ import (
 
 func (c *Controller) handleGetAllSubscriptions(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 
 	subscriptions, err := c.subscription.Select(pid)
@@ -50,7 +50,7 @@ func (c *Controller) handleGetAllSubscriptions(w http.ResponseWriter, r *http.Re
 
 func (c *Controller) handleGetSubscriptions(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	)
 
@@ -82,7 +82,7 @@ func (c *Controller) handleGetSubscriptions(w http.ResponseWriter, r *http.Reque
 
 func (c *Controller) handleGetSubscriptionByOrderID(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 	orderID := router.GetParam(r, "order_id")
 	subscriptions, err := c.subscription.GetByOrderNumber(pid, orderID)
@@ -115,7 +115,7 @@ func (c *Controller) handleGetSubscriptionByOrderID(w http.ResponseWriter, r *ht
 
 func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqDeleteSubscription
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -179,7 +179,7 @@ func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Req
 func (c *Controller) handlePostSubscription(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqSubscription
-		pid    = int64(10)
+		pid    = c.projectID
 	)
 	err := form.Bind(&params, r)
 
@@ -225,7 +225,7 @@ func (c *Controller) handlePostSubscription(w http.ResponseWriter, r *http.Reque
 
 func (c *Controller) handlePatchSubscription(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqSubscription
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false

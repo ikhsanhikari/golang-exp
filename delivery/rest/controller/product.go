@@ -17,7 +17,7 @@ import (
 func (c *Controller) handleGetAllByVenueType(w http.ResponseWriter, r *http.Request) {
 	venue, err := strconv.ParseInt(router.GetParam(r, "venue_type"), 10, 64)
 
-	products, err := c.product.SelectByVenueType(10, venue)
+	products, err := c.product.SelectByVenueType(c.projectID, venue)
 
 	if err != nil {
 		view.RenderJSONError(w, "Failed get products", http.StatusInternalServerError)
@@ -52,7 +52,7 @@ func (c *Controller) handleGetAllByVenueType(w http.ResponseWriter, r *http.Requ
 
 func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 	products, err := c.product.Select(pid)
 	if err != nil {
@@ -89,7 +89,7 @@ func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request
 
 func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqDeleteProduct
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -152,7 +152,7 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqProduct
-		pid    = int64(10)
+		pid    = c.projectID
 	)
 	err := form.Bind(&params, r)
 	if err != nil {
@@ -203,7 +203,7 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqProduct
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false

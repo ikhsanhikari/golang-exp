@@ -17,7 +17,7 @@ import (
 
 func (c *Controller) handleGetAllLicenses(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 	licenses, err := c.license.Select(pid)
 	if err != nil {
@@ -51,7 +51,7 @@ func (c *Controller) handleGetAllLicenses(w http.ResponseWriter, r *http.Request
 
 func (c *Controller) handleGetLicensesByBuyerID(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 	buyerID := router.GetParam(r, "buyer_id")
 	licenses, err := c.license.GetByBuyerId(pid, buyerID)
@@ -86,7 +86,7 @@ func (c *Controller) handleGetLicensesByBuyerID(w http.ResponseWriter, r *http.R
 
 func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqDeleteLicense
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -147,7 +147,7 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 
 func (c *Controller) handlePostLicense(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid    = int64(10)
+		pid    = c.projectID
 		params reqLicense
 	)
 
@@ -232,7 +232,7 @@ func (c *Controller) handlePatchLicense(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	licenseParam, err := c.license.Get(10, id)
+	licenseParam, err := c.license.Get(c.projectID, id)
 	buyerID := licenseParam.BuyerID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchLicense] license not found, err: %s", err.Error())
@@ -252,7 +252,7 @@ func (c *Controller) handlePatchLicense(w http.ResponseWriter, r *http.Request) 
 		LicenseStatus: params.LicenseStatus,
 		ActiveDate:    params.ActiveDate,
 		ExpiredDate:   params.ExpiredDate,
-		ProjectID:     10,
+		ProjectID:     c.projectID,
 		LastUpdateBy:  params.LastUpdateBy,
 		BuyerID:       params.BuyerID,
 	}

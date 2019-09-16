@@ -15,7 +15,7 @@ import (
 
 func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid = int64(10)
+		pid = c.projectID
 	)
 	rooms, err := c.room.Select(pid)
 	if err != nil {
@@ -47,7 +47,7 @@ func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqDeleteRoom
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -110,7 +110,7 @@ func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqRoom
-		pid    = int64(10)
+		pid    = c.projectID
 	)
 	err := form.Bind(&params, r)
 	if err != nil {
@@ -156,7 +156,7 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
+		pid     = c.projectID
 		params  reqRoom
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
