@@ -51,10 +51,8 @@ func (c *Controller) handleGetAllByVenueType(w http.ResponseWriter, r *http.Requ
 }
 
 func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = c.projectID
-	)
-	products, err := c.product.Select(pid)
+
+	products, err := c.product.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllProducts] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get products", http.StatusInternalServerError)
@@ -89,7 +87,6 @@ func (c *Controller) handleGetAllProducts(w http.ResponseWriter, r *http.Request
 
 func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = c.projectID
 		params  reqDeleteProduct
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -100,7 +97,7 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	productParam, err := c.product.Get(pid, id)
+	productParam, err := c.product.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteProduct] product not found, err: %s", err.Error())
 		view.RenderJSONError(w, "product not found", http.StatusNotFound)
@@ -139,7 +136,7 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 		userID = params.UserID
 		isAdmin = true
 	}
-	err = c.product.Delete(pid, id, venueTypeID, isAdmin, userID.(string))
+	err = c.product.Delete(c.projectID, id, venueTypeID, isAdmin, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteProduct] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete product", http.StatusInternalServerError)
@@ -152,7 +149,6 @@ func (c *Controller) handleDeleteProduct(w http.ResponseWriter, r *http.Request)
 func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqProduct
-		pid    = c.projectID
 	)
 	err := form.Bind(&params, r)
 	if err != nil {
@@ -187,7 +183,7 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 		Currency:     params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
-		ProjectID:    pid,
+		ProjectID:    c.projectID,
 		CreatedBy:    uid,
 	}
 
@@ -203,7 +199,6 @@ func (c *Controller) handlePostProduct(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = c.projectID
 		params  reqProduct
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -220,7 +215,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	productParam, err := c.product.Get(pid, id)
+	productParam, err := c.product.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchProduct] product not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Product not found", http.StatusNotFound)
@@ -262,7 +257,7 @@ func (c *Controller) handlePatchProduct(w http.ResponseWriter, r *http.Request) 
 		Currency:     params.Currency,
 		DisplayOrder: params.DisplayOrder,
 		Icon:         params.Icon,
-		ProjectID:    pid,
+		ProjectID:    c.projectID,
 		LastUpdateBy: userID.(string),
 	}
 	venueTypeID, err := strconv.ParseInt(productParam.VenueTypeID, 10, 64)

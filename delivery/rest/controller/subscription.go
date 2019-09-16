@@ -15,11 +15,8 @@ import (
 )
 
 func (c *Controller) handleGetAllSubscriptions(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = c.projectID
-	)
 
-	subscriptions, err := c.subscription.Select(pid)
+	subscriptions, err := c.subscription.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllSubscriptions] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Subscriptions", http.StatusInternalServerError)
@@ -50,11 +47,10 @@ func (c *Controller) handleGetAllSubscriptions(w http.ResponseWriter, r *http.Re
 
 func (c *Controller) handleGetSubscriptions(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = c.projectID
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	)
 
-	subscription, err := c.subscription.Get(pid, id)
+	subscription, err := c.subscription.Get(c.projectID, id)
 	if err != nil {
 		c.reporter.Errorf("[handleGetSubscriptions] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Subscriptions", http.StatusInternalServerError)
@@ -81,11 +77,9 @@ func (c *Controller) handleGetSubscriptions(w http.ResponseWriter, r *http.Reque
 }
 
 func (c *Controller) handleGetSubscriptionByOrderID(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = c.projectID
-	)
+
 	orderID := router.GetParam(r, "order_id")
-	subscriptions, err := c.subscription.GetByOrderNumber(pid, orderID)
+	subscriptions, err := c.subscription.GetByOrderNumber(c.projectID, orderID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetSubscriptionByOrderID] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get subscriptions by buyer id", http.StatusInternalServerError)
@@ -115,7 +109,6 @@ func (c *Controller) handleGetSubscriptionByOrderID(w http.ResponseWriter, r *ht
 
 func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = c.projectID
 		params  reqDeleteSubscription
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -126,7 +119,7 @@ func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	paramsSub, err := c.subscription.Get(pid, id)
+	paramsSub, err := c.subscription.Get(c.projectID, id)
 	orderID := paramsSub.OrderID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteSubscription] subscription not found, err: %s", err.Error())
@@ -166,7 +159,7 @@ func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Req
 		isAdmin = true
 	}
 
-	err = c.subscription.Delete(pid, id, isAdmin, userID.(string), orderID)
+	err = c.subscription.Delete(c.projectID, id, isAdmin, userID.(string), orderID)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteSubscription] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete subscription", http.StatusInternalServerError)
@@ -179,7 +172,6 @@ func (c *Controller) handleDeleteSubscription(w http.ResponseWriter, r *http.Req
 func (c *Controller) handlePostSubscription(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqSubscription
-		pid    = c.projectID
 	)
 	err := form.Bind(&params, r)
 
@@ -209,7 +201,7 @@ func (c *Controller) handlePostSubscription(w http.ResponseWriter, r *http.Reque
 		BoxSerialNumber: params.BoxSerialNumber,
 		SmartCardNumber: params.SmartCardNumber,
 		OrderID:         params.OrderID,
-		ProjectID:       pid,
+		ProjectID:       c.projectID,
 		CreatedBy:       uid,
 	}
 
@@ -225,7 +217,6 @@ func (c *Controller) handlePostSubscription(w http.ResponseWriter, r *http.Reque
 
 func (c *Controller) handlePatchSubscription(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = c.projectID
 		params  reqSubscription
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -242,7 +233,7 @@ func (c *Controller) handlePatchSubscription(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	paramsSub, err := c.subscription.Get(pid, id)
+	paramsSub, err := c.subscription.Get(c.projectID, id)
 	orderID := paramsSub.OrderID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchSubscription] subscription not found, err: %s", err.Error())
@@ -280,7 +271,7 @@ func (c *Controller) handlePatchSubscription(w http.ResponseWriter, r *http.Requ
 		BoxSerialNumber: params.BoxSerialNumber,
 		SmartCardNumber: params.SmartCardNumber,
 		OrderID:         params.OrderID,
-		ProjectID:       pid,
+		ProjectID:       c.projectID,
 		LastUpdateBy:    userID.(string),
 	}
 	err = c.subscription.Update(&subscription, isAdmin, orderID)
