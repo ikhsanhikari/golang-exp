@@ -14,10 +14,8 @@ import (
 )
 
 func (c *Controller) handleGetAllRegionalAgents(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
-	regionalAgents, err := c.regionalAgent.Select(pid)
+
+	regionalAgents, err := c.regionalAgent.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllRegionalAgents] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get RegionalAgents", http.StatusInternalServerError)
@@ -49,10 +47,9 @@ func (c *Controller) handleGetAllRegionalAgents(w http.ResponseWriter, r *http.R
 
 func (c *Controller) handleGetRegionalAgents(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 	)
-	regionalAgent, err := c.regionalAgent.Get(pid, id)
+	regionalAgent, err := c.regionalAgent.Get(c.projectID, id)
 	if err != nil {
 		c.reporter.Errorf("[handleGetRegionalAgents] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get RegionalAgents", http.StatusInternalServerError)
@@ -81,7 +78,6 @@ func (c *Controller) handleGetRegionalAgents(w http.ResponseWriter, r *http.Requ
 
 func (c *Controller) handleDeleteRegionalAgent(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		params  reqDeleteRegionalAgent
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -93,7 +89,7 @@ func (c *Controller) handleDeleteRegionalAgent(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	_, err = c.regionalAgent.Get(pid, id)
+	_, err = c.regionalAgent.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteRegionalAgent] regionalAgent not found, err: %s", err.Error())
 		view.RenderJSONError(w, "regionalAgent not found", http.StatusNotFound)
@@ -131,7 +127,7 @@ func (c *Controller) handleDeleteRegionalAgent(w http.ResponseWriter, r *http.Re
 		userID = params.UserID
 		isAdmin = true
 	}
-	err = c.regionalAgent.Delete(pid, id, isAdmin, userID.(string))
+	err = c.regionalAgent.Delete(c.projectID, id, isAdmin, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteRegionalAgent] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete regionalAgent", http.StatusInternalServerError)
@@ -144,7 +140,6 @@ func (c *Controller) handleDeleteRegionalAgent(w http.ResponseWriter, r *http.Re
 func (c *Controller) handlePostRegionalAgent(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqRegionalAgent
-		pid    = int64(10)
 	)
 	err := form.Bind(&params, r)
 	if err != nil {
@@ -176,7 +171,7 @@ func (c *Controller) handlePostRegionalAgent(w http.ResponseWriter, r *http.Requ
 		Email:     params.Email,
 		Phone:     params.Phone,
 		Website:   params.Website,
-		ProjectID: pid,
+		ProjectID: c.projectID,
 		CreatedBy: uid,
 	}
 
@@ -192,7 +187,6 @@ func (c *Controller) handlePostRegionalAgent(w http.ResponseWriter, r *http.Requ
 
 func (c *Controller) handlePatchRegionalAgent(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		params  reqRegionalAgent
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -211,7 +205,7 @@ func (c *Controller) handlePatchRegionalAgent(w http.ResponseWriter, r *http.Req
 		return
 	}
 
-	_, err = c.regionalAgent.Get(pid, id)
+	_, err = c.regionalAgent.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchRegionalAgent] regionalAgent not found, err: %s", err.Error())
 		view.RenderJSONError(w, "RegionalAgent not found", http.StatusNotFound)
@@ -250,7 +244,7 @@ func (c *Controller) handlePatchRegionalAgent(w http.ResponseWriter, r *http.Req
 		Email:        params.Email,
 		Phone:        params.Phone,
 		Website:      params.Website,
-		ProjectID:    pid,
+		ProjectID:    c.projectID,
 		LastUpdateBy: userID.(string),
 	}
 	err = c.regionalAgent.Update(&regionalAgent, isAdmin)

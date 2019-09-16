@@ -7,14 +7,14 @@ import (
 	"strconv"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/agent"
 	"git.sstv.io/lib/go/go-auth-api.git/authpassport"
 	"git.sstv.io/lib/go/gojunkyard.git/form"
 	"git.sstv.io/lib/go/gojunkyard.git/router"
-	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/agent"
 )
 
 func (c *Controller) handleGetAllAgents(w http.ResponseWriter, r *http.Request) {
-	agents, err := c.agent.Select(10)
+	agents, err := c.agent.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllAgents] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Agents", http.StatusInternalServerError)
@@ -43,7 +43,7 @@ func (c *Controller) handleGetAllAgents(w http.ResponseWriter, r *http.Request) 
 func (c *Controller) handleGetAllAgentsByUserID(w http.ResponseWriter, r *http.Request) {
 	id := router.GetParam(r, "userId")
 
-	agents, err := c.agent.SelectByUserID(10, id)
+	agents, err := c.agent.SelectByUserID(c.projectID, id)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllAgentsByUserID] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Agents", http.StatusInternalServerError)
@@ -66,7 +66,7 @@ func (c *Controller) handleDeleteAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	agentParam, err := c.agent.Get(10, id)
+	agentParam, err := c.agent.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteAgent] agent not found, err: %s", err.Error())
 		view.RenderJSONError(w, "agent not found", http.StatusNotFound)
@@ -79,7 +79,7 @@ func (c *Controller) handleDeleteAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.agent.Delete(10, id, agentParam.UserID)
+	err = c.agent.Delete(c.projectID, id, agentParam.UserID)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteAgent] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete agent", http.StatusInternalServerError)
@@ -100,7 +100,7 @@ func (c *Controller) handlePostAgent(w http.ResponseWriter, r *http.Request) {
 
 	agent := agent.Agent{
 		UserID:    params.UserID,
-		ProjectID: 10,
+		ProjectID: c.projectID,
 		CreatedBy: params.CreatedBy,
 	}
 
@@ -130,7 +130,7 @@ func (c *Controller) handlePatchAgent(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	agentParam, err := c.agent.Get(10, id)
+	agentParam, err := c.agent.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchAgent] agent not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Agent not found", http.StatusNotFound)
@@ -146,7 +146,7 @@ func (c *Controller) handlePatchAgent(w http.ResponseWriter, r *http.Request) {
 	agent := agent.Agent{
 		ID:           id,
 		UserID:       params.UserID,
-		ProjectID:    10,
+		ProjectID:    c.projectID,
 		LastUpdateBy: params.LastUpdateBy,
 	}
 	err = c.agent.Update(&agent, agentParam.UserID)

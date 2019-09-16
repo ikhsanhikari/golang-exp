@@ -14,10 +14,8 @@ import (
 )
 
 func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
-	rooms, err := c.room.Select(pid)
+
+	rooms, err := c.room.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllRooms] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Rooms", http.StatusInternalServerError)
@@ -47,7 +45,6 @@ func (c *Controller) handleGetAllRooms(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		params  reqDeleteRoom
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -59,7 +56,7 @@ func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.room.Get(pid, id)
+	_, err = c.room.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteRoom] room not found, err: %s", err.Error())
 		view.RenderJSONError(w, "room not found", http.StatusNotFound)
@@ -97,7 +94,7 @@ func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 		userID = params.UserID
 		isAdmin = true
 	}
-	err = c.room.Delete(pid, id, isAdmin, userID.(string))
+	err = c.room.Delete(c.projectID, id, isAdmin, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteRoom] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete room", http.StatusInternalServerError)
@@ -110,7 +107,6 @@ func (c *Controller) handleDeleteRoom(w http.ResponseWriter, r *http.Request) {
 func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 	var (
 		params reqRoom
-		pid    = int64(10)
 	)
 	err := form.Bind(&params, r)
 	if err != nil {
@@ -140,7 +136,7 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 		Name:        params.Name,
 		Description: params.Description,
 		Price:       params.Price,
-		ProjectID:   pid,
+		ProjectID:   c.projectID,
 		CreatedBy:   uid,
 	}
 
@@ -156,7 +152,6 @@ func (c *Controller) handlePostRoom(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		params  reqRoom
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -175,7 +170,7 @@ func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.room.Get(pid, id)
+	_, err = c.room.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchRoom] room not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Room not found", http.StatusNotFound)
@@ -212,7 +207,7 @@ func (c *Controller) handlePatchRoom(w http.ResponseWriter, r *http.Request) {
 		Name:         params.Name,
 		Description:  params.Description,
 		Price:        params.Price,
-		ProjectID:    pid,
+		ProjectID:    c.projectID,
 		LastUpdateBy: userID.(string),
 	}
 	err = c.room.Update(&room, isAdmin)
