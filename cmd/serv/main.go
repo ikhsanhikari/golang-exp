@@ -14,7 +14,6 @@ import (
 	commercialType "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
 	company "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/company"
 	device "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/device"
-	regional_agent "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/regional_agent"
 	email "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email"
 	emailLog "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/email_log"
 	_history "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/history"
@@ -22,9 +21,11 @@ import (
 	license "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	order "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	orderDetail "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
+	orderMatrix "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_matrix"
 	payment "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	_products "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	province "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
+	regional_agent "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/regional_agent"
 	room "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/room"
 	subscription "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/subscription"
 	template "git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/template"
@@ -171,6 +172,9 @@ func main() {
 	coreRegionalAgent := regional_agent.Init(db, redis, coreAuditTrail)
 	reporter.Infoln("/pkg/regional_agents successfully initialized")
 
+	coreOrderMatrix := orderMatrix.Init(db, redis, coreAuditTrail)
+	reporter.Infoln("/pkg/order_matrix successfully initialized")
+
 	var (
 		server = webserver.New(&cfg.Webserver)
 		rest   = rest.New(
@@ -200,6 +204,7 @@ func main() {
 			coreAgent,
 			coreSubscription,
 			coreRegionalAgent,
+			coreOrderMatrix,
 		)
 	)
 	rest.Register(server.Router())

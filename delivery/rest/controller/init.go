@@ -17,6 +17,7 @@ import (
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/license"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_detail"
+	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/order_matrix"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/payment"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/product"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/province"
@@ -62,6 +63,7 @@ type Controller struct {
 	agent          agent.ICore
 	subscription   subscription.ICore
 	regionalAgent  regional_agent.ICore
+	orderMatrix    order_matrix.ICore
 }
 
 // New ...
@@ -92,6 +94,7 @@ func New(
 	agent agent.ICore,
 	subscription subscription.ICore,
 	regionalAgent regional_agent.ICore,
+	orderMatrix order_matrix.ICore,
 ) *Controller {
 	return &Controller{
 		reporter:       reporter,
@@ -120,6 +123,7 @@ func New(
 		agent:          agent,
 		subscription:   subscription,
 		regionalAgent:  regionalAgent,
+		orderMatrix:    orderMatrix,
 	}
 }
 
@@ -237,4 +241,13 @@ func (c *Controller) Register(router *router.Router) {
 	router.PATCH("/regional_agents/:id", c.auth.MustAuthorize(c.handlePatchRegionalAgent, "molanobar:regional_agents.update"))
 	router.DELETE("/regional_agents/:id", c.auth.MustAuthorize(c.handleDeleteRegionalAgent, "molanobar:regional_agents.delete"))
 	router.GET("/regional_agents/:id", c.handleGetRegionalAgents)
+
+	router.GET("/order-matrix", c.auth.MustAuthorize(c.handleGetAllOrderMatrices, "molanobar:order_matrices.read"))
+	router.GET("/order-matrix-venue-types", c.auth.MustAuthorize(c.handleGetAllOrderMatrices, "molanobar:order_matrices.read"))
+	router.GET("/order-matrix-capacities", c.auth.MustAuthorize(c.handleGetAllOrderMatrices, "molanobar:order_matrices.read"))
+	router.GET("/order-matrix-agings", c.auth.MustAuthorize(c.handleGetAllOrderMatrices, "molanobar:order_matrices.read"))
+	router.GET("/order-matrix-devices", c.auth.MustAuthorize(c.handleGetAllOrderMatrices, "molanobar:order_matrices.read"))
+	router.POST("/order-matrix", c.auth.MustAuthorize(c.handlePostOrderMatrix, "molanobar:order_matrices.create"))
+	router.PATCH("/order-matrix/:id", c.auth.MustAuthorize(c.handlePatchOrderMatrix, "molanobar:order_matrices.update"))
+	router.DELETE("/order-matrix/:id", c.auth.MustAuthorize(c.handleDeleteOrderMatrix, "molanobar:order_matrices.delete"))
 }
