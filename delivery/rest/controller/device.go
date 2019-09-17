@@ -15,11 +15,8 @@ import (
 )
 
 func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
 
-	devices, err := c.device.Select(pid)
+	devices, err := c.device.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllDevices] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Devices", http.StatusInternalServerError)
@@ -49,7 +46,6 @@ func (c *Controller) handleGetAllDevices(w http.ResponseWriter, r *http.Request)
 
 func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		params  reqDeleteDevice
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -60,7 +56,7 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	_, err = c.device.Get(pid, id)
+	_, err = c.device.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteDevice] device not found, err: %s", err.Error())
 		view.RenderJSONError(w, "device not found", http.StatusNotFound)
@@ -99,7 +95,7 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 		isAdmin = true
 	}
 
-	err = c.device.Delete(pid, id, isAdmin, userID.(string))
+	err = c.device.Delete(c.projectID, id, isAdmin, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteDevice] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete device", http.StatusInternalServerError)
@@ -111,7 +107,6 @@ func (c *Controller) handleDeleteDevice(w http.ResponseWriter, r *http.Request) 
 
 func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid    = int64(10)
 		params reqDevice
 	)
 	err := form.Bind(&params, r)
@@ -141,7 +136,7 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 		Name:      params.Name,
 		Info:      params.Info,
 		Price:     params.Price,
-		ProjectID: pid,
+		ProjectID: c.projectID,
 		CreatedBy: uid,
 	}
 
@@ -157,7 +152,6 @@ func (c *Controller) handlePostDevice(w http.ResponseWriter, r *http.Request) {
 
 func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		params  reqDevice
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -174,7 +168,7 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	_, err = c.device.Get(pid, id)
+	_, err = c.device.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchDevice] device not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Device not found", http.StatusNotFound)
@@ -211,7 +205,7 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 		Name:         params.Name,
 		Info:         params.Info,
 		Price:        params.Price,
-		ProjectID:    pid,
+		ProjectID:    c.projectID,
 		LastUpdateBy: userID.(string),
 	}
 	err = c.device.Update(&device, isAdmin)
@@ -223,5 +217,3 @@ func (c *Controller) handlePatchDevice(w http.ResponseWriter, r *http.Request) {
 
 	view.RenderJSONData(w, device, http.StatusOK)
 }
-
-

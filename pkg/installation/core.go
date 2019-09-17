@@ -105,12 +105,6 @@ func (c *core) getFromDB(id int64, pid int64) (installation Installation, err er
 }
 
 func (c *core) Insert(installation *Installation) (err error) {
-	installation.CreatedAt = time.Now()
-	installation.UpdatedAt = installation.CreatedAt
-	installation.ProjectID = 10
-	installation.Status = 1
-	installation.LastUpdateBy = installation.CreatedBy
-
 	query := `
 	INSERT INTO mla_installation (
 		name,
@@ -183,9 +177,6 @@ func (c *core) Insert(installation *Installation) (err error) {
 }
 
 func (c *core) Update(installation *Installation, isAdmin bool) (err error) {
-	installation.UpdatedAt = time.Now()
-	installation.ProjectID = 10
-
 	query := `
 		UPDATE
 			mla_installation
@@ -198,7 +189,7 @@ func (c *core) Update(installation *Installation, isAdmin bool) (err error) {
 			last_update_by = ?
 		WHERE
 			id = ? AND 
-			project_id = 10 AND 
+			project_id = ? AND 
 			status = 	1`
 
 	args := []interface{}{
@@ -209,6 +200,7 @@ func (c *core) Update(installation *Installation, isAdmin bool) (err error) {
 		installation.UpdatedAt,
 		installation.LastUpdateBy,
 		installation.ID,
+		installation.ProjectID,
 	}
 
 	if !isAdmin {

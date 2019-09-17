@@ -16,10 +16,8 @@ import (
 )
 
 func (c *Controller) handleGetAllLicenses(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
-	licenses, err := c.license.Select(pid)
+
+	licenses, err := c.license.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllLicenses] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Licenses", http.StatusInternalServerError)
@@ -50,11 +48,8 @@ func (c *Controller) handleGetAllLicenses(w http.ResponseWriter, r *http.Request
 }
 
 func (c *Controller) handleGetLicensesByBuyerID(w http.ResponseWriter, r *http.Request) {
-	var (
-		pid = int64(10)
-	)
 	buyerID := router.GetParam(r, "buyer_id")
-	licenses, err := c.license.GetByBuyerId(pid, buyerID)
+	licenses, err := c.license.GetByBuyerId(c.projectID, buyerID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetLicensesByBuyerId] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Licenses by buyer id", http.StatusInternalServerError)
@@ -86,7 +81,6 @@ func (c *Controller) handleGetLicensesByBuyerID(w http.ResponseWriter, r *http.R
 
 func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid     = int64(10)
 		params  reqDeleteLicense
 		id, err = strconv.ParseInt(router.GetParam(r, "id"), 10, 64)
 		isAdmin = false
@@ -97,7 +91,7 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	licenseParam, err := c.license.Get(pid, id)
+	licenseParam, err := c.license.Get(c.projectID, id)
 	buyerID := licenseParam.BuyerID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteLicense] license not found, err: %s", err.Error())
@@ -135,7 +129,7 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 		userID = params.UserID
 		isAdmin = true
 	}
-	err = c.license.Delete(pid, id, buyerID, licenseParam.LicenseNumber, isAdmin, userID.(string))
+	err = c.license.Delete(c.projectID, id, buyerID, licenseParam.LicenseNumber, isAdmin, userID.(string))
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteLicense] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete license", http.StatusInternalServerError)
@@ -147,7 +141,6 @@ func (c *Controller) handleDeleteLicense(w http.ResponseWriter, r *http.Request)
 
 func (c *Controller) handlePostLicense(w http.ResponseWriter, r *http.Request) {
 	var (
-		pid    = int64(10)
 		params reqLicense
 	)
 
@@ -182,7 +175,7 @@ func (c *Controller) handlePostLicense(w http.ResponseWriter, r *http.Request) {
 		LicenseStatus: params.LicenseStatus,
 		ActiveDate:    params.ActiveDate,
 		ExpiredDate:   params.ExpiredDate,
-		ProjectID:     pid,
+		ProjectID:     c.projectID,
 		CreatedBy:     params.CreatedBy,
 		BuyerID:       params.BuyerID,
 	}
@@ -232,7 +225,7 @@ func (c *Controller) handlePatchLicense(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
-	licenseParam, err := c.license.Get(10, id)
+	licenseParam, err := c.license.Get(c.projectID, id)
 	buyerID := licenseParam.BuyerID
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchLicense] license not found, err: %s", err.Error())
@@ -252,7 +245,7 @@ func (c *Controller) handlePatchLicense(w http.ResponseWriter, r *http.Request) 
 		LicenseStatus: params.LicenseStatus,
 		ActiveDate:    params.ActiveDate,
 		ExpiredDate:   params.ExpiredDate,
-		ProjectID:     10,
+		ProjectID:     c.projectID,
 		LastUpdateBy:  params.LastUpdateBy,
 		BuyerID:       params.BuyerID,
 	}

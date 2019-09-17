@@ -14,7 +14,7 @@ import (
 )
 
 func (c *Controller) handleGetAllAdmins(w http.ResponseWriter, r *http.Request) {
-	admins, err := c.admin.Select(10)
+	admins, err := c.admin.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllAdmins] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Admins", http.StatusInternalServerError)
@@ -43,7 +43,7 @@ func (c *Controller) handleGetAllAdmins(w http.ResponseWriter, r *http.Request) 
 func (c *Controller) handleGetAllAdminsByUserID(w http.ResponseWriter, r *http.Request) {
 	id := router.GetParam(r, "userId")
 
-	admins, err := c.admin.SelectByUserID(10, id)
+	admins, err := c.admin.SelectByUserID(c.projectID, id)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllAdminsByUserID] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get Admins", http.StatusInternalServerError)
@@ -66,7 +66,7 @@ func (c *Controller) handleDeleteAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	adminParam, err := c.admin.Get(10, id)
+	adminParam, err := c.admin.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeleteAdmin] admin not found, err: %s", err.Error())
 		view.RenderJSONError(w, "admin not found", http.StatusNotFound)
@@ -79,7 +79,7 @@ func (c *Controller) handleDeleteAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	err = c.admin.Delete(10, id, adminParam.UserID)
+	err = c.admin.Delete(c.projectID, id, adminParam.UserID)
 	if err != nil {
 		c.reporter.Errorf("[handleDeleteAdmin] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete admin", http.StatusInternalServerError)
@@ -100,7 +100,7 @@ func (c *Controller) handlePostAdmin(w http.ResponseWriter, r *http.Request) {
 
 	admin := admin.Admin{
 		UserID:    params.UserID,
-		ProjectID: 10,
+		ProjectID: c.projectID,
 		CreatedBy: params.CreatedBy,
 	}
 
@@ -130,7 +130,7 @@ func (c *Controller) handlePatchAdmin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	adminParam, err := c.admin.Get(10, id)
+	adminParam, err := c.admin.Get(c.projectID, id)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchAdmin] admin not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Admin not found", http.StatusNotFound)
@@ -146,7 +146,7 @@ func (c *Controller) handlePatchAdmin(w http.ResponseWriter, r *http.Request) {
 	admin := admin.Admin{
 		ID:           id,
 		UserID:       params.UserID,
-		ProjectID:    10,
+		ProjectID:    c.projectID,
 		LastUpdateBy: params.LastUpdateBy,
 	}
 	err = c.admin.Update(&admin, adminParam.UserID)

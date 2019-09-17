@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"net/http"
 	"strconv"
+	"time"
 
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/delivery/rest/view"
 	"git.sstv.io/apps/molanobar/api/molanobar-core.git/pkg/commercial_type"
@@ -13,7 +14,7 @@ import (
 )
 
 func (c *Controller) handleGetAllcommercialTypes(w http.ResponseWriter, r *http.Request) {
-	commercialTypes, err := c.commercialType.Select(10)
+	commercialTypes, err := c.commercialType.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllcommercialTypes] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get commercialType", http.StatusInternalServerError)
@@ -50,7 +51,7 @@ func (c *Controller) handleDeletecommercialType(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	_, err = c.commercialType.Get(id,10)
+	_, err = c.commercialType.Get(id, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handleDeletecommercialType] commercialType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "commercialType not found", http.StatusNotFound)
@@ -63,7 +64,7 @@ func (c *Controller) handleDeletecommercialType(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	err = c.commercialType.Delete(id,10)
+	err = c.commercialType.Delete(id, c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleDeletecommercialType] error delete repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed delete commercialType", http.StatusInternalServerError)
@@ -86,6 +87,11 @@ func (c *Controller) handlePostcommercialType(w http.ResponseWriter, r *http.Req
 		Name			:  params.Name,
 		Description		:  params.Description,
 		CreatedBy		:  params.CreatedBy,
+		CreatedAt 		:  time.Now(),
+		UpdatedAt 		:  time.Now(),
+		Status 			:  1,
+		LastUpdateBy    :  params.CreatedBy,
+		ProjectID		:  c.projectID,
 	}
 
 	err = c.commercialType.Insert(&commercialType)
@@ -114,7 +120,7 @@ func (c *Controller) handlePatchcommercialType(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	_, err = c.commercialType.Get(id,10)
+	_, err = c.commercialType.Get(id, c.projectID)
 	if err == sql.ErrNoRows {
 		c.reporter.Infof("[handlePatchcommercialType] commercialType not found, err: %s", err.Error())
 		view.RenderJSONError(w, "commercialType not found", http.StatusNotFound)
@@ -131,6 +137,8 @@ func (c *Controller) handlePatchcommercialType(w http.ResponseWriter, r *http.Re
 		Name			:  params.Name,
 		Description		:  params.Description,
 		LastUpdateBy	:  params.LastUpdateBy,
+		ProjectID		:  c.projectID,
+		UpdatedAt 		:  time.Now(),
 	}
 	err = c.commercialType.Update(&commercialType)
 	if err != nil {

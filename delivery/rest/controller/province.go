@@ -12,7 +12,7 @@ import (
 
 func (c *Controller) handleGetAllProvinces(w http.ResponseWriter, r *http.Request) {
 
-	provinces, err := c.province.Select(10)
+	provinces, err := c.province.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllCities] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get province", http.StatusInternalServerError)
@@ -48,7 +48,7 @@ func (c *Controller) handleGetProvincesByID(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	provinces, err := c.province.Get(id, 10)
+	provinces, err := c.province.Get(id, c.projectID)
 	if err != nil && err == sql.ErrNoRows {
 		c.reporter.Errorf("[handleGetProvincesByID] province not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
@@ -61,7 +61,7 @@ func (c *Controller) handleGetProvincesByID(w http.ResponseWriter, r *http.Reque
 	}
 	getParam := r.URL.Query()
 	if getParam.Get("relationship") == "true" {
-		cities, err := c.city.SelectByProvince(provinces.ProvinceID, 10)
+		cities, err := c.city.SelectByProvince(provinces.ProvinceID, c.projectID)
 		if err != nil && err == sql.ErrNoRows {
 			c.reporter.Errorf("[handleSelectByProvince] select city in province not found, err: %s", err.Error())
 			view.RenderJSONError(w, "City not found in province", http.StatusNotFound)
