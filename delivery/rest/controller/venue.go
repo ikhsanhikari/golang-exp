@@ -151,9 +151,6 @@ func (c *Controller) handleGetVenueByLatAndLong(w http.ResponseWriter, r *http.R
 	var (
 		lat, err  = strconv.ParseFloat(router.GetParam(r, "latitude"), 64)
 		long, er = strconv.ParseFloat(router.GetParam(r, "longitude"), 64)
-		isAdmin   = false
-		userid    = ""
-		venues    venue.Venues
 	)
 	if err != nil || er != nil  {
 		c.reporter.Errorf("[handleGetVenueByLatAndLong] invalid parameter, err: %s", err.Error())
@@ -161,25 +158,8 @@ func (c *Controller) handleGetVenueByLatAndLong(w http.ResponseWriter, r *http.R
 		return
 	}
 
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleGetVenueByLatAndLong] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
-
-	userID, ok := user["sub"]
-	if !ok {
-		isAdmin = true
-	} else {
-		userid = fmt.Sprintf("%v", userID)
-	}
-
-	if isAdmin == true {
-		venues, err = c.venue.GetByLatLong(c.projectID, "", lat, long)
-	} else {
-		venues, err = c.venue.GetByLatLong(c.projectID, userid, lat, long)
-	}
+	venues, err := c.venue.GetByLatLong(c.projectID, "", lat, long)
+	
 	if err != nil {
 		c.reporter.Errorf("[handleGetVenueByLatAndLong] venue not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
