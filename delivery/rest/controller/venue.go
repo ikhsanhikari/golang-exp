@@ -148,82 +148,85 @@ func (c *Controller) handleGetVenueByID(w http.ResponseWriter, r *http.Request) 
 }
 
 func (c *Controller) handleGetVenueByLatAndLong(w http.ResponseWriter, r *http.Request) {
-	var (
-		lat, err  = strconv.ParseFloat(router.GetParam(r, "latitude"), 64)
-		long, er = strconv.ParseFloat(router.GetParam(r, "longitude"), 64)
-		isAdmin   = false
-		userid    = ""
-		venues    venue.Venues
-	)
-	if err != nil || er != nil  {
-		c.reporter.Errorf("[handleGetVenueByLatAndLong] invalid parameter, err: %s", err.Error())
-		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
-		return
-	}
+    var (
+        lat, err = strconv.ParseFloat(router.GetParam(r, "latitude"), 64)
+        long, er = strconv.ParseFloat(router.GetParam(r, "longitude"), 64)
+        getParam = r.URL.Query()
+        limitVal = getParam.Get("limit")
+        offsetVal = getParam.Get("page")
+        limitBase = 9
+        offset = 1
+        hasNext = false
+    )
 
-	user, ok := authpassport.GetUser(r)
-	if !ok {
-		c.reporter.Errorf("[handleGetVenueByLatAndLong] failed get user")
-		view.RenderJSONError(w, "failed get user", http.StatusInternalServerError)
-		return
-	}
+    if limitVal != "" {
+        limitBase, err = strconv.Atoi(limitVal)
+    }
+    if offsetVal != "" {
+        offset, err = strconv.Atoi(offsetVal)
+    }
+    offset = offset - 1
+    offset = limitBase * offset
+    limit := limitBase + 1
 
-	userID, ok := user["sub"]
-	if !ok {
-		isAdmin = true
-	} else {
-		userid = fmt.Sprintf("%v", userID)
-	}
+    if err != nil || er != nil {
+        c.reporter.Errorf("[handleGetVenueByLatAndLong] invalid parameter, err: %s", err.Error())
+        view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+        return
+    }
 
-	if isAdmin == true {
-		venues, err = c.venue.GetByLatLong(c.projectID, "", lat, long)
-	} else {
-		venues, err = c.venue.GetByLatLong(c.projectID, userid, lat, long)
-	}
-	if err != nil {
-		c.reporter.Errorf("[handleGetVenueByLatAndLong] venue not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
-		return
-	}
-	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handleGetVenueByLatAndLong] failed get Venue, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get venue", http.StatusInternalServerError)
-		return
-	}
+    venues, err := c.venue.GetByLatLong(c.projectID, "", lat, long, limit, offset)
+    
+    if err != nil {
+        c.reporter.Errorf("[handleGetVenueByLatAndLong] venue not found, err: %s", err.Error())
+        view.RenderJSONError(w, "Venue not found", http.StatusNotFound)
+        return
+    }
+    if err != nil && err != sql.ErrNoRows {
+        c.reporter.Errorf("[handleGetVenueByLatAndLong] failed get Venue, err: %s", err.Error())
+        view.RenderJSONError(w, "Failed get venue", http.StatusInternalServerError)
+        return
+    }
 
-	res := make([]view.DataResponse, 0, len(venues))
-	for _, venue := range venues {
-		res = append(res, view.DataResponse{
-			Type: "venues",
-			ID:   venue.Id,
-			Attributes: view.VenueAttributes{
-				Id:               venue.Id,
-				VenueType:        venue.VenueType,
-				VenueName:        venue.VenueName,
-				Address:          venue.Address,
-				City:             venue.City,
-				Province:         venue.Province,
-				Zip:              venue.Zip,
-				Capacity:         venue.Capacity,
-				Facilities:       venue.Facilities,
-				PtID:             venue.PtID,
-				CreatedAt:        venue.CreatedAt,
-				UpdatedAt:        venue.UpdatedAt,
-				DeletedAt:        venue.DeletedAt,
-				Longitude:        venue.Longitude,
-				Latitude:         venue.Latitude,
-				Status:           venue.Status,
-				PicName:          venue.PicName,
-				PicContactNumber: venue.PicContactNumber,
-				VenuePhone:       venue.VenuePhone,
-				CreatedBy:        venue.CreatedBy,
-				LastUpdateBy:     venue.LastUpdateBy,
-				ShowStatus:       venue.ShowStatus,
-			},
-		})
-	}
-	view.RenderJSONData(w, res, http.StatusOK)
+    res := make([]view.DataResponse, 0, len(venues))
+    for num, venue := range venues {
+        if num < limitBase {
+        	res = append(res, view.DataResponse{
+            	Type: "venues",
+            	ID: venue.Id,
+            	Attributes: view.VenueAttributes{
+					Id: venue.Id,
+					VenueType: venue.VenueType,
+					VenueName: venue.VenueName,
+					Address: venue.Address,
+					City: venue.City,
+					Province: venue.Province,
+					Zip: venue.Zip,
+					Capacity: venue.Capacity,
+					Facilities: venue.Facilities,
+					PtID: venue.PtID,
+					CreatedAt: venue.CreatedAt,
+					UpdatedAt: venue.UpdatedAt,
+					DeletedAt: venue.DeletedAt,
+					Longitude: venue.Longitude,
+					Latitude: venue.Latitude,
+					Status: venue.Status,
+					PicName: venue.PicName,
+					PicContactNumber: venue.PicContactNumber,
+					VenuePhone: venue.VenuePhone,
+					CreatedBy: venue.CreatedBy,
+					LastUpdateBy: venue.LastUpdateBy,
+					ShowStatus: venue.ShowStatus,
+				},
+			})
+		}
+		if num >= limitBase {
+			hasNext = true
+		}
+    }
+    view.RenderJSONDataPage(w, res, hasNext, http.StatusOK)
 }
+
 
 // Select All with Pagination
 func (c *Controller) handleGetAllVenues(w http.ResponseWriter, r *http.Request) {
