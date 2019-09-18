@@ -16,7 +16,7 @@ import (
 // ICore is the interface
 type ICore interface {
 	Select(pid int64, uid string) (venues Venues, err error)
-	GetByLatLong(pid int64, uid string, lt float64, lng float64) (venues Venues, err error)
+	GetByLatLong(pid int64, uid string, lt float64, lng float64, limit int, offset int) (venues Venues, err error)
 	GetVenueByCity(pid int64, cityName string, showStatus string, limit int, offset int) (venues Venues, err error)
 	GetVenueByStatus(pid int64, limit int, offset int) (venues Venues, err error)
 	GetVenueByCityID(pid int64, cityName string, limit int, offset int) (venues Venues, err error)
@@ -93,7 +93,7 @@ func (c *core) selectFromDB(pid int64, uid string) (venue Venues, err error) {
 	return
 }
 
-func (c *core) GetByLatLong(pid int64, uid string, lt float64, lng float64) (venue Venues, err error) {
+func (c *core) GetByLatLong(pid int64, uid string, lt float64, lng float64, limit int, offset int) (venue Venues, err error) {
 	query := `
 		SELECT
 			id,
@@ -133,11 +133,11 @@ func (c *core) GetByLatLong(pid int64, uid string, lt float64, lng float64) (ven
 			project_id = ? 
 	`
 	if uid == "" {
-		query = query + `ORDER BY distance`
-		err = c.db.Select(&venue, query, lt, lng, lt, pid)
+		query = query + `ORDER BY distance ASC LIMIT ?, ?`
+		err = c.db.Select(&venue, query, lt, lng, lt, pid, offset, limit)
 	} else {
-		query = query + `AND created_by = ? ORDER BY distance`
-		err = c.db.Select(&venue, query, lt, lng, lt, pid, uid)
+		query = query + `AND created_by = ? ORDER BY distance ASC LIMIT ?, ?`
+		err = c.db.Select(&venue, query, lt, lng, lt, pid, uid, offset, limit)
 	}
 	return
 }
@@ -592,6 +592,7 @@ func (c *core) InsertVenueAvailable(cityName string, status int64) (err error) {
 }
 
 func (c *core) Update(venue *Venue, uid string, isAdmin bool) (err error) {
+
 	query := `
 		UPDATE
 			mla_venues
