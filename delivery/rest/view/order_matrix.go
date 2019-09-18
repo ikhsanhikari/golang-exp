@@ -32,7 +32,7 @@ type OrderMatrixAttributes struct {
 type OrderMatrixDetailAttributes struct {
 	VenueTypeID      int64     `json:"venueTypeID"`
 	VenueTypeName    string    `json:"venueTypeName"`
-	Capacity         int64     `json:"capacity"`
+	Capacity         *int64    `json:"capacity"`
 	AgingID          int64     `json:"agingID"`
 	AgingName        string    `json:"agingName"`
 	DeviceID         int64     `json:"deviceID"`
@@ -50,4 +50,23 @@ type OrderMatrixDetailAttributes struct {
 	LastUpdateBy     string    `json:"lastUpdateBy"`
 	DeletedAt        null.Time `json:"deletedAt"`
 	ProjectID        int64     `json:"projectID"`
+}
+
+type SummaryVenueTypeAttributes struct {
+	VenueTypeID   int64  `json:"venue_type_id"`
+	VenueTypeName string `json:"venue_type_name"`
+}
+
+type SummaryCapacityAttributes struct {
+	Capacity int64 `json:"capacity"`
+}
+
+type SummaryAgingAttributes struct {
+	AgingID   int64  `json:"aging_id"`
+	AgingName string `json:"aging_name"`
+}
+
+type SummaryDeviceAttributes struct {
+	DeviceID   int64  `json:"device_id"`
+	DeviceName string `json:"device_name"`
 }

@@ -78,6 +78,18 @@ func (c *Controller) handlePostOrderMatrix(w http.ResponseWriter, r *http.Reques
 		ProjectID:      c.projectID,
 	}
 
+	checker, err := c.orderMatrix.MatrixChecker(matrix)
+	if err != nil {
+		c.reporter.Errorf("[handlePostOrderMatrix] failed doing matrix checker, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed doing matrix checker", http.StatusInternalServerError)
+		return
+	}
+	if checker.IsExists == 1 {
+		c.reporter.Errorf("[handlePostOrderMatrix] Duplicate matrix")
+		view.RenderJSONError(w, "Duplicate matrix", http.StatusConflict)
+		return
+	}
+
 	err = c.orderMatrix.Insert(&matrix)
 	if err != nil {
 		c.reporter.Errorf("[handlePostOrderMatrix] failed post order matrix, err: %s", err.Error())
@@ -198,6 +210,18 @@ func (c *Controller) handlePatchOrderMatrix(w http.ResponseWriter, r *http.Reque
 		ProjectID:      c.projectID,
 	}
 
+	checker, err := c.orderMatrix.MatrixChecker(matrix)
+	if err != nil {
+		c.reporter.Errorf("[handlePatchOrderMatrix] failed doing matrix checker, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed doing matrix checker", http.StatusInternalServerError)
+		return
+	}
+	if checker.IsExists == 1 {
+		c.reporter.Errorf("[handlePatchOrderMatrix] Duplicate matrix")
+		view.RenderJSONError(w, "Duplicate matrix", http.StatusConflict)
+		return
+	}
+
 	err = c.orderMatrix.Update(&matrix)
 	if err != nil {
 		c.reporter.Errorf("[handlePatchOrderMatrix] failed post order matrix, err: %s", err.Error())
@@ -281,15 +305,10 @@ func (c *Controller) handleDeleteOrderMatrix(w http.ResponseWriter, r *http.Requ
 }
 
 func (c *Controller) handleGetAllOrderMatrices(w http.ResponseWriter, r *http.Request) {
-	matrices, err := c.orderMatrix.Select(c.projectID)
-	if err != nil {
-		c.reporter.Errorf("[handleGetAllOrderMatrix] order matrix not found, err: %s", err.Error())
-		view.RenderJSONError(w, "Order matrix not found", http.StatusNotFound)
-		return
-	}
+	matrices, err := c.orderMatrix.SelectDetails(c.projectID)
 	if err != nil && err != sql.ErrNoRows {
-		c.reporter.Errorf("[handleGetAllOrderMatrix] failed get order matrix, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get order matrix", http.StatusInternalServerError)
+		c.reporter.Errorf("[handleGetAllOrderMatrix] failed get all orders matrix, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get all order matrix", http.StatusInternalServerError)
 		return
 	}
 
@@ -326,18 +345,166 @@ func (c *Controller) handleGetAllOrderMatrices(w http.ResponseWriter, r *http.Re
 	view.RenderJSONData(w, res, http.StatusOK)
 }
 
-func (c *Controller) handleGetVenueTypesFromMatrix(w http.ResponseWriter, r *http.Request) {
+func (c *Controller) handleGetOrderMatrixByID(w http.ResponseWriter, r *http.Request) {
+	var (
+		_id     = router.GetParam(r, "id")
+		id, err = strconv.ParseInt(_id, 10, 64)
+	)
+	if err != nil {
+		c.reporter.Errorf("[handleGetOrderMatrixByID] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
 
+	matrix, err := c.orderMatrix.GetDetails(id, c.projectID)
+	if err == sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetOrderMatrixByID] Order Matrix Not Found, err: %s", err.Error())
+		view.RenderJSONError(w, "Order Matrix Not Found", http.StatusNotFound)
+		return
+	}
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetOrderMatrixByID] Failed get order matrix, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get order matrix", http.StatusInternalServerError)
+		return
+	}
+
+	res := view.DataResponseOrderMatrix{
+		ID:   matrix.ID,
+		Type: "orderMatrix",
+		Attributes: view.OrderMatrixDetailAttributes{
+			VenueTypeID:      matrix.VenueTypeID,
+			VenueTypeName:    matrix.VenueTypeName,
+			Capacity:         matrix.Capacity,
+			AgingID:          matrix.AgingID,
+			AgingName:        matrix.AgingName,
+			DeviceID:         matrix.DeviceID,
+			DeviceName:       matrix.DeviceName,
+			RoomID:           matrix.RoomID,
+			RoomName:         matrix.RoomName,
+			ProductID:        matrix.ProductID,
+			ProductName:      matrix.ProductName,
+			InstallationID:   matrix.InstallationID,
+			InstallationName: matrix.InstallationName,
+			Status:           matrix.Status,
+			CreatedAt:        matrix.CreatedAt,
+			CreatedBy:        matrix.CreatedBy,
+			UpdatedAt:        matrix.UpdatedAt,
+			LastUpdateBy:     matrix.LastUpdateBy,
+			DeletedAt:        matrix.DeletedAt,
+			ProjectID:        matrix.ProjectID,
+		},
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
+}
+
+func (c *Controller) handleGetVenueTypesFromMatrix(w http.ResponseWriter, r *http.Request) {
+	venueTypes, err := c.orderMatrix.SelectVenueTypes(c.projectID)
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetVenueTypesFromMatrix] failed get all venue types, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get all venue types", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponseOrderMatrix, 0, len(venueTypes))
+	for _, venueType := range venueTypes {
+		res = append(res, view.DataResponseOrderMatrix{
+			Type: "orderMatrix",
+			Attributes: view.SummaryVenueTypeAttributes{
+				VenueTypeID:   venueType.VenueTypeID,
+				VenueTypeName: venueType.VenueTypeName,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
 }
 
 func (c *Controller) handleGetCapacitiesFromMatrix(w http.ResponseWriter, r *http.Request) {
+	var params reqSumCapacities
+	err := form.Bind(&params, r)
+	if err != nil {
+		c.reporter.Errorf("[handleGetCapacitiesFromMatrix] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
 
+	capacities, err := c.orderMatrix.SelectCapacities(c.projectID, params.VenueTypeID)
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetCapacitiesFromMatrix] failed get all capacities, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get all capacitiess", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponseOrderMatrix, 0, len(capacities))
+	for _, capacity := range capacities {
+		res = append(res, view.DataResponseOrderMatrix{
+			Type: "orderMatrix",
+			Attributes: view.SummaryCapacityAttributes{
+				Capacity: capacity.Capacity,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
 }
 
 func (c *Controller) handleGetAgingsFromMatrix(w http.ResponseWriter, r *http.Request) {
+	var params reqSumAgings
+	err := form.Bind(&params, r)
+	if err != nil {
+		c.reporter.Errorf("[handleGetAgingsFromMatrix] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
 
+	agings, err := c.orderMatrix.SelectAgings(c.projectID, params.VenueTypeID, params.Capacity)
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetAgingsFromMatrix] failed get all agings, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get all agings", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponseOrderMatrix, 0, len(agings))
+	for _, aging := range agings {
+		res = append(res, view.DataResponseOrderMatrix{
+			Type: "orderMatrix",
+			Attributes: view.SummaryAgingAttributes{
+				AgingID:   aging.AgingID,
+				AgingName: aging.AgingName,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
 }
 
 func (c *Controller) handleGetDevicesFromMatrix(w http.ResponseWriter, r *http.Request) {
+	var params reqSumDevices
+	err := form.Bind(&params, r)
+	if err != nil {
+		c.reporter.Errorf("[handleGetDevicesFromMatrix] invalid parameter, err: %s", err.Error())
+		view.RenderJSONError(w, "Invalid parameter", http.StatusBadRequest)
+		return
+	}
 
+	devices, err := c.orderMatrix.SelectDevices(c.projectID, params.VenueTypeID, params.Capacity, params.AgingID)
+	if err != nil && err != sql.ErrNoRows {
+		c.reporter.Errorf("[handleGetDevicesFromMatrix] failed get all Devices, err: %s", err.Error())
+		view.RenderJSONError(w, "Failed get all devices", http.StatusInternalServerError)
+		return
+	}
+
+	res := make([]view.DataResponseOrderMatrix, 0, len(devices))
+	for _, device := range devices {
+		res = append(res, view.DataResponseOrderMatrix{
+			Type: "orderMatrix",
+			Attributes: view.SummaryDeviceAttributes{
+				DeviceID:   device.DeviceID,
+				DeviceName: device.DeviceName,
+			},
+		})
+	}
+
+	view.RenderJSONData(w, res, http.StatusOK)
 }

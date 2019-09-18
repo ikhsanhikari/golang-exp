@@ -28,12 +28,11 @@ type OrderMatrix struct {
 //OrderMatrices is list of order matrix
 type OrderMatrices []OrderMatrix
 
-//OrderMatrixDetail is model for get all matrix with their name
 type OrderMatrixDetail struct {
 	ID               int64     `db:"id"`
 	VenueTypeID      int64     `db:"venue_type_id"`
 	VenueTypeName    string    `db:"venue_type_name"`
-	Capacity         int64     `db:"capacity"`
+	Capacity         *int64    `db:"capacity"`
 	AgingID          int64     `db:"aging_id"`
 	AgingName        string    `db:"aging_name"`
 	DeviceID         int64     `db:"device_id"`
@@ -53,5 +52,35 @@ type OrderMatrixDetail struct {
 	ProjectID        int64     `db:"project_id"`
 }
 
-//OrderMatrixDetails is list of OrderMatrixDetail
 type OrderMatrixDetails []OrderMatrixDetail
+
+type OrderMatrixChecker struct {
+	IsExists int16 `db:"is_exists"`
+}
+
+type SummaryVenueType struct {
+	VenueTypeID   int64  `db:"venue_type_id"`
+	VenueTypeName string `db:"venue_type_name"`
+}
+
+type SummaryVenueTypes []SummaryVenueType
+
+type SummaryCapacity struct {
+	Capacity int64 `db:"capacity"`
+}
+
+type SummaryCapacities []SummaryCapacity
+
+type SummaryAging struct {
+	AgingID   int64  `db:"aging_id"`
+	AgingName string `db:"aging_name"`
+}
+
+type SummaryAgings []SummaryAging
+
+type SummaryDevice struct {
+	DeviceID   int64  `db:"device_id"`
+	DeviceName string `db:"device_name"`
+}
+
+type SummaryDevices []SummaryDevice

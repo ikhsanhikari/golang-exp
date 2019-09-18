@@ -14,3 +14,18 @@ type reqOrderMatrix struct {
 type reqDeleteMatrix struct {
 	UserID string `json:"userID"`
 }
+
+type reqSumCapacities struct {
+	VenueTypeID int64 `json:"venueTypeID" validate:"required"`
+}
+
+type reqSumAgings struct {
+	VenueTypeID int64  `json:"venueTypeID" validate:"required"`
+	Capacity    *int64 `json:"capacity"`
+}
+
+type reqSumDevices struct {
+	VenueTypeID int64  `json:"venueTypeID" validate:"required"`
+	Capacity    *int64 `json:"capacity"`
+	AgingID     int64  `json:"agingID" validate:"required"`
+}
