@@ -117,7 +117,8 @@ func (c *core) GetByLatLong(pid int64, uid string, lt float64, lng float64, limi
 			last_update_by,
 			province,
 			city,
-			pt_id
+			pt_id,
+			show_status
 			,(
 				6371 * acos (
 				cos ( radians( ? ) )
@@ -130,6 +131,7 @@ func (c *core) GetByLatLong(pid int64, uid string, lt float64, lng float64, limi
 			FROM mla_venues
 			HAVING distance < 5 and
 			stats = 1 AND
+			show_status = 1 AND
 			project_id = ? 
 	`
 	if uid == "" {
