@@ -11,7 +11,7 @@ import (
 )
 
 func (c *Controller) handleGetAllCities(w http.ResponseWriter, r *http.Request) {
-	cities, err := c.city.Select(10)
+	cities, err := c.city.Select(c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetAllCities] error get from repository, err: %s", err.Error())
 		view.RenderJSONError(w, "Failed get city", http.StatusInternalServerError)
@@ -46,7 +46,7 @@ func (c *Controller) handleGetCityByID(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	cities, err := c.city.Get(id, 10)
+	cities, err := c.city.Get(id, c.projectID)
 	if err != nil {
 		c.reporter.Errorf("[handleGetCompanyByID] company not found, err: %s", err.Error())
 		view.RenderJSONError(w, "Company not found", http.StatusNotFound)
