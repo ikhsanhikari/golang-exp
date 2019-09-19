@@ -9,10 +9,11 @@ import (
 )
 
 // Init is used to initialize installation package
-func Init(db *sqlx.DB) ICore {
+func Init(db *sqlx.DB, pid int64) ICore {
 	examineDBHealth(db)
 	return &core{
-		db: db,
+		db:  db,
+		pid: pid,
 	}
 }
 

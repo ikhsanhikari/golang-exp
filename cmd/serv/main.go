@@ -100,7 +100,7 @@ func main() {
 	}
 	reporter.Infoln("Token Generator Email successfully initialized")
 
-	coreAuditTrail := auditTrail.Init(db)
+	coreAuditTrail := auditTrail.Init(db, cfg.ProjectID)
 	reporter.Infoln("/pkg/audit_trail successfully initialized")
 
 	coreHistory := _history.Init(db, redis)
