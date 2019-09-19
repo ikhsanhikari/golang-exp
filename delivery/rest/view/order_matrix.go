@@ -37,8 +37,8 @@ type OrderMatrixDetailAttributes struct {
 	AgingName        string    `json:"agingName"`
 	DeviceID         int64     `json:"deviceID"`
 	DeviceName       string    `json:"deviceName"`
-	RoomID           int64     `json:"roomID"`
-	RoomName         string    `json:"roomName"`
+	RoomID           *int64    `json:"roomID"`
+	RoomName         *string   `json:"roomName"`
 	ProductID        int64     `json:"productID"`
 	ProductName      string    `json:"productName"`
 	InstallationID   int64     `json:"installationID"`

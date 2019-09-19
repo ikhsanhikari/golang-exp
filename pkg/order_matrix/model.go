@@ -37,8 +37,8 @@ type OrderMatrixDetail struct {
 	AgingName        string    `db:"aging_name"`
 	DeviceID         int64     `db:"device_id"`
 	DeviceName       string    `db:"device_name"`
-	RoomID           int64     `db:"room_id"`
-	RoomName         string    `db:"room_name"`
+	RoomID           *int64    `db:"room_id"`
+	RoomName         *string   `db:"room_name"`
 	ProductID        int64     `db:"product_id"`
 	ProductName      string    `db:"product_name"`
 	InstallationID   int64     `db:"installation_id"`

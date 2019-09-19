@@ -432,7 +432,7 @@ func (c *Controller) handleGetCapacitiesFromMatrix(w http.ResponseWriter, r *htt
 	capacities, err := c.orderMatrix.SelectCapacities(c.projectID, params.VenueTypeID)
 	if err != nil && err != sql.ErrNoRows {
 		c.reporter.Errorf("[handleGetCapacitiesFromMatrix] failed get all capacities, err: %s", err.Error())
-		view.RenderJSONError(w, "Failed get all capacitiess", http.StatusInternalServerError)
+		view.RenderJSONError(w, "Failed get all capacities", http.StatusInternalServerError)
 		return
 	}
 
